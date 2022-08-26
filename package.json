@@ -27,7 +27,12 @@
   },
   "dependencies": {
     "ember-cli-babel": "^7.26.11",
-    "ember-cli-htmlbars": "^6.1.0"
+    "ember-cli-htmlbars": "^6.1.0",
+    "ember-cli-notifications": "^8.0.0",
+    "ember-concurrency": "^2.3.2",
+    "ember-get-config": "^2.1.1",
+    "ember-local-storage": "^2.0.2",
+    "ember-simple-auth": "^4.2.2"
   },
   "devDependencies": {
     "@ember/optional-features": "^2.0.0",
@@ -37,7 +42,6 @@
     "@glimmer/tracking": "^1.1.2",
     "babel-eslint": "^10.1.0",
     "broccoli-asset-rev": "^3.0.0",
-    "ember-auto-import": "^2.4.2",
     "ember-cli": "~4.6.0",
     "ember-cli-dependency-checker": "^3.3.1",
     "ember-cli-inject-live-reload": "^2.1.0",
