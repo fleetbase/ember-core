@@ -5,10 +5,11 @@ import { get, set, setProperties } from '@ember/object';
 import { isBlank } from '@ember/utils';
 import { dasherize } from '@ember/string';
 import { isArray } from '@ember/array';
-import { singularize } from 'ember-inflector';
+import { singularize, pluralize } from 'ember-inflector';
 import { task } from 'ember-concurrency';
 import { storageFor } from 'ember-local-storage';
-import { environment } from 'ember-get-config';
+import { intervalToDuration, parseISO } from 'date-fns';
+import config from 'ember-get-config';
 import corslite from '../utils/corslite';
 import getMimeType from '../utils/get-mime-type';
 import download from '../utils/download';
@@ -25,7 +26,7 @@ export default class FetchService extends Service {
       return this._host;
     }
 
-    return get(environment, 'API.host');
+    return get(config, 'API.host');
   }
 
   /**
@@ -45,7 +46,7 @@ export default class FetchService extends Service {
       return this._namespace;
     }
 
-    return get(environment, 'API.namespace');
+    return get(config, 'API.namespace');
   }
 
   /**
@@ -417,12 +418,19 @@ export default class FetchService extends Service {
 
         // get the path key version value
         const version = this.localCache.get(`${pathKey}-version`);
-
         const expirationInterval = options.expirationInterval ?? 3;
-        const expirationIntervalUnit = options.expirationIntervalUnit ?? 'days';
+        const expirationIntervalUnit = pluralize(
+          options.expirationIntervalUnit ?? 'days'
+        );
 
-        const lifespan = moment().diff(moment(version), expirationIntervalUnit);
-        const shouldExpire = lifespan > expirationInterval;
+        // calculate duration between cache version and now
+        const duration = intervalToDuration({
+          start: parseISO(version),
+          end: new Date(),
+        });
+        // determine if we should expire cache
+        const shouldExpire =
+          duration[expirationIntervalUnit] > expirationInterval;
 
         // if the version is older than 3 days clear it
         if (!version || shouldExpire || options.clearData === true) {
@@ -453,9 +461,9 @@ export default class FetchService extends Service {
   shouldResetCache() {
     const consoleVersion = this.localCache.get('console-version');
 
-    if (!consoleVersion || consoleVersion !== environment.APP.version) {
+    if (!consoleVersion || consoleVersion !== config.APP.version) {
       this.localCache.clear();
-      this.localCache.set('console-version', environment.APP.version);
+      this.localCache.set('console-version', config.APP.version);
     }
   }
 
@@ -585,8 +593,8 @@ export default class FetchService extends Service {
 
     try {
       const upload = yield file.upload(
-        `${get(environment, 'API.host')}/${get(
-          environment,
+        `${get(config, 'API.host')}/${get(
+          config,
           'API.namespace'
         )}/files/upload`,
         {
@@ -663,9 +671,6 @@ export default class FetchService extends Service {
           if (!options.mimeType) {
             options.mimeType = getMimeType(options.fileName);
           }
-
-          console.log('download() - options', options);
-          console.log('download() - response', response);
 
           return response;
         })

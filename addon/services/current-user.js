@@ -90,7 +90,7 @@ export default class CurrentUserService extends Service {
    */
   async load() {
     if (this.session.isAuthenticated) {
-      let user = await this.store.queryRecord('user', { me: true });
+      let user = await this.store.findRecord('user', 'me');
       this.set('user', user);
     }
   }
@@ -110,6 +110,7 @@ export default class CurrentUserService extends Service {
           .then((user) => {
             // set the `current user`
             this.set('user', user);
+
             // set environment from user option
             this.theme.setEnvironment();
 
@@ -120,9 +121,11 @@ export default class CurrentUserService extends Service {
 
             resolve(user);
           })
-          .catch(() => {
+          .catch((error) => {
             reject(NoUserAuthenticatedError);
           });
+      } else {
+        reject(NoUserAuthenticatedError);
       }
     });
   }

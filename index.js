@@ -2,6 +2,9 @@
 
 module.exports = {
   name: require('./package').name,
+  isDevelopingAddon: function () {
+    return true;
+  },
   included: function (app) {
     this._super.included.apply(this, arguments);
     app.options = app.options || {};

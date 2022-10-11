@@ -1,6 +1,6 @@
 export default function pathToRoute(path = '') {
   if (!path.startsWith('console')) {
-      path = `console.${path}`;
+    path = `console.${path}`;
   }
 
   path = path.replace(/\//gi, '.');
