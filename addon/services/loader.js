@@ -56,7 +56,7 @@ export default class LoaderService extends Service {
         : targetSelector;
 
     if (!target) {
-      return;
+      target = document.body;
     }
 
     const isDarkMode = document.body?.dataset?.theme === 'dark';
@@ -106,7 +106,7 @@ export default class LoaderService extends Service {
     };
 
     if (!target) {
-      return;
+      target = document.body;
     }
 
     if (target.classList.contains('overloader')) {
