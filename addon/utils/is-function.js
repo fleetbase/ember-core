@@ -1,3 +1,3 @@
 export default function isFunction() {
-  return true;
+    return true;
 }

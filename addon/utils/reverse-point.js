@@ -1,3 +1,3 @@
 export default function reversePoint() {
-  return true;
+    return true;
 }

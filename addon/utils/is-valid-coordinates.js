@@ -17,22 +17,22 @@ import isObject from './is-object';
  * @param {Array|Object|Integer} longitude
  */
 export default function isValidCoordinates(latitude, longitude = null) {
-  let testLatitude, testLongitude;
+    let testLatitude, testLongitude;
 
-  if (isArray(latitude) && longitude === null) {
-    testLatitude = latitude[0];
-    testLongitude = latitude[1];
-  }
+    if (isArray(latitude) && longitude === null) {
+        testLatitude = latitude[0];
+        testLongitude = latitude[1];
+    }
 
-  if (!isArray(latitude) && isObject(latitude) && longitude === null) {
-    testLatitude = latitude.lat || latitude.latitude;
-    testLongitude = latitude.lng || latitude.longitude;
-  }
+    if (!isArray(latitude) && isObject(latitude) && longitude === null) {
+        testLatitude = latitude.lat || latitude.latitude;
+        testLongitude = latitude.lng || latitude.longitude;
+    }
 
-  if (longitude !== null) {
-    testLatitude = latitude;
-    testLongitude = longitude;
-  }
+    if (longitude !== null) {
+        testLatitude = latitude;
+        testLongitude = longitude;
+    }
 
-  return isLatitude(testLatitude) && isLongitude(testLongitude);
+    return isLatitude(testLatitude) && isLongitude(testLongitude);
 }

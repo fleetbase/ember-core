@@ -1,3 +1,3 @@
 export default function isObject(obj) {
-  return typeof obj === 'object';
+    return typeof obj === 'object';
 }

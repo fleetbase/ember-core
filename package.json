@@ -33,6 +33,7 @@
         "ember-cli-htmlbars": "^6.1.0",
         "ember-cli-notifications": "^8.0.0",
         "ember-concurrency": "^2.3.2",
+        "ember-concurrency-decorators": "^2.0.3",
         "ember-get-config": "^2.1.1",
         "ember-inflector": "^4.0.2",
         "ember-loading": "^2.0.0",
@@ -41,6 +42,8 @@
         "ember-wormhole": "^0.6.0"
     },
     "devDependencies": {
+        "@ember-data/serializer": "^4.11.3",
+        "@ember-data/store": "^4.11.3",
         "@ember/optional-features": "^2.0.0",
         "@ember/test-helpers": "^2.8.1",
         "@embroider/test-setup": "^1.8.3",
@@ -54,7 +57,6 @@
         "ember-cli-inject-live-reload": "^2.1.0",
         "ember-cli-sri": "^2.1.1",
         "ember-cli-terser": "^4.0.2",
-        "ember-data": "^4.6.1",
         "ember-disable-prototype-extensions": "^1.1.3",
         "ember-file-upload": "^7.1.0",
         "ember-load-initializers": "^2.1.2",

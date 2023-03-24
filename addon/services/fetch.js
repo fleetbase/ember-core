@@ -562,7 +562,7 @@ export default class FetchService extends Service {
                 })
                 .then((response) => response.json());
 
-            const model = this.store.push(this.store.normalize('file', get(upload, 'file')));
+            const model = this.store.push(this.store.normalize('file', upload.file));
             set(file, 'model', model);
 
             if (typeof callback === 'function') {

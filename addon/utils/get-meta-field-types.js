@@ -1,3 +1,3 @@
 export default function getMetaFieldTypes() {
-  return true;
+    return true;
 }

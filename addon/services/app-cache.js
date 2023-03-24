@@ -7,55 +7,53 @@ import { storageFor } from 'ember-local-storage';
 import autoSerialize from '../utils/auto-serialize';
 
 export default class AppCacheService extends Service {
-  @service currentUser;
-  @service store;
-  @storageFor('local-cache') localCache;
+    @service currentUser;
+    @service store;
+    @storageFor('local-cache') localCache;
 
-  get cachePrefix() {
-    return `${this.currentUser.id}:${this.currentUser.companyId}:`;
-  }
-
-  @action setEmberData(key, value, except = []) {
-    value = autoSerialize(value, except);
-
-    return this.set(key, value);
-  }
-
-  @action getEmberData(key, modelName) {
-    const data = this.get(key);
-
-    if (isArray(data)) {
-      return data.map((instance) =>
-        this.store.push(this.store.normalize(modelName, instance))
-      );
+    get cachePrefix() {
+        return `${this.currentUser.id}:${this.currentUser.companyId}:`;
     }
 
-    return this.store.push(this.store.normalize(modelName, data));
-  }
+    @action setEmberData(key, value, except = []) {
+        value = autoSerialize(value, except);
 
-  @action set(key, value) {
-    this.localCache.set(`${this.cachePrefix}${dasherize(key)}`, value);
-
-    return this;
-  }
-
-  @action get(key) {
-    return this.localCache.get(`${this.cachePrefix}${dasherize(key)}`);
-  }
-
-  @action has(key) {
-    if (isArray(key)) {
-      return key.every((k) => this.get(k) !== undefined);
+        return this.set(key, value);
     }
 
-    return this.get(key) !== undefined;
-  }
+    @action getEmberData(key, modelName) {
+        const data = this.get(key);
 
-  @action doesntHave(key) {
-    if (isArray(key)) {
-      return key.every((k) => this.get(k) === undefined);
+        if (isArray(data)) {
+            return data.map((instance) => this.store.push(this.store.normalize(modelName, instance)));
+        }
+
+        return this.store.push(this.store.normalize(modelName, data));
     }
 
-    return this.get(key) === undefined;
-  }
+    @action set(key, value) {
+        this.localCache.set(`${this.cachePrefix}${dasherize(key)}`, value);
+
+        return this;
+    }
+
+    @action get(key) {
+        return this.localCache.get(`${this.cachePrefix}${dasherize(key)}`);
+    }
+
+    @action has(key) {
+        if (isArray(key)) {
+            return key.every((k) => this.get(k) !== undefined);
+        }
+
+        return this.get(key) !== undefined;
+    }
+
+    @action doesntHave(key) {
+        if (isArray(key)) {
+            return key.every((k) => this.get(k) === undefined);
+        }
+
+        return this.get(key) === undefined;
+    }
 }

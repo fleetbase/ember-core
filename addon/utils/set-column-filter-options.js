@@ -1,3 +1,3 @@
 export default function setColumnFilterOptions() {
-  return true;
+    return true;
 }

@@ -2,9 +2,9 @@ import serializeNormalizeRelationsWithHash from 'dummy/utils/serialize/normalize
 import { module, test } from 'qunit';
 
 module('Unit | Utility | serialize/normalize-relations-with-hash', function () {
-  // TODO: Replace this with your real tests.
-  test('it works', function (assert) {
-    let result = serializeNormalizeRelationsWithHash();
-    assert.ok(result);
-  });
+    // TODO: Replace this with your real tests.
+    test('it works', function (assert) {
+        let result = serializeNormalizeRelationsWithHash();
+        assert.ok(result);
+    });
 });

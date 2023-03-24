@@ -5,47 +5,40 @@ import { isBlank } from '@ember/utils';
 import config from '@fleetbase/console/config/environment';
 
 const isRoutingInCountry = (country, payload, waypoints = []) => {
-  // const owner = getOwner(this);
-  // const currentUser = owner.lookup(`service:current-user`);
-  // const whois = currentUser.getOption('whois');
+    // const owner = getOwner(this);
+    // const currentUser = owner.lookup(`service:current-user`);
+    // const whois = currentUser.getOption('whois');
 
-  if (isBlank(payload)) {
-    payload = {};
-  }
+    if (isBlank(payload)) {
+        payload = {};
+    }
 
-  let countryCode = null;
+    let countryCode = null;
 
-  if (
-    get(payload, 'pickup.country') === country ||
-    get(payload, 'dropoff.country') === country
-  ) {
-    countryCode = country;
-  }
+    if (get(payload, 'pickup.country') === country || get(payload, 'dropoff.country') === country) {
+        countryCode = country;
+    }
 
-  if (
-    isArray(waypoints) &&
-    !isBlank(waypoints?.firstObject) &&
-    get(waypoints?.firstObject, 'place.country') === country
-  ) {
-    countryCode = country;
-  }
+    if (isArray(waypoints) && !isBlank(waypoints?.firstObject) && get(waypoints?.firstObject, 'place.country') === country) {
+        countryCode = country;
+    }
 
-  return countryCode === country;
+    return countryCode === country;
 };
 
 export { isRoutingInCountry };
 
 export default function getRoutingHost(payload, waypoints = []) {
-  const isRoutingInCanada = isRoutingInCountry('CA', payload, waypoints);
-  const isRoutingInUSA = isRoutingInCountry('US', payload, waypoints);
+    const isRoutingInCanada = isRoutingInCountry('CA', payload, waypoints);
+    const isRoutingInUSA = isRoutingInCountry('US', payload, waypoints);
 
-  if (isRoutingInCanada && typeof config.osrm?.servers?.ca === 'string') {
-    return config.osrm.servers.ca;
-  }
+    if (isRoutingInCanada && typeof config.osrm?.servers?.ca === 'string') {
+        return config.osrm.servers.ca;
+    }
 
-  if (isRoutingInUSA && typeof config.osrm?.servers?.us === 'string') {
-    return config.osrm.servers.us;
-  }
+    if (isRoutingInUSA && typeof config.osrm?.servers?.us === 'string') {
+        return config.osrm.servers.us;
+    }
 
-  return config.osrm.host;
+    return config.osrm.host;
 }

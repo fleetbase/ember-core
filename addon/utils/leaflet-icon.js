@@ -9,5 +9,5 @@
  * @return {Icon}
  */
 export default function leafletIcon(options = {}) {
-  return L.icon(options);
+    return L.icon(options);
 }

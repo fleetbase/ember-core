@@ -1,3 +1,3 @@
 export default function leafletPointsFromCoordinates() {
-  return true;
+    return true;
 }

@@ -1,11 +1,11 @@
 export default function hasExtension(pkg) {
-  let has = true;
+    let has = true;
 
-  try {
-    require(pkg);
-  } catch {
-    has = false;
-  }
+    try {
+        require(pkg);
+    } catch {
+        has = false;
+    }
 
-  return has;
+    return has;
 }
