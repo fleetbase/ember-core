@@ -42,7 +42,7 @@ export default class LoaderService extends Service {
      * @param {String} loadingMessage
      * @return {HTMLElement} loader
      */
-    showLoader(targetSelector, loadingMessage = 'Loading...', opacity = 0.75) {
+    showLoader(targetSelector, loadingMessage = 'Loading...', opacity = 0.45) {
         let target = typeof targetSelector === 'string' ? document.querySelector(targetSelector) : targetSelector;
 
         if (!target) {
