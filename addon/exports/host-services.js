@@ -8,6 +8,7 @@ const hostServices = [
     'url-search-params',
     'modals-manager',
     'loader',
+    'filters',
     'crud',
     'notifications',
     'fileQueue',
