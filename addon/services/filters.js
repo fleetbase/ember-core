@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 
 export default class FiltersService extends Service {
     @service router;
+    @service urlSearchParams;
     @tracked pendingQueryParams = {};
     @tracked managedQueryParams = ['limit', 'offset', 'sort', 'query', 'page', 'layout', 'view'];
 
@@ -30,6 +31,7 @@ export default class FiltersService extends Service {
     }
 
     @action set(queryParam, value) {
+        console.log('FiltersService set()', ...arguments);
         if (value instanceof InputEvent) {
             value = value.target.value;
         }
@@ -39,14 +41,8 @@ export default class FiltersService extends Service {
             value = null;
         }
 
-        if (isArray(value)) {
-            value = value
-                .filter((value) => !isBlank(value))
-                .map((value) => this.serializeQueryParamValue(queryParam, value))
-                .join(',');
-        } else {
-            value = this.serializeQueryParamValue(queryParam, value);
-        }
+        // serialize query param value
+        value = this.serializeQueryParamValue(queryParam, value);
 
         if (isBlank(value)) {
             return this.clear(queryParam);
@@ -68,12 +64,21 @@ export default class FiltersService extends Service {
             return format(value, 'yyyy-MM-dd HH:mm');
         }
 
+        if (isArray(value)) {
+            return value
+                .filter((value) => !isBlank(value))
+                .map((value) => this.serializeQueryParamValue(queryParam, value))
+                .join(',');
+        }
+
         return value;
     }
 
     @action apply(controller) {
         const currentQueryParams = this.getQueryParams();
         const updatableQueryParams = { ...currentQueryParams, ...this.pendingQueryParams };
+
+        console.log('apply() #updatableQueryParams', updatableQueryParams);
 
         for (let queryParam in updatableQueryParams) {
             set(controller, queryParam, get(updatableQueryParams, queryParam));
@@ -83,6 +88,12 @@ export default class FiltersService extends Service {
         set(controller, 'page', 1);
 
         this.notifyPropertyChange('activeFilters');
+    }
+
+    @action reset(controller) {
+        this.clear((queryParam) => {
+            set(controller, queryParam, undefined);
+        });
     }
 
     @action clear(callback, queryParam = []) {
@@ -117,11 +128,8 @@ export default class FiltersService extends Service {
     }
 
     @action removeFromController(controller, queryParam, newValue) {
-        if (newValue === undefined) {
-            set(controller, queryParam, undefined);
-        } else {
-            set(controller, queryParam, newValue);
-        }
+        set(controller, queryParam, newValue);
+
         this.set(queryParam, newValue);
         this.notifyPropertyChange('activeFilters');
     }
@@ -134,38 +142,35 @@ export default class FiltersService extends Service {
     }
 
     @action lookupCurrentRoute() {
-        const owner = getOwner(this);
-        const currentRouteName = this.router.currentRouteName;
-        const currentRoute = owner.lookup(`route:${currentRouteName}`);
+        const owner = getOwner(this); // ApplicationInstance
+        const router = owner.lookup('router:main'); // Router
+        const routerMicrolib = get(router, '_routerMicrolib'); // PrivateRouter
+        const currentRouteInfos = get(routerMicrolib, 'currentRouteInfos'); // Array
+        const currentRouteInfo = currentRouteInfos[currentRouteInfos.length - 1]; // ResolvedRouteInfo
 
-        return currentRoute;
+        return get(currentRouteInfo, '_route');
+    }
+
+    @action getRouteQueryParams() {
+        const currentRoute = this.lookupCurrentRoute();
+        return get(currentRoute, 'queryParams');
     }
 
     @action getQueryParams() {
         const currentRoute = this.lookupCurrentRoute();
-        const currentRouteName = this.router.currentRouteName;
-        const routeNameSegments = currentRouteName.split('.');
+        const currentRouteQueryParams = Object.keys(get(currentRoute, 'queryParams'));
+        const queryParams = {};
 
-        for (let i = 0; i < routeNameSegments.length; i++) {
-            const path = routeNameSegments.slice(0, routeNameSegments.length - i).join('.');
-            const queryParams = currentRoute.paramsFor(path);
-            const queryParamKeys = Object.keys(queryParams);
+        for (let i = 0; i < currentRouteQueryParams.length; i++) {
+            const queryParam = currentRouteQueryParams.objectAt(i);
+            const value = this.urlSearchParams.get(queryParam);
 
-            if (queryParamKeys.length > 0) {
-                // strip application managed query params
-                const cleanedQueryParams = {};
+            if (this.managedQueryParams.includes(queryParam)) {
+                continue;
+            }
 
-                for (let i = 0; i < queryParamKeys.length; i++) {
-                    const qp = queryParamKeys.objectAt(i);
-
-                    if (this.managedQueryParams.includes(qp)) {
-                        continue;
-                    }
-
-                    set(cleanedQueryParams, qp, queryParams[qp]);
-                }
-
-                return cleanedQueryParams;
+            if (value) {
+                queryParams[queryParam] = value;
             }
         }
 
@@ -173,7 +178,7 @@ export default class FiltersService extends Service {
     }
 
     @action resetQueryParams() {
-        if(!isBlank(this.activeFilters)){
+        if (!isBlank(this.activeFilters)) {
             this.clear();
             this.router.transitionTo({ queryParams: {} });
         }
