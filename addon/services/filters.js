@@ -31,7 +31,6 @@ export default class FiltersService extends Service {
     }
 
     @action set(queryParam, value) {
-        console.log('FiltersService set()', ...arguments);
         if (value instanceof InputEvent) {
             value = value.target.value;
         }
@@ -77,8 +76,6 @@ export default class FiltersService extends Service {
     @action apply(controller) {
         const currentQueryParams = this.getQueryParams();
         const updatableQueryParams = { ...currentQueryParams, ...this.pendingQueryParams };
-
-        console.log('apply() #updatableQueryParams', updatableQueryParams);
 
         for (let queryParam in updatableQueryParams) {
             set(controller, queryParam, get(updatableQueryParams, queryParam));
