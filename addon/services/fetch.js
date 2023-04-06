@@ -5,6 +5,7 @@ import { get, set, setProperties } from '@ember/object';
 import { isBlank } from '@ember/utils';
 import { dasherize } from '@ember/string';
 import { isArray } from '@ember/array';
+import { assign } from '@ember/polyfills';
 import { singularize, pluralize } from 'ember-inflector';
 import { task } from 'ember-concurrency';
 import { storageFor } from 'ember-local-storage';
@@ -17,43 +18,15 @@ import fetch from 'fetch';
 
 export default class FetchService extends Service {
     /**
-     * The default namespace for the fetch service
-     *
-     * @var {String}
+     * Creates an instance of FetchService.
+     * @memberof FetchService
      */
-    get host() {
-        if (this._host) {
-            return this._host;
-        }
+    constructor() {
+        super(...arguments);
 
-        return get(config, 'API.host');
-    }
-
-    /**
-     * Setter fucntion to overwrite host.
-     */
-    set host(host) {
-        this._host = host;
-    }
-
-    /**
-     * The default namespace for the fetch service
-     *
-     * @var {String}
-     */
-    get namespace() {
-        if (this._namespace) {
-            return this._namespace;
-        }
-
-        return get(config, 'API.namespace');
-    }
-
-    /**
-     * Setter fucntion to overwrite namespace.
-     */
-    set namespace(namespace) {
-        this._namespace = namespace;
+        this.headers = this.getHeaders();
+        this.host = get(config, 'API.host');
+        this.namespace = get(config, 'API.namespace');
     }
 
     /**
@@ -61,41 +34,21 @@ export default class FetchService extends Service {
      *
      * @var {Array}
      */
-    @tracked _headers;
+    @tracked headers;
 
     /**
      * Mutable namespace property.
      *
      * @var {String}
      */
-    @tracked _namespace;
+    @tracked namespace;
 
     /**
      * Mutable host property.
      *
      * @var {String}
      */
-    @tracked _host;
-
-    /**
-     * The headers to send with request.
-     *
-     * @var {Object}
-     */
-    get headers() {
-        if (this._headers) {
-            return this._headers;
-        }
-
-        return this.getHeaders();
-    }
-
-    /**
-     * Setter fucntion to overwrite headers.
-     */
-    set headers(headers) {
-        this._headers = headers;
-    }
+    @tracked host;
 
     /**
      * Gets headers that should be sent with request.
@@ -126,24 +79,37 @@ export default class FetchService extends Service {
     }
 
     /**
-     * Gets fresh headers and sets them.
+     * Updates headers property before making request.
      *
-     * @return {Object}
+     * @return {FetchService} 
+     * @memberof FetchService
      */
     refreshHeaders() {
-        const headers = this.getHeaders(true);
+        this.headers = this.getHeaders();
 
-        this.headers = headers;
-
-        return headers;
+        return this;
     }
 
+    /**
+     * Allows namespace to be set before making fetch request.
+     *
+     * @param {String} namespace
+     * @return {FetchService} 
+     * @memberof FetchService
+     */
     setNamespace(namespace) {
         this.namespace = namespace;
 
         return this;
     }
 
+    /**
+     * Allows host to be set before making fetch request.
+     *
+     * @param {String} host
+     * @return {FetchService} 
+     * @memberof FetchService
+     */
     setHost(host) {
         this.host = host;
 
@@ -272,17 +238,6 @@ export default class FetchService extends Service {
         );
     }
 
-    // /**
-    //  * Request XSRF token from server to use on each subsequent request.
-    //  *
-    //  * @void
-    //  */
-    // setupXsrf() {
-    //     this.request(`${this.host}/sanctum/csrf-cookie`, 'GET', {}, { externalRequest: true }).then((response) => {
-    //         console.log('setupXsrf', response);
-    //     });
-    // }
-
     /**
      * The base request method
      *
@@ -294,17 +249,14 @@ export default class FetchService extends Service {
      * @return {Promise}
      */
     request(path, method = 'GET', data = {}, options = {}) {
-        this.refreshHeaders();
+        const headers = assign(this.getHeaders(), options.headers ?? {});
 
         return new Promise((resolve, reject) => {
             return fetch(options.externalRequest === true ? path : `${options.host || this.host}/${options.namespace || this.namespace}/${path}`, {
                 method,
                 mode: options.mode || 'cors',
                 credentials: options.credentials || this.credentials,
-                headers: {
-                    ...(this.headers || {}),
-                    ...(options.headers || {}),
-                },
+                headers,
                 ...data,
             })
                 .then(this.parseJSON)
@@ -541,9 +493,8 @@ export default class FetchService extends Service {
      * @void
      */
     @(task(function* (file, params = {}, callback, errorCallback) {
-        this.refreshHeaders();
-
         const { queue } = file;
+        const headers = this.getHeaders();
 
         // set some default params from file data
         setProperties(params, {
@@ -556,9 +507,7 @@ export default class FetchService extends Service {
                     data: params,
                     mode: 'cors',
                     credentials: this.credentials,
-                    headers: {
-                        Authorization: `Bearer ${this.session.data.authenticated.token}`,
-                    },
+                    headers,
                 })
                 .then((response) => response.json());
 
@@ -593,16 +542,13 @@ export default class FetchService extends Service {
      * @return {Promise}
      */
     download(path, query = {}, options = {}) {
-        this.refreshHeaders();
+        const headers = assign(this.getHeaders(), options.headers ?? {});
 
         return new Promise((resolve, reject) => {
             return fetch(`${options.host || this.host}/${options.namespace || this.namespace}/${path}?${!isBlank(query) ? new URLSearchParams(query).toString() : ''}`, {
                 method: 'GET',
                 credentials: options.credentials || this.credentials,
-                headers: {
-                    ...(this.headers || {}),
-                    ...(options.headers || {}),
-                },
+                headers,
             })
                 .then((response) => {
                     options.fileName = this.getFilenameFromResponse(response, options.fileName);
