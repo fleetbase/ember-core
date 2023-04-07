@@ -94,7 +94,7 @@ export default class CrudService extends Service {
         }
 
         const firstModel = first(selected);
-        const modelName = getModelName(firstModel);
+        const modelName = getModelName(firstModel, options?.modelName);
 
         // make sure all are the same type
         selected = selected.filter((m) => getModelName(m) === modelName);
