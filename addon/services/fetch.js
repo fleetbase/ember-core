@@ -81,7 +81,7 @@ export default class FetchService extends Service {
     /**
      * Updates headers property before making request.
      *
-     * @return {FetchService} 
+     * @return {FetchService}
      * @memberof FetchService
      */
     refreshHeaders() {
@@ -94,7 +94,7 @@ export default class FetchService extends Service {
      * Allows namespace to be set before making fetch request.
      *
      * @param {String} namespace
-     * @return {FetchService} 
+     * @return {FetchService}
      * @memberof FetchService
      */
     setNamespace(namespace) {
@@ -107,7 +107,7 @@ export default class FetchService extends Service {
      * Allows host to be set before making fetch request.
      *
      * @param {String} host
-     * @return {FetchService} 
+     * @return {FetchService}
      * @memberof FetchService
      */
     setHost(host) {
