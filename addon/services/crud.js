@@ -65,16 +65,16 @@ export default class CrudService extends Service {
      * @void
      */
     @action delete(model, options = {}) {
-        const modelName = getModelName(model);
+        const modelName = getModelName(model, options?.modelName, { humanize: true, capitalizeWords: true });
 
         this.modalsManager.confirm({
-            title: `Are you sure to delete this ${options.modelName || humanize(modelName).toLowerCase()}?`,
+            title: `Are you sure to delete this ${modelName}?`,
             args: ['model'],
             model,
             confirm: (modal) => {
                 modal.startLoading();
                 return model.destroyRecord().then((model) => {
-                    this.notifications.success(options.successNotification || `'${options.modelName || model.name || humanize(modelName)}' has been deleted.`);
+                    this.notifications.success(options.successNotification || `${model.name ? modelName + ' \'' + model.name + '\'' : '\'' + modelName + '\''} has been deleted.`);
                 });
             },
             ...options,

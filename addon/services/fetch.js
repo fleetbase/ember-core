@@ -496,17 +496,17 @@ export default class FetchService extends Service {
         const { queue } = file;
         const headers = this.getHeaders();
 
-        // set some default params from file data
-        setProperties(params, {
-            file_size: file.size,
-        });
+        // remove Content-Type header
+        delete headers['Content-Type'];
 
         try {
             const upload = yield file
                 .upload(`${get(config, 'API.host')}/${get(config, 'API.namespace')}/files/upload`, {
-                    data: params,
-                    mode: 'cors',
-                    credentials: this.credentials,
+                    data: {
+                        ...params,
+                        file_size: file.size
+                    },
+                    withCredentials: true,
                     headers,
                 })
                 .then((response) => response.json());
