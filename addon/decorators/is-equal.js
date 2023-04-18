@@ -1,6 +1,5 @@
 import { computed } from '@ember/object';
 import { decoratorWithRequiredParams } from '@ember-decorators/utils/decorator';
-import { isDescriptor } from '@ember/object/internals';
 import { assert } from '@ember/debug';
 
 export function isEqual(propNameA, propNameB) {
