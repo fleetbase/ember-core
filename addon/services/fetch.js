@@ -14,6 +14,7 @@ import config from 'ember-get-config';
 import corslite from '../utils/corslite';
 import getMimeType from '../utils/get-mime-type';
 import download from '../utils/download';
+import getUserOptions from '../utils/get-user-options';
 import fetch from 'fetch';
 
 export default class FetchService extends Service {
@@ -57,9 +58,11 @@ export default class FetchService extends Service {
      */
     getHeaders() {
         const headers = {};
-
-        // check if user is authenticated
         const isAuthenticated = this.session.isAuthenticated;
+        const userId = this.session.data.authenticated.user;
+        const userOptions = getUserOptions();
+        const isSandbox = get(userOptions, `${userId}:sandbox`) === true;
+        const testKey = get(userOptions, `${userId}:testKey`);
 
         headers['Content-Type'] = 'application/json';
 
@@ -67,12 +70,12 @@ export default class FetchService extends Service {
             headers['Authorization'] = `Bearer ${this.session.data.authenticated.token}`;
         }
 
-        if (isAuthenticated && this.currentUser.getOption('sandbox') === true) {
+        if (isAuthenticated && isSandbox) {
             headers['Access-Console-Sandbox'] = true;
         }
 
-        if (isAuthenticated && this.currentUser.hasOption('testKey')) {
-            headers['Access-Console-Sandbox-Key'] = this.currentUser.getOption('testKey');
+        if (isAuthenticated && !isBlank(testKey)) {
+            headers['Access-Console-Sandbox-Key'] = testKey;
         }
 
         return headers;
@@ -264,9 +267,24 @@ export default class FetchService extends Service {
                     // console.log('[fetch:response]', response);
                     if (response.ok) {
                         if (options.normalizeToEmberData) {
-                            return resolve(this.normalizeModel(response.json, options.normalizeModelType));
+                            const normalized = this.normalizeModel(response.json, options.normalizeModelType);
+
+                            if (typeof options.onSuccess === 'function') {
+                                options.onSuccess(normalized);
+                            }
+
+                            return resolve(normalized);
                         }
+
+                        if (typeof options.onSuccess === 'function') {
+                            options.onSuccess(response.json);
+                        }
+
                         return resolve(response.json);
+                    }
+
+                    if (typeof options.onError === 'function') {
+                        options.onError(response.json);
                     }
 
                     if (options.rawError) {
@@ -301,6 +319,11 @@ export default class FetchService extends Service {
      * @return {Promise}
      */
     get(path, query = {}, options = {}) {
+        // handle if want to request from cache
+        if (options.fromCache === true) {
+            return this.cachedGet(...arguments);
+        }
+
         const urlParams = !isBlank(query) ? new URLSearchParams(query).toString() : '';
 
         return this.request(`${path}${urlParams ? '?' + urlParams : ''}`, 'GET', {}, options);
@@ -504,7 +527,7 @@ export default class FetchService extends Service {
                 .upload(`${get(config, 'API.host')}/${get(config, 'API.namespace')}/files/upload`, {
                     data: {
                         ...params,
-                        file_size: file.size
+                        file_size: file.size,
                     },
                     withCredentials: true,
                     headers,

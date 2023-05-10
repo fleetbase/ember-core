@@ -11,7 +11,7 @@ export default function getModelName(model, fallback = null, options = {}) {
     if (isArray(fallback)) {
         for (let i = 0; i < fallback.length; i++) {
             const defaultValue = fallback.objectAt(i);
-            
+
             if (!isBlank(defaultValue)) {
                 modelName = defaultValue;
                 break;

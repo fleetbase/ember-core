@@ -39,7 +39,8 @@
         "ember-loading": "^2.0.0",
         "ember-local-storage": "^2.0.4",
         "ember-simple-auth": "^4.2.2",
-        "ember-wormhole": "^0.6.0"
+        "ember-wormhole": "^0.6.0",
+        "socketcluster-client": "^17.1.1"
     },
     "devDependencies": {
         "@ember-data/serializer": "^4.11.3",

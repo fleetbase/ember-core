@@ -74,7 +74,7 @@ export default class CrudService extends Service {
             confirm: (modal) => {
                 modal.startLoading();
                 return model.destroyRecord().then((model) => {
-                    this.notifications.success(options.successNotification || `${model.name ? modelName + ' \'' + model.name + '\'' : '\'' + modelName + '\''} has been deleted.`);
+                    this.notifications.success(options.successNotification || `${model.name ? modelName + " '" + model.name + "'" : "'" + modelName + "'"} has been deleted.`);
                 });
             },
             ...options,
@@ -94,16 +94,17 @@ export default class CrudService extends Service {
         }
 
         const firstModel = first(selected);
-        const modelName = getModelName(firstModel, options?.modelName);
+        const modelName = getModelName(firstModel, options?.modelName, { humanize: true, capitalizeWords: true });
 
         // make sure all are the same type
-        selected = selected.filter((m) => getModelName(m) === modelName);
+        selected = selected.filter((m) => getModelName(m) === getModelName(firstModel));
 
         return this.bulkAction('delete', selected, {
             acceptButtonScheme: 'danger',
             acceptButtonIcon: 'trash',
             actionPath: `${dasherize(pluralize(modelName))}/bulk-delete`,
             actionMethod: `DELETE`,
+            modelName,
             ...options,
         });
     }
@@ -121,7 +122,7 @@ export default class CrudService extends Service {
         }
 
         const firstModel = first(selected);
-        const modelName = getModelName(firstModel);
+        const modelName = getModelName(firstModel, options?.modelName, { humanize: true, capitalizeWords: true });
         const count = selected.length;
         const actionMethod = (typeof options.actionMethod === 'string' ? options.actionMethod : `POST`).toLowerCase();
 
@@ -140,6 +141,10 @@ export default class CrudService extends Service {
             },
             confirm: (modal) => {
                 const selected = modal.getOption('selected');
+
+                if (typeof options.onConfirm === 'function') {
+                    options.onConfirm(selected);
+                }
 
                 modal.startLoading();
 

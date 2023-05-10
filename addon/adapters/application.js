@@ -3,8 +3,10 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { storageFor } from 'ember-local-storage';
 import { get } from '@ember/object';
+import { isBlank } from '@ember/utils';
 import { dasherize } from '@ember/string';
 import { pluralize } from 'ember-inflector';
+import getUserOptions from '../utils/get-user-options';
 import config from 'ember-get-config';
 
 export default class ApplicationAdapter extends RESTAdapter {
@@ -88,9 +90,11 @@ export default class ApplicationAdapter extends RESTAdapter {
      */
     getHeaders() {
         const headers = {};
-
-        // check if user is authenticated
         const isAuthenticated = this.session.isAuthenticated;
+        const userId = this.session.data.authenticated.user;
+        const userOptions = getUserOptions();
+        const isSandbox = get(userOptions, `${userId}:sandbox`) === true;
+        const testKey = get(userOptions, `${userId}:testKey`);
 
         headers['Content-Type'] = 'application/json';
 
@@ -98,12 +102,12 @@ export default class ApplicationAdapter extends RESTAdapter {
             headers['Authorization'] = `Bearer ${this.session.data.authenticated.token}`;
         }
 
-        if (isAuthenticated && this.currentUser.getOption('sandbox') === true) {
+        if (isAuthenticated && isSandbox) {
             headers['Access-Console-Sandbox'] = true;
         }
 
-        if (isAuthenticated && this.currentUser.hasOption('testKey')) {
-            headers['Access-Console-Sandbox-Key'] = this.currentUser.getOption('testKey');
+        if (isAuthenticated && !isBlank(testKey)) {
+            headers['Access-Console-Sandbox-Key'] = testKey;
         }
 
         return headers;
@@ -115,7 +119,7 @@ export default class ApplicationAdapter extends RESTAdapter {
      * @return {Object}
      */
     refreshHeaders() {
-        const headers = this.getHeaders(true);
+        const headers = this.getHeaders();
 
         this.headers = headers;
 

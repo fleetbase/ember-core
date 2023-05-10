@@ -1,16 +1,15 @@
 import { decoratorWithRequiredParams } from '@ember-decorators/utils/decorator';
 import { assert } from '@ember/debug';
-import { get } from '@ember/object';
 import { getOwner } from '@ember/application';
 import { scheduleOnce } from '@ember/runloop';
 
-export default function fromStore(modelName, query = {}, options = {}) {
-    assert('The first argument of the @fromStore decorator must be a string', typeof modelName === 'string');
-    assert('The second argument of the @fromStore decorator must be an object', typeof query === 'object');
-    assert('The third argument of the @fromStore decorator must be an object', typeof options === 'object');
+export default function fetchFrom(endpoint, query = {}, options = {}) {
+    assert('The first argument of the @fetchFrom decorator must be a string', typeof endpoint === 'string');
+    assert('The second argument of the @fetchFrom decorator must be an object', typeof query === 'object');
+    assert('The third argument of the @fetchFrom decorator must be an object', typeof options === 'object');
 
     return decoratorWithRequiredParams(function (target, key, desc, params) {
-        const symbol = Symbol(`__${key}_fromStore`);
+        const symbol = Symbol(`__${key}_fetchFrom`);
 
         Object.defineProperty(target, symbol, {
             configurable: true,
@@ -39,11 +38,11 @@ export default function fromStore(modelName, query = {}, options = {}) {
 
             scheduleOnce('afterRender', this, function () {
                 const owner = getOwner(this);
-                const store = owner.lookup('service:store'); // Get the Ember Data store
+                const fetch = owner.lookup('service:fetch'); // Get the Fleetbase Fetch service
 
                 // Perform the query and set the result to the property
-                store
-                    .query(modelName, query, options)
+                fetch
+                    .get(endpoint, query, options)
                     .then((result) => {
                         this.set(key, result);
                     })
@@ -52,5 +51,5 @@ export default function fromStore(modelName, query = {}, options = {}) {
                     });
             });
         };
-    }, 'fromStore')(modelName, query, options);
+    }, 'fetchFrom')(endpoint, query, options);
 }

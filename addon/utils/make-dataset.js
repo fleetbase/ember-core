@@ -1,6 +1,6 @@
 import groupBy from './group-by';
 import { _range } from './range';
-import moment from 'moment';
+import { format, startOfMonth, endOfMonth, startOfDay, sub, addDays } from 'date-fns';
 
 function randomInt(min, max) {
     min = Math.ceil(min);
@@ -10,7 +10,10 @@ function randomInt(min, max) {
 
 function randomDateThisMonth() {
     const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), randomInt(0, 29), randomInt(0, 60));
+    const startDate = startOfMonth(now);
+    const endDate = endOfMonth(now);
+    const diffInDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
+    return addDays(startDate, randomInt(0, diffInDays));
 }
 
 function makeMockDataset(start, end, dateProperty = 'created_at') {
@@ -20,7 +23,7 @@ function makeMockDataset(start, end, dateProperty = 'created_at') {
         };
     });
     const grouped = groupBy(data, (record) => {
-        return moment(new Date(record[dateProperty])).format('MMMM, DD YYYY');
+        return format(new Date(record[dateProperty]), 'MMMM, dd yyyy');
     });
     const dataset = [];
 
@@ -39,7 +42,7 @@ export { makeMockDataset, randomInt, randomDateThisMonth, _range as range };
 export default function makeDataset(recordArray, filter = Boolean, dateProperty = 'created_at') {
     const filteredData = recordArray.filter(filter);
     const grouped = groupBy(filteredData, (record) => {
-        return moment(new Date(record[dateProperty])).format('MMMM, DD YYYY');
+        return format(new Date(record[dateProperty]), 'MMMM, dd yyyy');
     });
     const dataset = [];
 

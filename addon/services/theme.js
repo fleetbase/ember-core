@@ -8,11 +8,17 @@ import closeSidebar from '@fleetbase/ember-ui/utils/close-sidebar';
 
 export default class ThemeService extends Service {
     /**
-     * Inject the router service
+     * Lookup the correct router for the engine and or console.
      *
-     * @var {Service}
+     * @readonly
+     * @memberof ThemeService
      */
-    @service router;
+    get router() {
+        const owner = getOwner(this);
+        const router = owner.lookup('service:router');
+
+        return router;
+    }
 
     /**
      * Inject the current user service
