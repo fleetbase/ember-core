@@ -39,25 +39,6 @@ export default class CrudService extends Service {
     @service store;
 
     /**
-     * Closes a current modal then opens another modal action
-     *
-     * @void
-     */
-    @action next() {
-        const args = [...arguments];
-        const nextAction = args[0];
-
-        // shift off the action
-        args.shift();
-
-        this.modalsManager.done().then(() => {
-            if (typeof this[nextAction] === 'function') {
-                this[nextAction](...args);
-            }
-        });
-    }
-
-    /**
      * Generic deletion modal with options
      *
      * @param {Model} model
@@ -72,10 +53,32 @@ export default class CrudService extends Service {
             args: ['model'],
             model,
             confirm: (modal) => {
+                if (typeof options.onConfirm === 'function') {
+                    options.onConfirm(model);
+                }
+
                 modal.startLoading();
-                return model.destroyRecord().then((model) => {
-                    this.notifications.success(options.successNotification || `${model.name ? modelName + " '" + model.name + "'" : "'" + modelName + "'"} has been deleted.`);
-                });
+
+                return model
+                    .destroyRecord()
+                    .then((model) => {
+                        this.notifications.success(options.successNotification || `${model.name ? modelName + " '" + model.name + "'" : "'" + modelName + "'"} has been deleted.`);
+                        if (typeof options.onSuccess === 'function') {
+                            options.onSuccess(model);
+                        }
+                    })
+                    .catch((error) => {
+                        this.notifications.serverError(error);
+
+                        if (typeof options.onError === 'function') {
+                            options.onError(error, model);
+                        }
+                    })
+                    .finally(() => {
+                        if (typeof options.callback === 'function') {
+                            options.callback(model);
+                        }
+                    });
             },
             ...options,
         });

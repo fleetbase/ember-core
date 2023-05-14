@@ -1,5 +1,6 @@
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { later } from '@ember/runloop';
 
 export default class LoaderService extends Service {
     @tracked routesLoaded = [];
@@ -120,11 +121,15 @@ export default class LoaderService extends Service {
     remove(delay = 0) {
         const loaders = document.querySelectorAll(`.overloader`);
 
-        setTimeout(() => {
-            loaders.forEach((loader) => {
-                loader.remove();
-            });
-        }, delay);
+        later(
+            this,
+            () => {
+                loaders.forEach((loader) => {
+                    loader.remove();
+                });
+            },
+            delay
+        );
 
         return this;
     }

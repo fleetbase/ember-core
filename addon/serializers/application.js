@@ -101,13 +101,8 @@ export default class ApplicationSerializer extends RESTSerializer {
     serializeAttribute(snapshot, json, key, attributes) {
         const { modelName } = snapshot;
         const excludedKeys = ['name', 'meta', 'options', 'config', 'excluded_addons', 'translations', 'tags'];
-        const excludedModels = ['place'];
 
-        if (excludedModels.includes(modelName)) {
-            return super.serializeAttribute(snapshot, json, key, attributes);
-        }
-
-        if (snapshot.record.get('isNew') || snapshot.changedAttributes()[key] || isArray(snapshot.attr(key)) || excludedKeys.includes(key)) {
+        if (snapshot.record?.get('isNew') || snapshot.changedAttributes()[key] || isArray(snapshot.attr(key)) || excludedKeys.includes(key)) {
             return super.serializeAttribute(snapshot, json, key, attributes);
         }
     }
