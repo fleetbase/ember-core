@@ -43,7 +43,7 @@ export default function consoleUrl(path = '', queryParams = {}, subdomain = 'con
     url += parsedHost.host;
 
     if (parsedHost.port) {
-        url+= `:${parsedHost.port}`;
+        url += `:${parsedHost.port}`;
     }
 
     url += `/${path}`;

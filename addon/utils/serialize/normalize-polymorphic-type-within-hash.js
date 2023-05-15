@@ -11,7 +11,7 @@ export default function serializeNormalizePolymorphicTypeWithinHash(hash) {
         if (typeof attr === 'string' && attr.includes('_type') && encodeURI(hash[attr]).includes('%5C')) {
             const emberPolymorphicType = normalizePolymorphicType(hash[attr]);
             const polymorphicRelationType = attr.replace(`_type`, ``);
-
+            
             hash[attr] = emberPolymorphicType;
 
             // set the type of relationship using the polymorphic relation attr

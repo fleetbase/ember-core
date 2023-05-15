@@ -2,7 +2,6 @@ import RESTSerializer from '@ember-data/serializer/rest';
 import { isNone } from '@ember/utils';
 import { underscore } from '@ember/string';
 import { isArray } from '@ember/array';
-import normalizePolymorphicTypeWithinHash from '../utils/serialize/normalize-polymorphic-type-within-hash';
 
 export default class ApplicationSerializer extends RESTSerializer {
     /**
@@ -20,28 +19,6 @@ export default class ApplicationSerializer extends RESTSerializer {
      */
     keyForPolymorphicType(key, typeClass, method) {
         return `${underscore(key)}_type`;
-    }
-
-    /**
-     * You can use this method to customize how polymorphic objects are serialized. 
-     * By default the REST Serializer creates the key by appending `Type` to the attribute and value from the model's 
-     * camelcased model name.
-
-     * @method serializePolymorphicType
-     * @param {Snapshot} snapshot
-     * @param {Object} json
-     * @param {Object} relationship
-     */
-    serializePolymorphicType(snapshot, json, relationship) {
-        super.serializePolymorphicType(...arguments);
-
-        let key = relationship.key;
-        let typeKey = this.keyForPolymorphicType(key, relationship.type, 'serialize');
-        let belongsTo = snapshot.belongsTo(key);
-
-        if (relationship.meta?.options?.polymorphic === true && !isNone(belongsTo)) {
-            json[typeKey] = belongsTo.attr(typeKey);
-        }
     }
 
     /**
@@ -73,21 +50,6 @@ export default class ApplicationSerializer extends RESTSerializer {
         });
 
         return json;
-    }
-
-    /**
-     * Normalizes a part of the JSON payload returned by the server.
-     *
-     * @method normalize
-     * @param {Model} modelClass
-     * @param {Object} resourceHash
-     * @param {String} prop
-     * @return {Object}
-     */
-    normalize(model, hash, prop) {
-        hash = normalizePolymorphicTypeWithinHash(hash);
-
-        return super.normalize(model, hash, prop);
     }
 
     /**
