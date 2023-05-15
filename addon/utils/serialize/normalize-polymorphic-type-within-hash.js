@@ -19,8 +19,6 @@ export default function serializeNormalizePolymorphicTypeWithinHash(hash) {
                 if (hash[polymorphicRelationType].type) {
                     set(hash, `${polymorphicRelationType}._type`, hash[polymorphicRelationType].type);
                 }
-
-                set(hash, `${polymorphicRelationType}.type`, emberPolymorphicType);
             }
         }
     }
