@@ -1,16 +1,22 @@
 {
     "name": "@fleetbase/ember-core",
-    "version": "0.0.0",
-    "description": "The default blueprint for ember-cli addons.",
+    "version": "0.0.1",
+    "description": "Provides all the core services, decorators and utilities for building a Fleetbase extension for the Console.",
     "keywords": [
-        "ember-addon"
+        "fleetbase-extension",
+        "fleetbase-core",
+        "fleetbase-services",
+        "fleetbase",
+        "ember-addon",
+        "ember-engine"
     ],
-    "repository": "",
+    "repository": "https://github.com/fleetbase/ember-core",
     "license": "MIT",
-    "author": "",
+    "author": "Fleetbase Pte Ltd <hello@fleetbase.io>",
     "directories": {
-        "doc": "doc",
-        "test": "tests"
+        "app": "app",
+        "addon": "addon",
+        "tests": "tests"
     },
     "scripts": {
         "build": "ember build --environment=production",
