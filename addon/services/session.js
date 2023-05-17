@@ -92,7 +92,7 @@ export default class SessionService extends SimpleAuthSessionService {
      *
      * @void
      */
-    async asyncloadCurrentUser() {
+    async loadCurrentUser() {
         try {
             const user = await this.currentUser.load();
 
@@ -102,7 +102,7 @@ export default class SessionService extends SimpleAuthSessionService {
 
             return user;
         } catch (error) {
-            await this.invalidateWithLoader(error.message || `Session authentication failed...`);
+            await this.invalidateWithLoader(error.message ?? `Session authentication failed...`);
         }
     }
 
@@ -112,7 +112,7 @@ export default class SessionService extends SimpleAuthSessionService {
      * @param {Transition} transition
      * @void
      */
-    loadCurrentUser(transition = null) {
+    promiseCurrentUser(transition = null) {
         const invalidateWithLoader = this.invalidateWithLoader.bind(this);
 
         return new Promise((resolve, reject) => {
@@ -134,7 +134,7 @@ export default class SessionService extends SimpleAuthSessionService {
                         transition.abort();
                     }
 
-                    reject(invalidateWithLoader(error.message || `Session authentication failed...`));
+                    reject(invalidateWithLoader(error.message ?? `Session authentication failed...`));
                 });
         });
     }
