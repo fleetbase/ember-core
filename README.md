@@ -1,6 +1,6 @@
 # @fleetbase/ember-core
 
-[Short description of the addon.]
+Ember Core Services, Utilities and Framework for building Fleetbase Extensions in the Console
 
 
 ## Compatibility
