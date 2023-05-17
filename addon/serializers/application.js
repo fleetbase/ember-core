@@ -23,28 +23,6 @@ export default class ApplicationSerializer extends RESTSerializer {
     }
 
     /**
-     * You can use this method to customize how polymorphic objects are serialized. 
-     * By default the REST Serializer creates the key by appending `Type` to the attribute and value from the model's 
-     * camelcased model name.
-
-     * @method serializePolymorphicType
-     * @param {Snapshot} snapshot
-     * @param {Object} json
-     * @param {Object} relationship
-     */
-    serializePolymorphicType(snapshot, json, relationship) {
-        super.serializePolymorphicType(...arguments);
-
-        let key = relationship.key;
-        let typeKey = this.keyForPolymorphicType(key, relationship.type, 'serialize');
-        let belongsTo = snapshot.belongsTo(key);
-
-        if (relationship.meta?.options?.polymorphic === true && !isNone(belongsTo)) {
-            json[typeKey] = belongsTo.attr(typeKey);
-        }
-    }
-
-    /**
      * Customize serializer so that any attributes that are instances of Models or objects
      * that are to accept and ID get serialized into the id only
      *
@@ -101,13 +79,8 @@ export default class ApplicationSerializer extends RESTSerializer {
     serializeAttribute(snapshot, json, key, attributes) {
         const { modelName } = snapshot;
         const excludedKeys = ['name', 'meta', 'options', 'config', 'excluded_addons', 'translations', 'tags'];
-        const excludedModels = ['place'];
 
-        if (excludedModels.includes(modelName)) {
-            return super.serializeAttribute(snapshot, json, key, attributes);
-        }
-
-        if (snapshot.record.get('isNew') || snapshot.changedAttributes()[key] || isArray(snapshot.attr(key)) || excludedKeys.includes(key)) {
+        if (snapshot.record?.get('isNew') || snapshot.changedAttributes()[key] || isArray(snapshot.attr(key)) || excludedKeys.includes(key)) {
             return super.serializeAttribute(snapshot, json, key, attributes);
         }
     }

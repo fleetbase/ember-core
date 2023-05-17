@@ -39,25 +39,6 @@ export default class CrudService extends Service {
     @service store;
 
     /**
-     * Closes a current modal then opens another modal action
-     *
-     * @void
-     */
-    @action next() {
-        const args = [...arguments];
-        const nextAction = args[0];
-
-        // shift off the action
-        args.shift();
-
-        this.modalsManager.done().then(() => {
-            if (typeof this[nextAction] === 'function') {
-                this[nextAction](...args);
-            }
-        });
-    }
-
-    /**
      * Generic deletion modal with options
      *
      * @param {Model} model
@@ -65,17 +46,39 @@ export default class CrudService extends Service {
      * @void
      */
     @action delete(model, options = {}) {
-        const modelName = getModelName(model);
+        const modelName = getModelName(model, options?.modelName, { humanize: true, capitalizeWords: true });
 
         this.modalsManager.confirm({
-            title: `Are you sure to delete this ${options.modelName || humanize(modelName).toLowerCase()}?`,
+            title: `Are you sure to delete this ${modelName}?`,
             args: ['model'],
             model,
             confirm: (modal) => {
+                if (typeof options.onConfirm === 'function') {
+                    options.onConfirm(model);
+                }
+
                 modal.startLoading();
-                return model.destroyRecord().then((model) => {
-                    this.notifications.success(options.successNotification || `'${options.modelName || model.name || humanize(modelName)}' has been deleted.`);
-                });
+
+                return model
+                    .destroyRecord()
+                    .then((model) => {
+                        this.notifications.success(options.successNotification || `${model.name ? modelName + " '" + model.name + "'" : "'" + modelName + "'"} has been deleted.`);
+                        if (typeof options.onSuccess === 'function') {
+                            options.onSuccess(model);
+                        }
+                    })
+                    .catch((error) => {
+                        this.notifications.serverError(error);
+
+                        if (typeof options.onError === 'function') {
+                            options.onError(error, model);
+                        }
+                    })
+                    .finally(() => {
+                        if (typeof options.callback === 'function') {
+                            options.callback(model);
+                        }
+                    });
             },
             ...options,
         });
@@ -94,16 +97,17 @@ export default class CrudService extends Service {
         }
 
         const firstModel = first(selected);
-        const modelName = getModelName(firstModel, options?.modelName);
+        const modelName = getModelName(firstModel, options?.modelName, { humanize: true, capitalizeWords: true });
 
         // make sure all are the same type
-        selected = selected.filter((m) => getModelName(m) === modelName);
+        selected = selected.filter((m) => getModelName(m) === getModelName(firstModel));
 
         return this.bulkAction('delete', selected, {
             acceptButtonScheme: 'danger',
             acceptButtonIcon: 'trash',
             actionPath: `${dasherize(pluralize(modelName))}/bulk-delete`,
             actionMethod: `DELETE`,
+            modelName,
             ...options,
         });
     }
@@ -121,7 +125,7 @@ export default class CrudService extends Service {
         }
 
         const firstModel = first(selected);
-        const modelName = getModelName(firstModel);
+        const modelName = getModelName(firstModel, options?.modelName, { humanize: true, capitalizeWords: true });
         const count = selected.length;
         const actionMethod = (typeof options.actionMethod === 'string' ? options.actionMethod : `POST`).toLowerCase();
 
@@ -140,6 +144,10 @@ export default class CrudService extends Service {
             },
             confirm: (modal) => {
                 const selected = modal.getOption('selected');
+
+                if (typeof options.onConfirm === 'function') {
+                    options.onConfirm(selected);
+                }
 
                 modal.startLoading();
 

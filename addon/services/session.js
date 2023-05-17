@@ -1,6 +1,7 @@
 import SimpleAuthSessionService from 'ember-simple-auth/services/session';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
+import { later } from '@ember/runloop';
 
 export default class SessionService extends SimpleAuthSessionService {
     /**
@@ -32,6 +33,24 @@ export default class SessionService extends SimpleAuthSessionService {
     @tracked redirectTo = 'console';
 
     /**
+     * If session is onboarding a user.
+     *
+     * @var {String}
+     */
+    @tracked _isOnboarding = false;
+
+    /**
+     * Set this as onboarding.
+     *
+     * @return {SessionService}
+     */
+    isOnboarding() {
+        this._isOnboarding = true;
+
+        return this;
+    }
+
+    /**
      * Manually authenticate user
      */
     manuallyAuthenticate(authToken) {
@@ -55,11 +74,15 @@ export default class SessionService extends SimpleAuthSessionService {
         this.router
             .transitionTo(this.redirectTo)
             .finally(() => {
-                setTimeout(() => {
-                    // remove node from body
-                    document.body.removeChild(loaderNode);
-                    this.isLoaderNodeOpen = false;
-                }, 600 * 6);
+                later(
+                    this,
+                    () => {
+                        // remove node from body
+                        document.body.removeChild(loaderNode);
+                        this.isLoaderNodeOpen = false;
+                    },
+                    600 * 6
+                );
             })
             .catch((error) => console.log(error));
     }
@@ -69,7 +92,7 @@ export default class SessionService extends SimpleAuthSessionService {
      *
      * @void
      */
-    async asyncloadCurrentUser() {
+    async loadCurrentUser() {
         try {
             const user = await this.currentUser.load();
 
@@ -79,7 +102,7 @@ export default class SessionService extends SimpleAuthSessionService {
 
             return user;
         } catch (error) {
-            await this.invalidateWithLoader(error.message || `Session authentication failed...`);
+            await this.invalidateWithLoader(error.message ?? `Session authentication failed...`);
         }
     }
 
@@ -89,7 +112,7 @@ export default class SessionService extends SimpleAuthSessionService {
      * @param {Transition} transition
      * @void
      */
-    loadCurrentUser(transition = null) {
+    promiseCurrentUser(transition = null) {
         const invalidateWithLoader = this.invalidateWithLoader.bind(this);
 
         return new Promise((resolve, reject) => {
@@ -111,7 +134,7 @@ export default class SessionService extends SimpleAuthSessionService {
                         transition.abort();
                     }
 
-                    reject(invalidateWithLoader(error.message || `Session authentication failed...`));
+                    reject(invalidateWithLoader(error.message ?? `Session authentication failed...`));
                 });
         });
     }
@@ -155,10 +178,14 @@ export default class SessionService extends SimpleAuthSessionService {
         this.isLoaderNodeOpen = false;
 
         return this.session.invalidate().then(() => {
-            setTimeout(() => {
-                document.body.removeChild(loaderNode);
-                this.isLoaderNodeOpen = false;
-            }, 600);
+            later(
+                this,
+                () => {
+                    document.body.removeChild(loaderNode);
+                    this.isLoaderNodeOpen = false;
+                },
+                600
+            );
         });
     }
 

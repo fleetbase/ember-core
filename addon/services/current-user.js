@@ -1,11 +1,13 @@
 import Service from '@ember/service';
+import Evented from '@ember/object/evented';
 import { inject as service } from '@ember/service';
 import { dasherize } from '@ember/string';
 import { computed, get, action } from '@ember/object';
+import { isBlank } from '@ember/utils';
 import { alias } from '@ember/object/computed';
 import { storageFor } from 'ember-local-storage';
 
-export default class CurrentUserService extends Service {
+export default class CurrentUserService extends Service.extend(Evented) {
     /**
      * Inject the `session` service
      *
@@ -92,6 +94,7 @@ export default class CurrentUserService extends Service {
         if (this.session.isAuthenticated) {
             let user = await this.store.findRecord('user', 'me');
             this.set('user', user);
+            this.trigger('user.loaded', user);
         }
     }
 
@@ -110,6 +113,7 @@ export default class CurrentUserService extends Service {
                     .then((user) => {
                         // set the `current user`
                         this.set('user', user);
+                        this.trigger('user.loaded', user);
 
                         // set environment from user option
                         this.theme.setEnvironment();
@@ -210,10 +214,11 @@ export default class CurrentUserService extends Service {
      * @param {String} key
      * @return {Mixed}
      */
-    @action getOption(key) {
+    @action getOption(key, defaultValue = null) {
         key = `${this.optionsPrefix}${dasherize(key)}`;
 
-        return this.options.get(key);
+        const value = this.options.get(key);
+        return value !== undefined ? value : defaultValue;
     }
 
     /**
@@ -240,5 +245,15 @@ export default class CurrentUserService extends Service {
      */
     @action hasOption(key) {
         return this.getOption(key) !== undefined;
+    }
+
+    /**
+     * Checks if an option exists in users local storage
+     *
+     * @param {String} key
+     * @return {Boolean}
+     */
+    @action filledOption(key) {
+        return !isBlank(this.getOption(key));
     }
 }

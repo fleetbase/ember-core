@@ -13,7 +13,7 @@ export default class FiltersService extends Service {
     @tracked pendingQueryParams = {};
     @tracked managedQueryParams = ['limit', 'offset', 'sort', 'query', 'page', 'layout', 'view'];
 
-    @computed('pendingQueryParams') get activeFilters() {
+    @computed('managedQueryParams', 'pendingQueryParams') get activeFilters() {
         const queryParams = this.getQueryParams();
         const activeQueryParams = [];
 
@@ -141,21 +141,21 @@ export default class FiltersService extends Service {
     @action lookupCurrentRoute() {
         const owner = getOwner(this); // ApplicationInstance
         const router = owner.lookup('router:main'); // Router
-        const routerMicrolib = get(router, '_routerMicrolib'); // PrivateRouter
-        const currentRouteInfos = get(routerMicrolib, 'currentRouteInfos'); // Array
+        const routerMicrolib = router._routerMicrolib; // PrivateRouter
+        const currentRouteInfos = routerMicrolib.currentRouteInfos; // Array
         const currentRouteInfo = currentRouteInfos[currentRouteInfos.length - 1]; // ResolvedRouteInfo
 
-        return get(currentRouteInfo, '_route');
+        return currentRouteInfo._route;
     }
 
     @action getRouteQueryParams() {
         const currentRoute = this.lookupCurrentRoute();
-        return get(currentRoute, 'queryParams');
+        return currentRoute.queryParams;
     }
 
     @action getQueryParams() {
         const currentRoute = this.lookupCurrentRoute();
-        const currentRouteQueryParams = Object.keys(get(currentRoute, 'queryParams'));
+        const currentRouteQueryParams = Object.keys(currentRoute.queryParams);
         const queryParams = {};
 
         for (let i = 0; i < currentRouteQueryParams.length; i++) {
