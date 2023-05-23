@@ -4,7 +4,6 @@ import { inject as service } from '@ember/service';
 import { dasherize } from '@ember/string';
 import { isArray } from '@ember/array';
 import { getOwner } from '@ember/application';
-import closeSidebar from '@fleetbase/ember-ui/utils/close-sidebar';
 
 export default class ThemeService extends Service {
     /**
@@ -108,7 +107,6 @@ export default class ThemeService extends Service {
      * @void
      */
     routeWillChange() {
-        closeSidebar();
         this.removeRoutebodyClassNames(this.currentRouteBodyClasses);
     }
 
