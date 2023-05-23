@@ -14,6 +14,7 @@ export default function last(arr, n = 1) {
     }
 
     let res = new Array(n);
+    let len = arr.length;
 
     while (n--) {
         res[n] = arr[--len];

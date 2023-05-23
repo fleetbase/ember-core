@@ -1,7 +1,7 @@
 import Model from '@ember-data/model';
 import { isArray } from '@ember/array';
 import { get } from '@ember/object';
-import { isEmpty, tryInvoke } from '@ember/utils';
+import { isEmpty } from '@ember/utils';
 
 const _isEmpty = (value) => {
     let empty = isEmpty(value);

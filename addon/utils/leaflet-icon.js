@@ -1,5 +1,3 @@
-/* global L */
-
 /**
  * Represents an icon to provide when creating a marker.
  * More information about its possible options [here](https://leafletjs.com/reference-1.7.1.html#icon-option).

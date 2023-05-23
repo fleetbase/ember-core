@@ -1,4 +1,3 @@
-import isModel from '../is-model';
 import { get, setProperties } from '@ember/object';
 import { isBlank } from '@ember/utils';
 

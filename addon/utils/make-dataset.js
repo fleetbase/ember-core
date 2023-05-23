@@ -1,6 +1,6 @@
 import groupBy from './group-by';
 import { _range } from './range';
-import { format, startOfMonth, endOfMonth, startOfDay, sub, addDays } from 'date-fns';
+import { format, startOfMonth, endOfMonth, addDays } from 'date-fns';
 
 function randomInt(min, max) {
     min = Math.ceil(min);

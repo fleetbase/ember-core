@@ -1,6 +1,5 @@
 import Base from 'ember-simple-auth/authenticators/base';
 import { inject as service } from '@ember/service';
-import { get } from '@ember/object';
 
 export default class FleetbaseAuthenticator extends Base {
     /**

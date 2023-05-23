@@ -148,7 +148,7 @@ export default function download(data, strFileName, strMimeType) {
 
         // Blob but not URL support:
         reader = new FileReader();
-        reader.onload = function (e) {
+        reader.onload = function () {
             saver(this.result);
         };
         reader.readAsDataURL(blob);

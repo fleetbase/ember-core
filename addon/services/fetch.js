@@ -1,7 +1,7 @@
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { get, set, setProperties } from '@ember/object';
+import { get, set } from '@ember/object';
 import { isBlank } from '@ember/utils';
 import { dasherize } from '@ember/string';
 import { isArray } from '@ember/array';
