@@ -18,7 +18,7 @@ export default class ApplicationSerializer extends RESTSerializer {
      *
      * @var {String}
      */
-    keyForPolymorphicType(key, typeClass, method) {
+    keyForPolymorphicType(key) {
         return `${underscore(key)}_type`;
     }
 
@@ -77,7 +77,6 @@ export default class ApplicationSerializer extends RESTSerializer {
      * @param {Array} attributes
      */
     serializeAttribute(snapshot, json, key, attributes) {
-        const { modelName } = snapshot;
         const excludedKeys = ['name', 'meta', 'options', 'config', 'excluded_addons', 'translations', 'tags'];
 
         if (snapshot.record?.get('isNew') || snapshot.changedAttributes()[key] || isArray(snapshot.attr(key)) || excludedKeys.includes(key)) {

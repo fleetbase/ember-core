@@ -37,7 +37,7 @@ jobs:
       run: pnpm run build
 
   npm_publish:
-    needs: test
+    needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
@@ -60,4 +60,4 @@ jobs:
       run: pnpm run build
 
     - name: Publish
-      run: pnpm publish --access public
+      run: pnpm publish --access public --auth ${secrets.NPM_AUTH_TOKEN}

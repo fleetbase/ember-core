@@ -1,6 +1,5 @@
 import { decoratorWithRequiredParams } from '@ember-decorators/utils/decorator';
 import { assert } from '@ember/debug';
-import { get } from '@ember/object';
 import { getOwner } from '@ember/application';
 import { scheduleOnce } from '@ember/runloop';
 
@@ -9,7 +8,7 @@ export default function fromStore(modelName, query = {}, options = {}) {
     assert('The second argument of the @fromStore decorator must be an object', typeof query === 'object');
     assert('The third argument of the @fromStore decorator must be an object', typeof options === 'object');
 
-    return decoratorWithRequiredParams(function (target, key, desc, params) {
+    return decoratorWithRequiredParams(function (target, key) {
         const symbol = Symbol(`__${key}_fromStore`);
 
         Object.defineProperty(target, symbol, {

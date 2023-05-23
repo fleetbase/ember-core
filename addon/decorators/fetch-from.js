@@ -8,7 +8,7 @@ export default function fetchFrom(endpoint, query = {}, options = {}) {
     assert('The second argument of the @fetchFrom decorator must be an object', typeof query === 'object');
     assert('The third argument of the @fetchFrom decorator must be an object', typeof options === 'object');
 
-    return decoratorWithRequiredParams(function (target, key, desc, params) {
+    return decoratorWithRequiredParams(function (target, key) {
         const symbol = Symbol(`__${key}_fetchFrom`);
 
         Object.defineProperty(target, symbol, {

@@ -15,7 +15,25 @@ module.exports = {
     env: {
         browser: true,
     },
-    rules: {},
+    globals: {
+        module: 'readonly',
+        socketClusterClient: 'readonly',
+        L: 'readonly',
+        process: 'readonly',
+        window: 'readonly',
+        require: 'readonly',
+    },
+    rules: {
+        'ember/no-array-prototype-extensions': 'off',
+        'ember/no-computed-properties-in-native-classes': 'off',
+        'ember/no-classic-classes': 'off',
+        'ember/no-empty-glimmer-component-classes': 'off',
+        'ember/no-get': 'off',
+        'ember/classic-decorator-no-classic-methods': 'off',
+        'ember/no-incorrect-calls-with-inline-anonymous-functions': 'off',
+        'ember/no-private-routing-service': 'off',
+        'no-useless-escape': 'off',
+    },
     overrides: [
         // node files
         {

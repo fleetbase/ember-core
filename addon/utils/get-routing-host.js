@@ -1,14 +1,9 @@
 import { get } from '@ember/object';
 import { isArray } from '@ember/array';
 import { isBlank } from '@ember/utils';
-// import { getOwner } from '@ember/application';
 import config from '@fleetbase/console/config/environment';
 
 const isRoutingInCountry = (country, payload, waypoints = []) => {
-    // const owner = getOwner(this);
-    // const currentUser = owner.lookup(`service:current-user`);
-    // const whois = currentUser.getOption('whois');
-
     if (isBlank(payload)) {
         payload = {};
     }

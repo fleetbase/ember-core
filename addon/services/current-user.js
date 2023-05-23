@@ -125,7 +125,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
 
                         resolve(user);
                     })
-                    .catch((error) => {
+                    .catch(() => {
                         reject(NoUserAuthenticatedError);
                     });
             } else {
