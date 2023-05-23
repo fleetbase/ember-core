@@ -3,9 +3,10 @@ name: Ember CI
 on:
   push:
     branches: [ main ]
+    tags:
+      - 'refs/tags/*' # Listen for tag events
   pull_request:
     branches: [ main ]
-
 jobs:
   build:
     runs-on: ubuntu-latest
