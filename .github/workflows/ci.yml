@@ -60,4 +60,4 @@ jobs:
       run: pnpm run build
 
     - name: Publish
-      run: pnpm publish --access public
+      run: pnpm publish --access public --auth ${secrets.NPM_AUTH_TOKEN}
