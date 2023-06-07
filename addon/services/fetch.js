@@ -17,6 +17,10 @@ import download from '../utils/download';
 import getUserOptions from '../utils/get-user-options';
 import fetch from 'fetch';
 
+if (isBlank(config.API.host)) {
+    config.API.host = `${window.location.protocol}//${window.location.hostname}:8000`;
+}
+
 export default class FetchService extends Service {
     /**
      * Creates an instance of FetchService.

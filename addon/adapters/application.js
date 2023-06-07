@@ -9,6 +9,10 @@ import { pluralize } from 'ember-inflector';
 import getUserOptions from '../utils/get-user-options';
 import config from 'ember-get-config';
 
+if (isBlank(config.API.host)) {
+    config.API.host = `${window.location.protocol}//${window.location.hostname}:8000`;
+}
+
 export default class ApplicationAdapter extends RESTAdapter {
     /**
      * Inject the `session` service
