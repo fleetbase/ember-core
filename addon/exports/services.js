@@ -3,6 +3,7 @@ const services = [
     'session',
     'current-user',
     'fetch',
+    'socket',
     'media',
     'app-cache',
     'url-search-params',

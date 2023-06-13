@@ -1,6 +1,6 @@
 {
     "name": "@fleetbase/ember-core",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "description": "Provides all the core services, decorators and utilities for building a Fleetbase extension for the Console.",
     "keywords": [
         "fleetbase-extension",

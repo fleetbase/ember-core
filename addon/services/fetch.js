@@ -257,9 +257,12 @@ export default class FetchService extends Service {
      */
     request(path, method = 'GET', data = {}, options = {}) {
         const headers = assign(this.getHeaders(), options.headers ?? {});
+        const host = options.host ?? this.host;
+        const namespace = options.namespace ?? this.namespace;
+        const url = options.externalRequest === true ? path : [host, namespace, path].filter(Boolean).join('/');
 
         return new Promise((resolve, reject) => {
-            return fetch(options.externalRequest === true ? path : `${options.host || this.host}/${options.namespace || this.namespace}/${path}`, {
+            return fetch(url, {
                 method,
                 mode: options.mode || 'cors',
                 credentials: options.credentials || this.credentials,
@@ -268,7 +271,6 @@ export default class FetchService extends Service {
             })
                 .then(this.parseJSON)
                 .then((response) => {
-                    // console.log('[fetch:response]', response);
                     if (response.ok) {
                         if (options.normalizeToEmberData) {
                             const normalized = this.normalizeModel(response.json, options.normalizeModelType);
