@@ -1,5 +1,5 @@
 export default function toBoolean(value) {
-    switch(value) {
+    switch (value) {
         case 'true':
         case '1':
         case 1:
