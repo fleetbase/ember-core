@@ -1,7 +1,6 @@
 import RESTSerializer from '@ember-data/serializer/rest';
 import { isNone } from '@ember/utils';
 import { underscore } from '@ember/string';
-import { isArray } from '@ember/array';
 import normalizePolymorphicTypeWithinHash from '../utils/serialize/normalize-polymorphic-type-within-hash';
 
 export default class ApplicationSerializer extends RESTSerializer {
@@ -66,21 +65,5 @@ export default class ApplicationSerializer extends RESTSerializer {
         hash = normalizePolymorphicTypeWithinHash(hash);
 
         return super.normalize(model, hash, prop);
-    }
-
-    /**
-     * We only want to save dirty/changed model attributes
-     *
-     * @param {Snapshot} snapshot
-     * @param {Object} json
-     * @param {String} key
-     * @param {Array} attributes
-     */
-    serializeAttribute(snapshot, json, key, attributes) {
-        const excludedKeys = ['name', 'meta', 'options', 'config', 'excluded_addons', 'translations', 'tags'];
-
-        if (snapshot.record?.get('isNew') || snapshot.changedAttributes()[key] || isArray(snapshot.attr(key)) || excludedKeys.includes(key)) {
-            return super.serializeAttribute(snapshot, json, key, attributes);
-        }
     }
 }
