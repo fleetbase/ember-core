@@ -156,6 +156,9 @@ devDependencies:
   qunit-dom:
     specifier: ^2.0.0
     version: 2.0.0
+  resolve:
+    specifier: ^1.22.2
+    version: 1.22.2
   webpack:
     specifier: ^5.74.0
     version: 5.74.0
