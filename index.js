@@ -1,5 +1,6 @@
 'use strict';
 const path = require('path');
+const resolve = require('resolve');
 
 module.exports = {
     name: require('./package').name,
@@ -20,14 +21,12 @@ module.exports = {
             };
         }
 
-        const importJs = (module, file, options) => {
-            const modulePath = path.dirname(require.resolve(module));
-            this.import(`${modulePath}/${file}`, options);
-        };
-
         // import socketcluster for use in all fleetbase engines
         // this will become globally available as socketClusterClient
-        importJs('socketcluster-client', 'socketcluster-client.min.js');
-        // app.import('node_modules/socketcluster-client/socketcluster-client.min.js');
+        let socketClusterMainPath = resolve.sync('socketcluster-client', { basedir: app.project.root });
+        let socketClusterDir = path.dirname(socketClusterMainPath);
+        let socketClusterMinPath = path.join(socketClusterDir, 'socketcluster-client.min.js');
+
+        app.import(socketClusterMinPath);
     },
 };
