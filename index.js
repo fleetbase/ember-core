@@ -1,6 +1,7 @@
 'use strict';
+const Funnel = require('broccoli-funnel');
+const MergeTrees = require('broccoli-merge-trees');
 const path = require('path');
-const resolve = require('resolve');
 
 module.exports = {
     name: require('./package').name,
@@ -20,13 +21,20 @@ module.exports = {
                 useSessionSetupMethod: true,
             };
         }
+    },
 
-        // import socketcluster for use in all fleetbase engines
-        // this will become globally available as socketClusterClient
-        let socketClusterMainPath = resolve.sync('socketcluster-client', { basedir: app.project.root });
-        let socketClusterDir = path.dirname(socketClusterMainPath);
-        let socketClusterMinPath = path.join(socketClusterDir, 'socketcluster-client.min.js');
+    treeForPublic: function () {
+        const publicTree = this._super.treeForPublic.apply(this, arguments);
+        const trees = [];
 
-        app.import(socketClusterMinPath);
+        trees.push(
+            new Funnel(path.dirname(require.resolve('socketcluster-client')), {
+                files: ['socketcluster-client.min.js'],
+                destDir: '/assets',
+            })
+        );
+
+        // Merge the addon tree with the existing tree
+        return publicTree ? new MergeTrees([publicTree, ...trees], { overwrite: true }) : new MergeTrees([...trees], { overwrite: true });
     },
 };
