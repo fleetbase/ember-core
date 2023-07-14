@@ -14,6 +14,7 @@ const services = [
     'notifications',
     'hostRouter',
     'fileQueue',
+    'universe',
 ];
 
 export default services;
