@@ -99,14 +99,13 @@ export default class ApplicationAdapter extends RESTAdapter {
         const isSandbox = get(userOptions, `${userId}:sandbox`) === true;
         const testKey = get(userOptions, `${userId}:testKey`);
         let isAuthenticated = this.session.isAuthenticated;
-        let { user, token } = this.session.data.authenticated;
+        let { token } = this.session.data.authenticated;
 
         // If the session data is not yet available, check localStorage
         if (!isAuthenticated) {
             const localStorageSession = JSON.parse(window.localStorage.getItem('ember_simple_auth-session'));
             if (localStorageSession) {
                 const { authenticated } = localStorageSession;
-                user = authenticated.user;
                 token = authenticated.token;
 
                 // Check isAuthenticated again

@@ -36,7 +36,7 @@ export default class UniverseService extends Service {
      * @memberof UniverseService
      * @returns {Array} Array of administrative menu items
      */
-    @computed('adminRegistry.menuItems.@each') get adminMenuItems() {
+    @computed('adminRegistry.menuItems.[]') get adminMenuItems() {
         return this.adminRegistry.menuItems;
     }
 
@@ -49,7 +49,7 @@ export default class UniverseService extends Service {
      * @memberof UniverseService
      * @returns {Array} Array of administrative menu panels
      */
-    @computed('adminRegistry.menuPanels.@each') get adminMenuPanels() {
+    @computed('adminRegistry.menuPanels.[]') get adminMenuPanels() {
         return this.adminRegistry.menuPanels;
     }
 
@@ -62,7 +62,7 @@ export default class UniverseService extends Service {
      * @memberof UniverseService
      * @returns {Array} Array of administrative menu items
      */
-    @computed('settingsRegistry.menuItems.@each') get settingsMenuItems() {
+    @computed('settingsRegistry.menuItems.[]') get settingsMenuItems() {
         return this.settingsRegistry.menuItems;
     }
 
@@ -75,7 +75,7 @@ export default class UniverseService extends Service {
      * @memberof UniverseService
      * @returns {Array} Array of administrative menu panels
      */
-    @computed('settingsRegistry.menuPanels.@each') get settingsMenuPanels() {
+    @computed('settingsRegistry.menuPanels.[]') get settingsMenuPanels() {
         return this.settingsRegistry.menuPanels;
     }
 
@@ -359,7 +359,7 @@ export default class UniverseService extends Service {
      */
     registerOrganizationMenuItem(title, options = {}) {
         const route = this._getOption(options, 'route', 'console.virtual');
-        const index = this._getOption(options, 'index', 0);
+        options.index = this._getOption(options, 'index', 0);
         options.section = this._getOption(options, 'section', 'settings');
 
         this.organizationMenuItems.pushObject(this._createMenuItem(title, route, options));
@@ -377,7 +377,7 @@ export default class UniverseService extends Service {
      */
     registerUserMenuItem(title, options = {}) {
         const route = this._getOption(options, 'route', 'console.virtual');
-        const index = this._getOption(options, 'index', 0);
+        options.index = this._getOption(options, 'index', 0);
         options.section = this._getOption(options, 'section', 'account');
 
         this.userMenuItems.pushObject(this._createMenuItem(title, route, options));
@@ -430,6 +430,7 @@ export default class UniverseService extends Service {
             priority,
             items,
             component,
+            componentParams,
             slug,
             queryParams,
             view,
