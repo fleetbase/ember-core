@@ -13,6 +13,7 @@ const hostServices = [
     'crud',
     'notifications',
     'fileQueue',
+    'universe',
     { hostRouter: 'router' },
 ];
 

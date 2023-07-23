@@ -94,16 +94,29 @@ export default class ApplicationAdapter extends RESTAdapter {
      */
     getHeaders() {
         const headers = {};
-        const isAuthenticated = this.session.isAuthenticated;
         const userId = this.session.data.authenticated.user;
         const userOptions = getUserOptions();
         const isSandbox = get(userOptions, `${userId}:sandbox`) === true;
         const testKey = get(userOptions, `${userId}:testKey`);
+        let isAuthenticated = this.session.isAuthenticated;
+        let { token } = this.session.data.authenticated;
+
+        // If the session data is not yet available, check localStorage
+        if (!isAuthenticated) {
+            const localStorageSession = JSON.parse(window.localStorage.getItem('ember_simple_auth-session'));
+            if (localStorageSession) {
+                const { authenticated } = localStorageSession;
+                token = authenticated.token;
+
+                // Check isAuthenticated again
+                isAuthenticated = !!token;
+            }
+        }
 
         headers['Content-Type'] = 'application/json';
 
         if (isAuthenticated) {
-            headers['Authorization'] = `Bearer ${this.session.data.authenticated.token}`;
+            headers['Authorization'] = `Bearer ${token}`;
         }
 
         if (isAuthenticated && isSandbox) {
