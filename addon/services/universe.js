@@ -101,7 +101,7 @@ export default class UniverseService extends Service {
             return this.router.transitionTo(route, slug, view);
         }
 
-        return this.router.transitionTo(route, slug);
+        return this.router.transitionTo(route, slug, 'index');
     }
 
     /**
@@ -127,6 +127,12 @@ export default class UniverseService extends Service {
             for (let i = 0; i < registry.menuItems.length; i++) {
                 const menuItem = registry.menuItems[i];
 
+                // no view hack
+                if (menuItem && menuItem.slug === slug && menuItem.view === null && view === 'index') {
+                    component = menuItem.component;
+                    break;
+                }
+
                 if (menuItem && menuItem.slug === slug && menuItem.view === view) {
                     component = menuItem.component;
                     break;
@@ -140,6 +146,12 @@ export default class UniverseService extends Service {
                 if (menuPanel && isArray(menuPanel.items)) {
                     for (let j = 0; j < menuPanel.items.length; j++) {
                         const menuItem = menuPanel.items[j];
+
+                        // no view hack
+                        if (menuItem && menuItem.slug === slug && menuItem.view === null && view === 'index') {
+                            component = menuItem.component;
+                            break;
+                        }
 
                         if (menuItem && menuItem.slug === slug && menuItem.view === view) {
                             component = menuItem.component;
@@ -176,6 +188,12 @@ export default class UniverseService extends Service {
             for (let i = 0; i < registry.menuItems.length; i++) {
                 const menuItem = registry.menuItems[i];
 
+                // no view hack
+                if (menuItem && menuItem.slug === slug && menuItem.view === null && view === 'index') {
+                    foundMenuItem = menuItem;
+                    break;
+                }
+
                 if (menuItem && menuItem.slug === slug && menuItem.view === view) {
                     foundMenuItem = menuItem;
                     break;
@@ -189,6 +207,12 @@ export default class UniverseService extends Service {
                 if (menuPanel && isArray(menuPanel.items)) {
                     for (let j = 0; j < menuPanel.items.length; j++) {
                         const menuItem = menuPanel.items[j];
+
+                        // no view hack
+                        if (menuItem && menuItem.slug === slug && menuItem.view === null && view === 'index') {
+                            foundMenuItem = menuItem;
+                            break;
+                        }
 
                         if (menuItem && menuItem.slug === slug && menuItem.view === view) {
                             foundMenuItem = menuItem;
@@ -264,6 +288,7 @@ export default class UniverseService extends Service {
      * @param {Object} options Additional options for the panel
      */
     registerAdminMenuPanel(title, items = [], options = {}) {
+        options.section = this._getOption(options, 'section', 'admin');
         this.registerMenuPanel('admin', title, items, options);
     }
 
@@ -335,6 +360,7 @@ export default class UniverseService extends Service {
     registerOrganizationMenuItem(title, options = {}) {
         const route = this._getOption(options, 'route', 'console.virtual');
         const index = this._getOption(options, 'index', 0);
+        options.section = this._getOption(options, 'section', 'settings');
 
         this.organizationMenuItems.pushObject(this._createMenuItem(title, route, options));
     }
@@ -352,6 +378,7 @@ export default class UniverseService extends Service {
     registerUserMenuItem(title, options = {}) {
         const route = this._getOption(options, 'route', 'console.virtual');
         const index = this._getOption(options, 'index', 0);
+        options.section = this._getOption(options, 'section', 'account');
 
         this.userMenuItems.pushObject(this._createMenuItem(title, route, options));
     }
@@ -393,6 +420,7 @@ export default class UniverseService extends Service {
         const queryParams = this._getOption(options, 'queryParams', {});
         const index = this._getOption(options, 'index', 0);
         const onClick = this._getOption(options, 'onClick', null);
+        const section = this._getOption(options, 'section', null);
 
         // todo: create menu item class
         const menuItem = {
@@ -406,6 +434,7 @@ export default class UniverseService extends Service {
             queryParams,
             view,
             index,
+            section,
         };
 
         // send default params into onClick
