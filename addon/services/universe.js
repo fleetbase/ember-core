@@ -1,4 +1,5 @@
 import Service from '@ember/service';
+import Evented from '@ember/object/evented';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { computed, action } from '@ember/object';
@@ -9,7 +10,7 @@ import { getOwner } from '@ember/application';
 import { assert } from '@ember/debug';
 import RSVP from 'rsvp';
 
-export default class UniverseService extends Service {
+export default class UniverseService extends Service.extend(Evented) {
     @service router;
     @tracked headerMenuItems = [];
     @tracked organizationMenuItems = [];
