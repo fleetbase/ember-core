@@ -32,7 +32,7 @@
         "publish:github": "npm config set '@fleetbase:registry' https://npm.pkg.github.com/ && npm publish"
     },
     "dependencies": {
-        "date-fns": "^2.29.2",
+        "date-fns": "^2.30.0",
         "ember-auto-import": "^2.4.2",
         "ember-cli-babel": "^7.26.11",
         "ember-cli-htmlbars": "^6.1.0",
