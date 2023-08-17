@@ -14,6 +14,7 @@ const hostServices = [
     'notifications',
     'fileQueue',
     'universe',
+    'intl',
     { hostRouter: 'router' },
 ];
 

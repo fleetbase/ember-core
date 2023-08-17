@@ -40,25 +40,21 @@ export default class ApplicationAdapter extends RESTAdapter {
      *
      * @var {String}
      */
-    get host() {
-        return get(config, 'API.host');
-    }
+    @tracked host;
 
     /**
      * The default namespace for adapter
      *
      * @var {String}
      */
-    get namespace() {
-        return get(config, 'API.namespace');
-    }
+    @tracked namespace;
 
     /**
      * Credentials
      *
      * @var {String}
      */
-    credentials = 'include';
+    @tracked credentials = 'include';
 
     /**
      * Mutable headers property.
@@ -68,31 +64,23 @@ export default class ApplicationAdapter extends RESTAdapter {
     @tracked _headers;
 
     /**
-     * The headers to send with request.
-     *
-     * @var {Object}
+     * Creates an instance of ApplicationAdapter.
+     * @memberof ApplicationAdapter
      */
-    get headers() {
-        if (this._headers) {
-            return this._headers;
-        }
+    constructor() {
+        super(...arguments);
 
-        return this.getHeaders();
+        this.host = get(config, 'API.host');
+        this.namespace = get(config, 'API.namespace');
+        this.headers = this.setupHeaders();
     }
 
     /**
-     * Setter fucntion to overwrite headers.
-     */
-    set headers(headers) {
-        this._headers = headers;
-    }
-
-    /**
-     * Gets headers that should be sent with request.
+     * Setup headers that should be sent with request.
      *
      * @return {Object}
      */
-    getHeaders() {
+    setupHeaders() {
         const headers = {};
         const userId = this.session.data.authenticated.user;
         const userOptions = getUserOptions();
@@ -127,20 +115,8 @@ export default class ApplicationAdapter extends RESTAdapter {
             headers['Access-Console-Sandbox-Key'] = testKey;
         }
 
-        return headers;
-    }
-
-    /**
-     * Gets fresh headers and sets them.
-     *
-     * @return {Object}
-     */
-    refreshHeaders() {
-        const headers = this.getHeaders();
-
         this.headers = headers;
-
-        return headers;
+        return this.headers;
     }
 
     /**
@@ -153,7 +129,7 @@ export default class ApplicationAdapter extends RESTAdapter {
      * @return {Object}
      */
     ajaxOptions(url, type, options) {
-        this.refreshHeaders();
+        this.setupHeaders();
 
         const ajaxOptions = super.ajaxOptions(url, type, options);
         ajaxOptions.credentials = this.credentials;
