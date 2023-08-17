@@ -12,6 +12,7 @@ import RSVP from 'rsvp';
 
 export default class UniverseService extends Service.extend(Evented) {
     @service router;
+    @service intl;
     @tracked headerMenuItems = [];
     @tracked organizationMenuItems = [];
     @tracked userMenuItems = [];
@@ -526,5 +527,14 @@ export default class UniverseService extends Service.extend(Evented) {
         return engineInstance.boot().then(() => {
             return engineInstance;
         });
+    }
+
+    /**
+     * Alias for intl service `t`
+     *
+     * @memberof UniverseService
+     */
+    t() {
+        this.intl.t(...arguments);
     }
 }

@@ -1,6 +1,7 @@
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
+import { computed } from '@ember/object';
 import { dasherize } from '@ember/string';
 import { isArray } from '@ember/array';
 import { getOwner } from '@ember/application';
@@ -32,11 +33,15 @@ export default class ThemeService extends Service {
      *
      * @var {String}
      */
-    get activeTheme() {
+    @computed('currentTheme', 'initialTheme') get activeTheme() {
         const userSetTheme = this.currentUser.getOption(`theme`);
 
         if (userSetTheme) {
             return userSetTheme;
+        }
+
+        if (this.initialTheme) {
+            return this.initialTheme;
         }
 
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -44,7 +49,7 @@ export default class ThemeService extends Service {
         }
 
         // default to dark theme
-        return 'dark';
+        return this.currentTheme;
     }
 
     /**
@@ -56,11 +61,18 @@ export default class ThemeService extends Service {
     }
 
     /**
-     * Current theme, defaults to light, active theme represents the theme set by user OS
+     * Current theme, defaults to dark, active theme represents the theme set by user OS
      *
      * @var {String}
      */
     @tracked currentTheme = 'dark';
+
+    /**
+     * The initially set theme
+     *
+     * @var {String}
+     */
+    @tracked initialTheme;
 
     /**
      * The current route name as style class
@@ -116,6 +128,7 @@ export default class ThemeService extends Service {
      * @void
      */
     initialize(options = {}) {
+        this.initialTheme = options?.theme;
         this.setTheme(this.activeTheme);
         this.setEnvironment();
         this.resetScroll();
@@ -125,6 +138,19 @@ export default class ThemeService extends Service {
         // remove route class as exiting
         this.router.on('routeWillChange', this.routeWillChange.bind(this));
         // remove console-loader
+        this.removeConsoleLoader();
+        // run a `onInit` callback if provided
+        if (typeof options.onInit === 'function') {
+            options.onInit(this);
+        }
+    }
+
+    /**
+     * Remove the console-loader
+     *
+     * @memberof ThemeService
+     */
+    removeConsoleLoader() {
         const consoleLoader = document.getElementById(`console-loader`);
         if (consoleLoader) {
             consoleLoader.remove();

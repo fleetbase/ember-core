@@ -15,6 +15,7 @@ const services = [
     'hostRouter',
     'fileQueue',
     'universe',
+    'intl',
 ];
 
 export default services;
