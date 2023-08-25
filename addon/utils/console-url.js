@@ -2,55 +2,39 @@ import config from '@fleetbase/console/config/environment';
 import { isBlank } from '@ember/utils';
 
 const isDevelopment = ['local', 'development'].includes(config.environment);
-const isProduction = ['production'].includes(config.environment);
 
-function queryString(params) {
+export function queryString(params) {
     return Object.keys(params)
-        .map((key) => `${key}=${params[key]}`)
+        .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
         .join('&');
 }
 
-function extractHostAndPort(url) {
+export function extractHostAndPort(url) {
     try {
-        const parsedUrl = new URL(url);
-        const host = parsedUrl.hostname;
-        const port = parsedUrl.port;
-
-        return {
-            host: host,
-            port: port || null,
-        };
+        const { hostname: host, port = null } = new URL(url);
+        return { host, port };
     } catch (error) {
-        console.error('Invalid URL:', error);
-        return null;
+        return { host: null, port: null };
     }
 }
 
-export default function consoleUrl(path = '', queryParams = {}, subdomain = 'console', host = 'fleetbase.io') {
-    let parsedHost = extractHostAndPort(host);
-    let url = isDevelopment ? 'http://' : 'https://';
-
-    if (subdomain) {
-        url += subdomain + '.';
+export default function consoleUrl(path = '', queryParams = {}, subdomain = null, host = null) {
+    if (subdomain === null || host === null) {
+        const { hostname, host: currentHost } = window.location;
+        if (subdomain === null) {
+            const parts = hostname.split('.');
+            subdomain = parts.length > 2 ? parts[0] : null;
+        }
+        if (host === null) {
+            host = currentHost;
+        }
     }
 
-    let urlParams = !isBlank(queryParams) ? queryString(queryParams) : '';
+    const { host: parsedHost, port } = extractHostAndPort(host);
+    const protocol = isDevelopment ? 'http://' : 'https://';
+    const urlParams = !isBlank(queryParams) ? queryString(queryParams) : '';
+    const portSegment = port ? `:${port}` : '';
+    const pathSegment = path.startsWith('/') ? path : `/${path}`;
 
-    if (!isProduction && !isDevelopment) {
-        url += `${config.environment}.`;
-    }
-
-    url += parsedHost.host;
-
-    if (parsedHost.port) {
-        url += `:${parsedHost.port}`;
-    }
-
-    url += `/${path}`;
-
-    if (urlParams) {
-        url += `?${urlParams}`;
-    }
-
-    return url;
+    return `${protocol}${subdomain ? subdomain + '.' : ''}${parsedHost}${portSegment}${pathSegment}${urlParams ? '?' + urlParams : ''}`;
 }
