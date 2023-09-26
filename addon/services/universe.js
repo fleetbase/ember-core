@@ -13,6 +13,7 @@ import RSVP from 'rsvp';
 export default class UniverseService extends Service.extend(Evented) {
     @service router;
     @service intl;
+    @tracked menuRegistry = [];
     @tracked headerMenuItems = [];
     @tracked organizationMenuItems = [];
     @tracked userMenuItems = [];
@@ -107,6 +108,142 @@ export default class UniverseService extends Service.extend(Evented) {
     }
 
     /**
+     * @action
+     * Creates a new registry with the given name and options.
+    
+     * @memberof UniverseService
+     * @param {string} registryName - The name of the registry to create.
+     * @param {Object} [options={}] - Optional settings for the registry.
+     * @param {Array} [options.menuItems=[]] - An array of menu items for the registry.
+     * @param {Array} [options.menuPanel=[]] - An array of menu panels for the registry.
+     *
+     * @fires registry.created - Event triggered when a new registry is created.
+     *
+     * @returns {UniverseService} Returns the current UniverseService for chaining.
+     *
+     * @example
+     * createRegistry('myRegistry', { menuItems: ['item1', 'item2'], menuPanel: ['panel1', 'panel2'] });
+     */
+    @action createRegistry(registryName, options = {}) {
+        this[`${registryName}Registry`] = {
+            name: registryName,
+            menuItems: [],
+            menuPanels: [],
+            ...options,
+        };
+
+        // trigger registry created event
+        this.trigger('registry.created', this[`${registryName}Registry`]);
+
+        return this;
+    }
+
+    /**
+     * @action
+     * Retrieves the entire registry with the given name.
+     *
+     * @memberof UniverseService
+     * @param {string} registryName - The name of the registry to retrieve.
+     *
+     * @returns {Object|null} Returns the registry object if it exists; otherwise, returns null.
+     *
+     * @example
+     * const myRegistry = getRegistry('myRegistry');
+     */
+    @action getRegistry(registryName) {
+        const registry = this[`${registryName}Registry`];
+
+        if (!isBlank(registry)) {
+            return registry;
+        }
+
+        return null;
+    }
+
+    /**
+     * Looks up a registry by its name and returns it as a Promise.
+     *
+     * @memberof UniverseService
+     * @param {string} registryName - The name of the registry to look up.
+     *
+     * @returns {Promise<Object|null>} A Promise that resolves to the registry object if it exists; otherwise, rejects with null.
+     *
+     * @example
+     * lookupRegistry('myRegistry')
+     *   .then((registry) => {
+     *     // Do something with the registry
+     *   })
+     *   .catch((error) => {
+     *     // Handle the error or absence of the registry
+     *   });
+     */
+    lookupRegistry(registryName) {
+        const registry = this[`${registryName}Registry`];
+
+        return new Promise((resolve, reject) => {
+            if (!isBlank(registry)) {
+                return resolve(registry);
+            }
+
+            later(
+                this,
+                () => {
+                    if (!isBlank(registry)) {
+                        return resolve(registry);
+                    }
+                },
+                100
+            );
+
+            reject(null);
+        });
+    }
+
+    /**
+     * @action
+     * Retrieves the menu items from a registry with the given name.
+     *
+     * @memberof UniverseService
+     * @param {string} registryName - The name of the registry to retrieve menu items from.
+     *
+     * @returns {Array} Returns an array of menu items if the registry exists and has menu items; otherwise, returns an empty array.
+     *
+     * @example
+     * const items = getMenuItemsFromRegistry('myRegistry');
+     */
+    @action getMenuItemsFromRegistry(registryName) {
+        const registry = this[`${registryName}Registry`];
+
+        if (!isBlank(registry) && isArray(registry.menuItems)) {
+            return registry.menuItems;
+        }
+
+        return [];
+    }
+
+    /**
+     * @action
+     * Retrieves the menu panels from a registry with the given name.
+     *
+     * @memberof UniverseService
+     * @param {string} registryName - The name of the registry to retrieve menu panels from.
+     *
+     * @returns {Array} Returns an array of menu panels if the registry exists and has menu panels; otherwise, returns an empty array.
+     *
+     * @example
+     * const panels = getMenuPanelsFromRegistry('myRegistry');
+     */
+    @action getMenuPanelsFromRegistry(registryName) {
+        const registry = this[`${registryName}Registry`];
+
+        if (!isBlank(registry) && isArray(registry.menuPanels)) {
+            return registry.menuPanels;
+        }
+
+        return [];
+    }
+
+    /**
      * Loads a component from the specified registry based on a given slug and view.
      *
      * @param {string} registryName - The name of the registry where the component is located.
@@ -118,12 +255,12 @@ export default class UniverseService extends Service.extend(Evented) {
     loadComponentFromRegistry(registryName, slug, view = null) {
         const registry = this[`${registryName}Registry`];
 
-        if (isBlank(registry)) {
-            return null;
-        }
-
         return new Promise((resolve) => {
             let component = null;
+
+            if (isBlank(registry)) {
+                return resolve(component);
+            }
 
             // check menu items first
             for (let i = 0; i < registry.menuItems.length; i++) {
@@ -179,12 +316,12 @@ export default class UniverseService extends Service.extend(Evented) {
     lookupMenuItemFromRegistry(registryName, slug, view = null) {
         const registry = this[`${registryName}Registry`];
 
-        if (isBlank(registry)) {
-            return null;
-        }
-
         return new Promise((resolve) => {
             let foundMenuItem = null;
+
+            if (isBlank(registry)) {
+                return resolve(foundMenuItem);
+            }
 
             // check menu items first
             for (let i = 0; i < registry.menuItems.length; i++) {
@@ -242,8 +379,7 @@ export default class UniverseService extends Service.extend(Evented) {
     registerMenuPanel(registryName, title, items = [], options = {}) {
         const open = this._getOption(options, 'open', true);
         const slug = this._getOption(options, 'slug', dasherize(title));
-
-        this[`${registryName}Registry`].menuPanels.pushObject({
+        const menuPanel = {
             title,
             open,
             items: items.map(({ title, route, ...options }) => {
@@ -252,7 +388,13 @@ export default class UniverseService extends Service.extend(Evented) {
 
                 return this._createMenuItem(title, route, options);
             }),
-        });
+        };
+
+        // register menu panel
+        this[`${registryName}Registry`].menuPanels.pushObject(menuPanel);
+
+        // trigger menu panel registered event
+        this.trigger('menuPanel.registered', menuPanel, this[`${registryName}Registry`]);
     }
 
     /**
@@ -276,7 +418,45 @@ export default class UniverseService extends Service.extend(Evented) {
             options.view = null;
         }
 
-        this[`${registryName}Registry`].menuItems.pushObject(this._createMenuItem(title, route, options));
+        // register component if applicable
+        this.registerMenuItemComponentToEngine(options);
+
+        // create menu item
+        const menuItem = this._createMenuItem(title, route, options);
+
+        // register menu item
+        this[`${registryName}Registry`].menuItems.pushObject(menuItem);
+
+        // trigger menu panel registered event
+        this.trigger('menuItem.registered', menuItem, this[`${registryName}Registry`]);
+    }
+
+    /**
+     * Registers a menu item's component to one or multiple engines.
+     *
+     * @method registerMenuItemComponentToEngine
+     * @public
+     * @memberof UniverseService
+     * @param {Object} options - An object containing the following properties:
+     *   - `registerComponentToEngine`: A string or an array of strings representing the engine names where the component should be registered.
+     *   - `component`: The component class to register, which should have a 'name' property.
+     */
+    registerMenuItemComponentToEngine(options) {
+        // Register component if applicable
+        if (typeof options.registerComponentToEngine === 'string') {
+            this.registerComponentInEngine(options.registerComponentToEngine, options.component);
+        }
+
+        // register to multiple engines
+        if (isArray(options.registerComponentToEngine)) {
+            for (let i = 0; i < options.registerComponentInEngine.length; i++) {
+                const engineName = options.registerComponentInEngine.objectAt(i);
+
+                if (typeof engineName === 'string') {
+                    this.registerComponentInEngine(engineName, options.component);
+                }
+            }
+        }
     }
 
     /**
@@ -424,6 +604,14 @@ export default class UniverseService extends Service.extend(Evented) {
         const onClick = this._getOption(options, 'onClick', null);
         const section = this._getOption(options, 'section', null);
 
+        // dasherize route segments
+        if (typeof route === 'string') {
+            route = route
+                .split('.')
+                .map((segment) => dasherize(segment))
+                .join('.');
+        }
+
         // todo: create menu item class
         const menuItem = {
             title,
@@ -448,6 +636,22 @@ export default class UniverseService extends Service.extend(Evented) {
         }
 
         return menuItem;
+    }
+
+    /**
+     * Manually registers a component in a specified engine.
+     *
+     * @method registerComponentInEngine
+     * @public
+     * @memberof UniverseService
+     * @param {String} engineName - The name of the engine where the component should be registered.
+     * @param {Object} componentClass - The component class to register, which should have a 'name' property.
+     */
+    registerComponentInEngine(engineName, componentClass) {
+        const engineInstance = this.getEngineInstance(engineName);
+        if (engineInstance && !isBlank(componentClass) && typeof componentClass.name === 'string') {
+            engineInstance.register(`component:${componentClass.name}`, componentClass);
+        }
     }
 
     /**
@@ -527,6 +731,28 @@ export default class UniverseService extends Service.extend(Evented) {
         return engineInstance.boot().then(() => {
             return engineInstance;
         });
+    }
+
+    /**
+     * Retrieve an existing engine instance by its name and instanceId.
+     *
+     * @method getEngineInstance
+     * @public
+     * @memberof UniverseService
+     * @param {String} name The name of the engine
+     * @param {String} [instanceId='manual'] The id of the engine instance (defaults to 'manual')
+     * @returns {Object|null} The engine instance if it exists, otherwise null
+     */
+    getEngineInstance(name, instanceId = 'manual') {
+        const owner = getOwner(this);
+        const router = owner.lookup('router:main');
+        const engineInstances = router._engineInstances;
+
+        if (engineInstances && engineInstances[name]) {
+            return engineInstances[name][instanceId] || null;
+        }
+
+        return null;
     }
 
     /**
