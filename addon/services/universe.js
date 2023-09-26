@@ -5,6 +5,7 @@ import { inject as service } from '@ember/service';
 import { computed, action } from '@ember/object';
 import { isBlank } from '@ember/utils';
 import { isArray } from '@ember/array';
+import { later } from '@ember/runloop';
 import { dasherize } from '@ember/string';
 import { getOwner } from '@ember/application';
 import { assert } from '@ember/debug';
@@ -13,7 +14,6 @@ import RSVP from 'rsvp';
 export default class UniverseService extends Service.extend(Evented) {
     @service router;
     @service intl;
-    @tracked menuRegistry = [];
     @tracked headerMenuItems = [];
     @tracked organizationMenuItems = [];
     @tracked userMenuItems = [];
