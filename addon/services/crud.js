@@ -3,6 +3,7 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
 import { dasherize } from '@ember/string';
+import { later } from '@ember/runloop';
 import { pluralize } from 'ember-inflector';
 import { format as formatDate } from 'date-fns';
 import getModelName from '../utils/get-model-name';
@@ -193,6 +194,7 @@ export default class CrudService extends Service {
         this.modalsManager.show('modals/export-form', {
             title: `Export ${pluralize(modelName)}`,
             acceptButtonText: 'Download',
+            modalClass: 'modal-sm',
             formatOptions: ['csv', 'xlsx', 'xls', 'html', 'pdf'],
             setFormat: ({ target }) => {
                 this.modalsManager.setOption('format', target.value || null);
@@ -211,9 +213,13 @@ export default class CrudService extends Service {
                         }
                     )
                     .then(() => {
-                        setTimeout(() => {
-                            return done();
-                        }, 600);
+                        later(
+                            this,
+                            () => {
+                                return done();
+                            },
+                            600
+                        );
                     })
                     .catch((error) => {
                         modal.stopLoading();

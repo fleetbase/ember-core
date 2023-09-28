@@ -1,3 +1,5 @@
+import { later } from '@ember/runloop';
+
 export default function download(data, strFileName, strMimeType) {
     var self = window, // this script is only for browsers anyway...
         defaultMime = 'application/octet-stream', // this default mime also triggers iframe downloads
@@ -33,9 +35,13 @@ export default function download(data, strFileName, strMimeType) {
             ajax.onload = function (e) {
                 download(e.target.response, fileName, defaultMime);
             };
-            setTimeout(function () {
-                ajax.send();
-            }, 0); // allows setting custom ajax headers using the return:
+            later(
+                this,
+                function () {
+                    ajax.send();
+                },
+                0
+            ); // allows setting custom ajax headers using the return:
             return ajax;
         } // end if valid url?
     } // end if url?
@@ -90,15 +96,23 @@ export default function download(data, strFileName, strMimeType) {
                 this.removeEventListener('click', arguments.callee);
             });
             document.body.appendChild(anchor);
-            setTimeout(function () {
-                anchor.click();
-                document.body.removeChild(anchor);
-                if (winMode === true) {
-                    setTimeout(function () {
-                        self.URL.revokeObjectURL(anchor.href);
-                    }, 250);
-                }
-            }, 66);
+            later(
+                this,
+                function () {
+                    anchor.click();
+                    document.body.removeChild(anchor);
+                    if (winMode === true) {
+                        later(
+                            this,
+                            function () {
+                                self.URL.revokeObjectURL(anchor.href);
+                            },
+                            250
+                        );
+                    }
+                },
+                66
+            );
             return true;
         }
 
@@ -123,9 +137,13 @@ export default function download(data, strFileName, strMimeType) {
             url = 'data:' + url.replace(/^data:([\w\/\-\+]+)/, defaultMime);
         }
         f.src = url;
-        setTimeout(function () {
-            document.body.removeChild(f);
-        }, 333);
+        later(
+            this,
+            function () {
+                document.body.removeChild(f);
+            },
+            333
+        );
     } //end saver
 
     if (navigator.msSaveBlob) {

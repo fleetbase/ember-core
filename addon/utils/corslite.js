@@ -1,3 +1,5 @@
+import { later } from '@ember/runloop';
+
 function corslite(url, callback, cors) {
     var sent = false;
 
@@ -28,11 +30,13 @@ function corslite(url, callback, cors) {
             if (sent) {
                 original.apply(this, arguments);
             } else {
-                var that = this,
-                    args = arguments;
-                setTimeout(function () {
-                    original.apply(that, args);
-                }, 0);
+                later(
+                    this,
+                    function () {
+                        original.apply(this, arguments);
+                    },
+                    0
+                );
             }
         };
     }
