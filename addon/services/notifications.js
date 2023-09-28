@@ -1,22 +1,19 @@
 import EmberNotificationsService from 'ember-cli-notifications/services/notifications';
 import { isArray } from '@ember/array';
+import getWithDefault from '../utils/get-with-default';
 
 export default class NotificationsService extends EmberNotificationsService {
-    /**
-     * Handles errors from the server
-     *
-     * @param {Error} error
-     * @void
-     */
-    serverError(error, fallbackMessage = 'Oops! Something went wrong with your request.', options) {
+    serverError(error, fallbackMessage = 'Oops! Something went wrong with your request.', options = {}) {     
         if (isArray(error.errors)) {
-            const errorMessage = error.errors.firstObject;
+            const errors = getWithDefault(error, 'errors');
+            const errorMessage = getWithDefault(errors, '0', fallbackMessage);
 
-            return this.error(errorMessage ?? fallbackMessage, options);
+            return this.error(errorMessage, options);
         }
 
         if (error instanceof Error) {
-            return this.error(error.message ?? fallbackMessage, options);
+            const errorMessage = getWithDefault(error, 'message', fallbackMessage);
+            return this.error(errorMessage, options);
         }
 
         return this.error(error ?? fallbackMessage, options);

@@ -31,18 +31,20 @@ export default class SocketService extends Service {
     async listen(channelId, callback) {
         const channel = this.socket.subscribe(channelId);
 
-        // track channel
+        // Track channel
         this.channels.pushObject(channel);
 
-        // listen to channel for events
+        // Listen to channel for events
         await channel.listener('subscribe').once();
 
-        // get incoming data and console out
-        for await (let output of channel) {
-            if (typeof callback === 'function') {
-                callback(output);
+        // Listen for channel subscription
+        (async () => {
+            for await (let output of channel) {
+                if (typeof callback === 'function') {
+                    callback(output);
+                }
             }
-        }
+        })();
     }
 
     closeChannels() {
