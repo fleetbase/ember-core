@@ -6,7 +6,7 @@ import { computed, action } from '@ember/object';
 import { isBlank } from '@ember/utils';
 import { isArray } from '@ember/array';
 import { later } from '@ember/runloop';
-import { dasherize } from '@ember/string';
+import { dasherize, camelize } from '@ember/string';
 import { getOwner } from '@ember/application';
 import { assert } from '@ember/debug';
 import RSVP from 'rsvp';
@@ -125,7 +125,9 @@ export default class UniverseService extends Service.extend(Evented) {
      * createRegistry('myRegistry', { menuItems: ['item1', 'item2'], menuPanel: ['panel1', 'panel2'] });
      */
     @action createRegistry(registryName, options = {}) {
-        this[`${registryName}Registry`] = {
+        const internalRegistryName = this.createInternalRegistryName(registryName);
+
+        this[internalRegistryName] = {
             name: registryName,
             menuItems: [],
             menuPanels: [],
@@ -133,7 +135,7 @@ export default class UniverseService extends Service.extend(Evented) {
         };
 
         // trigger registry created event
-        this.trigger('registry.created', this[`${registryName}Registry`]);
+        this.trigger('registry.created', this[internalRegistryName]);
 
         return this;
     }
@@ -151,7 +153,8 @@ export default class UniverseService extends Service.extend(Evented) {
      * const myRegistry = getRegistry('myRegistry');
      */
     @action getRegistry(registryName) {
-        const registry = this[`${registryName}Registry`];
+        const internalRegistryName = this.createInternalRegistryName(registryName);
+        const registry = this[internalRegistryName];
 
         if (!isBlank(registry)) {
             return registry;
@@ -178,7 +181,8 @@ export default class UniverseService extends Service.extend(Evented) {
      *   });
      */
     lookupRegistry(registryName) {
-        const registry = this[`${registryName}Registry`];
+        const internalRegistryName = this.createInternalRegistryName(registryName);
+        const registry = this[internalRegistryName];
 
         return new Promise((resolve, reject) => {
             if (!isBlank(registry)) {
@@ -212,7 +216,8 @@ export default class UniverseService extends Service.extend(Evented) {
      * const items = getMenuItemsFromRegistry('myRegistry');
      */
     @action getMenuItemsFromRegistry(registryName) {
-        const registry = this[`${registryName}Registry`];
+        const internalRegistryName = this.createInternalRegistryName(registryName);
+        const registry = this[internalRegistryName];
 
         if (!isBlank(registry) && isArray(registry.menuItems)) {
             return registry.menuItems;
@@ -234,7 +239,8 @@ export default class UniverseService extends Service.extend(Evented) {
      * const panels = getMenuPanelsFromRegistry('myRegistry');
      */
     @action getMenuPanelsFromRegistry(registryName) {
-        const registry = this[`${registryName}Registry`];
+        const internalRegistryName = this.createInternalRegistryName(registryName);
+        const registry = this[internalRegistryName];
 
         if (!isBlank(registry) && isArray(registry.menuPanels)) {
             return registry.menuPanels;
@@ -253,7 +259,8 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Promise} Returns a Promise that resolves with the component if it is found, or null.
      */
     loadComponentFromRegistry(registryName, slug, view = null) {
-        const registry = this[`${registryName}Registry`];
+        const internalRegistryName = this.createInternalRegistryName(registryName);
+        const registry = this[internalRegistryName];
 
         return new Promise((resolve) => {
             let component = null;
@@ -314,7 +321,8 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Promise} Returns a Promise that resolves with the menu item if it is found, or null.
      */
     lookupMenuItemFromRegistry(registryName, slug, view = null) {
-        const registry = this[`${registryName}Registry`];
+        const internalRegistryName = this.createInternalRegistryName(registryName);
+        const registry = this[internalRegistryName];
 
         return new Promise((resolve) => {
             let foundMenuItem = null;
@@ -377,6 +385,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Object} options Additional options for the panel
      */
     registerMenuPanel(registryName, title, items = [], options = {}) {
+        const internalRegistryName = this.createInternalRegistryName(registryName);
         const open = this._getOption(options, 'open', true);
         const slug = this._getOption(options, 'slug', dasherize(title));
         const menuPanel = {
@@ -391,10 +400,10 @@ export default class UniverseService extends Service.extend(Evented) {
         };
 
         // register menu panel
-        this[`${registryName}Registry`].menuPanels.pushObject(menuPanel);
+        this[internalRegistryName].menuPanels.pushObject(menuPanel);
 
         // trigger menu panel registered event
-        this.trigger('menuPanel.registered', menuPanel, this[`${registryName}Registry`]);
+        this.trigger('menuPanel.registered', menuPanel, this[internalRegistryName]);
     }
 
     /**
@@ -409,7 +418,8 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Object} options Additional options for the item
      */
     registerMenuItem(registryName, title, options = {}) {
-        const route = this._getOption(options, 'route', `console.${registryName}.virtual`);
+        const internalRegistryName = this.createInternalRegistryName(registryName);
+        const route = this._getOption(options, 'route', `console.${dasherize(registryName)}.virtual`);
         options.slug = this._getOption(options, 'slug', '~');
         options.view = this._getOption(options, 'view', dasherize(title));
 
@@ -425,10 +435,10 @@ export default class UniverseService extends Service.extend(Evented) {
         const menuItem = this._createMenuItem(title, route, options);
 
         // register menu item
-        this[`${registryName}Registry`].menuItems.pushObject(menuItem);
+        this[internalRegistryName].menuItems.pushObject(menuItem);
 
         // trigger menu panel registered event
-        this.trigger('menuItem.registered', menuItem, this[`${registryName}Registry`]);
+        this.trigger('menuItem.registered', menuItem, this[internalRegistryName]);
     }
 
     /**
@@ -636,6 +646,19 @@ export default class UniverseService extends Service.extend(Evented) {
         }
 
         return menuItem;
+    }
+
+    /**
+     * Creates an internal registry name by camelizing the provided registry name and appending "Registry" to it.
+     *
+     * @method createInternalRegistryName
+     * @public
+     * @memberof UniverseService
+     * @param {String} registryName - The name of the registry to be camelized and formatted.
+     * @returns {String} The formatted internal registry name.
+     */
+    createInternalRegistryName(registryName) {
+        return `${camelize(registryName.replace(/[^a-zA-Z0-9]/g, '-'))}Registry`;
     }
 
     /**
