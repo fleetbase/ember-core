@@ -607,6 +607,7 @@ export default class UniverseService extends Service.extend(Evented) {
         const items = this._getOption(options, 'items');
         const component = this._getOption(options, 'component');
         const componentParams = this._getOption(options, 'componentParams', {});
+        const renderComponentInPlace = this._getOption(options, 'renderComponentInPlace', false);
         const slug = this._getOption(options, 'slug', dasherize(title));
         const view = this._getOption(options, 'view');
         const queryParams = this._getOption(options, 'queryParams', {});
@@ -631,6 +632,7 @@ export default class UniverseService extends Service.extend(Evented) {
             items,
             component,
             componentParams,
+            renderComponentInPlace,
             slug,
             queryParams,
             view,
