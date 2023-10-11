@@ -141,6 +141,19 @@ export default class UniverseService extends Service.extend(Evented) {
     }
 
     /**
+     * Triggers an event on for a universe registry.
+     *
+     * @memberof UniverseService
+     * @method createRegistryEvent
+     * @param {string} registryName - The name of the registry to trigger the event on.
+     * @param {string} event - The name of the event to trigger.
+     * @param {...*} params - Additional parameters to pass to the event handler.
+     */
+    @action createRegistryEvent(registryName, event, ...params) {
+        this.trigger(`${registryName}.${event}`, ...params);
+    }
+
+    /**
      * @action
      * Retrieves the entire registry with the given name.
      *
@@ -638,7 +651,7 @@ export default class UniverseService extends Service.extend(Evented) {
             view,
             index,
             section,
-            onClick
+            onClick,
         };
 
         return menuItem;
