@@ -638,14 +638,8 @@ export default class UniverseService extends Service.extend(Evented) {
             view,
             index,
             section,
+            onClick
         };
-
-        // send default params into onClick
-        if (typeof onClick === 'function') {
-            menuItem.onClick = () => {
-                return onClick(menuItem);
-            };
-        }
 
         return menuItem;
     }

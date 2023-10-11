@@ -90,7 +90,7 @@ export default function autoSerialize(model, except = []) {
         }
 
         if (kind === 'hasMany') {
-            serialized[attr] = model[attr].toArray().map((instance) => serialize(instance));
+            serialized[attr] = [];
         } else {
             serialized[attr] = serialize(model[attr]);
         }
