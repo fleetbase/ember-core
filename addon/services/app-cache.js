@@ -16,7 +16,6 @@ export default class AppCacheService extends Service {
     }
 
     @action setEmberData(key, value, except = []) {
-        console.log('setEmberData()', ...arguments);
         value = autoSerialize(value, except);
 
         return this.set(key, value);
