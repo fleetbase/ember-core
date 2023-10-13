@@ -141,6 +141,19 @@ export default class UniverseService extends Service.extend(Evented) {
     }
 
     /**
+     * Triggers an event on for a universe registry.
+     *
+     * @memberof UniverseService
+     * @method createRegistryEvent
+     * @param {string} registryName - The name of the registry to trigger the event on.
+     * @param {string} event - The name of the event to trigger.
+     * @param {...*} params - Additional parameters to pass to the event handler.
+     */
+    @action createRegistryEvent(registryName, event, ...params) {
+        this.trigger(`${registryName}.${event}`, ...params);
+    }
+
+    /**
      * @action
      * Retrieves the entire registry with the given name.
      *
@@ -638,14 +651,8 @@ export default class UniverseService extends Service.extend(Evented) {
             view,
             index,
             section,
+            onClick,
         };
-
-        // send default params into onClick
-        if (typeof onClick === 'function') {
-            menuItem.onClick = () => {
-                return onClick(menuItem);
-            };
-        }
 
         return menuItem;
     }
@@ -677,6 +684,55 @@ export default class UniverseService extends Service.extend(Evented) {
         if (engineInstance && !isBlank(componentClass) && typeof componentClass.name === 'string') {
             engineInstance.register(`component:${componentClass.name}`, componentClass);
         }
+    }
+
+    /**
+     * Manually registers a service in a specified engine.
+     *
+     * @method registerComponentInEngine
+     * @public
+     * @memberof UniverseService
+     * @param {String} engineName - The name of the engine where the component should be registered.
+     * @param {Object} serviceClass - The service class to register, which should have a 'name' property.
+     */
+    registerServiceInEngine(targetEngineName, serviceName, currentEngineInstance) {
+        // Get the target engine instance
+        const targetEngineInstance = this.getEngineInstance(targetEngineName);
+
+        // Validate inputs
+        if (targetEngineInstance && currentEngineInstance && typeof serviceName === 'string') {
+            // Lookup the service instance from the current engine
+            const sharedService = currentEngineInstance.lookup(`service:${serviceName}`);
+
+            if (sharedService) {
+                // Register the service in the target engine
+                targetEngineInstance.register(`service:${serviceName}`, sharedService, { instantiate: false });
+            }
+        }
+    }
+
+    /**
+     * Retrieves a service instance from a specified Ember engine.
+     *
+     * @param {string} engineName - The name of the engine from which to retrieve the service.
+     * @param {string} serviceName - The name of the service to retrieve.
+     * @returns {Object|null} The service instance if found, otherwise null.
+     *
+     * @example
+     * const userService = universe.getServiceFromEngine('user-engine', 'user');
+     * if (userService) {
+     *   userService.doSomething();
+     * }
+     */
+    getServiceFromEngine(engineName, serviceName) {
+        const engineInstance = this.getEngineInstance(engineName);
+
+        if (engineInstance && typeof serviceName === 'string') {
+            const serviceInstance = engineInstance.lookup(`service:${serviceName}`);
+            return serviceInstance;
+        }
+
+        return null;
     }
 
     /**
