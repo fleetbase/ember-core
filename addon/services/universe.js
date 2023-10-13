@@ -687,6 +687,55 @@ export default class UniverseService extends Service.extend(Evented) {
     }
 
     /**
+     * Manually registers a service in a specified engine.
+     *
+     * @method registerComponentInEngine
+     * @public
+     * @memberof UniverseService
+     * @param {String} engineName - The name of the engine where the component should be registered.
+     * @param {Object} serviceClass - The service class to register, which should have a 'name' property.
+     */
+    registerServiceInEngine(targetEngineName, serviceName, currentEngineInstance) {
+        // Get the target engine instance
+        const targetEngineInstance = this.getEngineInstance(targetEngineName);
+
+        // Validate inputs
+        if (targetEngineInstance && currentEngineInstance && typeof serviceName === 'string') {
+            // Lookup the service instance from the current engine
+            const sharedService = currentEngineInstance.lookup(`service:${serviceName}`);
+
+            if (sharedService) {
+                // Register the service in the target engine
+                targetEngineInstance.register(`service:${serviceName}`, sharedService, { instantiate: false });
+            }
+        }
+    }
+
+    /**
+     * Retrieves a service instance from a specified Ember engine.
+     *
+     * @param {string} engineName - The name of the engine from which to retrieve the service.
+     * @param {string} serviceName - The name of the service to retrieve.
+     * @returns {Object|null} The service instance if found, otherwise null.
+     *
+     * @example
+     * const userService = universe.getServiceFromEngine('user-engine', 'user');
+     * if (userService) {
+     *   userService.doSomething();
+     * }
+     */
+    getServiceFromEngine(engineName, serviceName) {
+        const engineInstance = this.getEngineInstance(engineName);
+
+        if (engineInstance && typeof serviceName === 'string') {
+            const serviceInstance = engineInstance.lookup(`service:${serviceName}`);
+            return serviceInstance;
+        }
+
+        return null;
+    }
+
+    /**
      * Load the specified engine. If it is not loaded yet, it will use assetLoader
      * to load it and then register it to the router.
      *
