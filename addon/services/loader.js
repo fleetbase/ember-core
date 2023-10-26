@@ -2,31 +2,55 @@ import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { later } from '@ember/runloop';
 
+/**
+ * Service for managing loading overlays.
+ *
+ * @class LoaderService
+ * @extends Service
+ */
 export default class LoaderService extends Service {
+    /**
+     * Tracks the routes that have been loaded.
+     *
+     * @type {Array}
+     * @tracked
+     */
     @tracked routesLoaded = [];
 
+    /**
+     * Shows the loader based on a condition.
+     *
+     * @param {String|HTMLElement} target - The loader target.
+     * @param {Object} options - Options for controlling the loader.
+     * @param {Function|null} condition - The condition to evaluate.
+     */
     showOnCondition(target, options = {}, condition = null) {
-        const { loadingMessage, opacity } = options;
-
         if (typeof condition === 'function') {
             condition = condition();
         }
 
         if (condition) {
-            this.showLoader(target, loadingMessage, opacity);
+            this.showLoader(target, options);
         }
     }
 
-    showOnInitialTransition(transition, target, loadingMessage = 'Loading...', opacity = 0.1) {
+    /**
+     * Shows loader during the initial route transition.
+     *
+     * @param {Object} transition - The Ember.js transition object.
+     * @param {String|HTMLElement} target - The loader target.
+     * @param {Object} options - Options for controlling the loader.
+     */
+    showOnInitialTransition(transition, target, options = { loadingMessage: 'Loading...', opacity: 0.1 }) {
         const route = transition.to.name;
         const isSameRoute = transition.from ? transition.to.name === transition.from.name : false;
 
         if (!this.routesLoaded.includes(route) || !isSameRoute) {
-            if (document.querySelectorAll(`.overloader`).length > 0) {
+            if (document.querySelectorAll('.overloader').length > 0) {
                 return;
             }
 
-            this.showLoader(target, loadingMessage, opacity);
+            this.showLoader(target, options);
 
             transition.finally(() => {
                 this.removeLoader(target);
@@ -39,20 +63,25 @@ export default class LoaderService extends Service {
     /**
      * Creates an HTML element node for a loading overlay with a message.
      *
-     * @param {String|HTMLElement} targetSelector
-     * @param {String} loadingMessage
-     * @return {HTMLElement} loader
+     * @param {String|HTMLElement} targetSelector - The loader target.
+     * @param {Object} options - Options for controlling the loader.
+     * @returns {HTMLElement} - The loader element.
      */
-    showLoader(targetSelector, loadingMessage = 'Loading...', opacity = 0.1) {
+    showLoader(targetSelector, options = {}) {
         let target = typeof targetSelector === 'string' ? document.querySelector(targetSelector) : targetSelector;
 
         if (!target) {
             target = document.body;
         }
 
+        const loadingMessage = typeof options.loadingMessage === 'string' ? options.loadingMessage : 'Loading...';
+        const opacity = typeof options.opacity === 'number' ? options.opacity : 0.1;
         const isDarkMode = document.body.dataset.theme ? document.body.dataset.theme === 'dark' : true;
+        const preserveTargetPosition = options.preserveTargetPosition === true;
 
-        target.style.position = 'relative';
+        if (!preserveTargetPosition) {
+            target.style.position = 'relative';
+        }
 
         let loader = document.createElement('div');
         loader.classList.add('overloader');
@@ -71,15 +100,21 @@ export default class LoaderService extends Service {
         return loader;
     }
 
-    show(loadingMessage = 'Loading...', opacity = 0.1) {
-        return this.showLoader(document.body, loadingMessage, opacity);
+    /**
+     * Shows a loader on the document body.
+     *
+     * @param {Object} options - Options for controlling the loader.
+     * @returns {HTMLElement} - The loader element.
+     */
+    show(options = { loadingMessage: 'Loading...', opacity: 0.1 }) {
+        return this.showLoader(document.body, options);
     }
 
     /**
-     * Creates an HTML element node for a loading overlay with a message.
+     * Removes a loader from a target.
      *
-     * @param {String|HTMLElement} targetSelector
-     * @return {Service} this
+     * @param {String|HTMLElement} targetSelector - The loader target.
+     * @returns {Service} - The current service instance.
      */
     removeLoader(targetSelector) {
         let target = typeof targetSelector === 'string' ? document.querySelector(targetSelector) : targetSelector;
@@ -114,9 +149,10 @@ export default class LoaderService extends Service {
     }
 
     /**
-     * Removes the all loader instances.
+     * Removes all loader instances after a delay.
      *
-     * @return {Service} this
+     * @param {Number} delay - The delay in milliseconds.
+     * @returns {Service} - The current service instance.
      */
     remove(delay = 0) {
         const loaders = document.querySelectorAll(`.overloader`);

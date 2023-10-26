@@ -448,6 +448,14 @@ export default class UniverseService extends Service.extend(Evented) {
         const menuItem = this._createMenuItem(title, route, options);
 
         // register menu item
+        if (!this[internalRegistryName]) {
+            this[internalRegistryName] = {
+                menuItems: [],
+                menuPanels: [],
+            };
+        }
+
+        // register menu item
         this[internalRegistryName].menuItems.pushObject(menuItem);
 
         // trigger menu panel registered event
