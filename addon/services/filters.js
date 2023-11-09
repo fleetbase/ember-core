@@ -6,6 +6,7 @@ import { isBlank } from '@ember/utils';
 import { computed, action, set, get } from '@ember/object';
 import { getOwner } from '@ember/application';
 import { format } from 'date-fns';
+import getWithDefault from '../utils/get-with-default';
 
 export default class FiltersService extends Service {
     @service router;
@@ -74,7 +75,7 @@ export default class FiltersService extends Service {
     }
 
     @action apply(controller) {
-        const currentQueryParams = this.getQueryParams();
+        const currentQueryParams = this.getQueryParams(controller);
         const updatableQueryParams = { ...currentQueryParams, ...this.pendingQueryParams };
 
         for (let queryParam in updatableQueryParams) {
@@ -88,8 +89,10 @@ export default class FiltersService extends Service {
     }
 
     @action reset(controller) {
-        this.clear((queryParam) => {
-            set(controller, queryParam, undefined);
+        const queryParams = this.getQueryParams(controller);
+
+        Object.keys(queryParams).forEach((queryParam) => {
+            this.removeFromController(controller, queryParam, undefined);
         });
     }
 
@@ -103,19 +106,17 @@ export default class FiltersService extends Service {
             return this.clear(queryParam, callback);
         }
 
-        if (isBlank(queryParam)) {
+        if (isBlank(queryParam) && Object.keys(currentQueryParams).length > 0) {
             return Object.keys(currentQueryParams).forEach((qp) => this.clear(callback, qp));
         }
 
-        if (isArray(queryParam)) {
+        if (isArray(queryParam) && !isBlank(queryParam)) {
             return queryParam.forEach((qp) => this.clear(callback, qp));
         }
 
-        if (typeof queryParam !== 'string') {
-            return;
+        if (typeof queryParam === 'string') {
+            set(this.pendingQueryParams, queryParam, undefined);
         }
-
-        set(this.pendingQueryParams, queryParam, undefined);
 
         if (typeof callback == 'function') {
             callback(queryParam);
@@ -153,10 +154,29 @@ export default class FiltersService extends Service {
         return currentRoute.queryParams;
     }
 
-    @action getQueryParams() {
+    @action getQueryParams(controller) {
+        const queryParams = {};
+
+        if (controller) {
+            const controllerQueryParams = getWithDefault(controller, 'queryParams', []);
+
+            if (isArray(controllerQueryParams)) {
+                for (let i = 0; i < controllerQueryParams.length; i++) {
+                    const qp = controllerQueryParams.objectAt(i);
+
+                    if (this.managedQueryParams.includes(qp)) {
+                        continue;
+                    }
+
+                    queryParams[qp] = get(controller, qp);
+                }
+
+                return queryParams;
+            }
+        }
+
         const currentRoute = this.lookupCurrentRoute();
         const currentRouteQueryParams = Object.keys(currentRoute.queryParams);
-        const queryParams = {};
 
         for (let i = 0; i < currentRouteQueryParams.length; i++) {
             const queryParam = currentRouteQueryParams.objectAt(i);
