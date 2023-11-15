@@ -1,6 +1,6 @@
 import Service from '@ember/service';
 import { inject as service } from '@ember/service';
-import { action } from '@ember/object';
+import { action, get } from '@ember/object';
 import { isArray } from '@ember/array';
 import { dasherize } from '@ember/string';
 import { later } from '@ember/runloop';
@@ -48,7 +48,7 @@ export default class CrudService extends Service {
      * @void
      */
     @action delete(model, options = {}) {
-        const modelName = getModelName(model, getWithDefault(options, 'modelName'), { humanize: true, capitalizeWords: true });
+        const modelName = getModelName(model, get(options, 'modelName'), { humanize: true, capitalizeWords: true });
 
         this.modalsManager.confirm({
             title: `Are you sure to delete this ${modelName}?`,
@@ -99,7 +99,7 @@ export default class CrudService extends Service {
         }
 
         const firstModel = first(selected);
-        const modelName = getModelName(firstModel, getWithDefault(options, 'modelName'), { humanize: true, capitalizeWords: true });
+        const modelName = getModelName(firstModel, get(options, 'modelName'), { humanize: true, capitalizeWords: true });
 
         // make sure all are the same type
         selected = selected.filter((m) => getModelName(m) === getModelName(firstModel));
@@ -127,7 +127,7 @@ export default class CrudService extends Service {
         }
 
         const firstModel = first(selected);
-        const modelName = getModelName(firstModel, getWithDefault(options, 'modelName'), { humanize: true, capitalizeWords: true });
+        const modelName = getModelName(firstModel, get(options, 'modelName'), { humanize: true, capitalizeWords: true });
         const count = selected.length;
         const actionMethod = (typeof options.actionMethod === 'string' ? options.actionMethod : `POST`).toLowerCase();
         const fetchParams = getWithDefault(options, 'fetchParams', {});
