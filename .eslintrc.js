@@ -34,7 +34,7 @@ module.exports = {
         'ember/no-incorrect-calls-with-inline-anonymous-functions': 'off',
         'ember/no-private-routing-service': 'off',
         'no-useless-escape': 'off',
-        'node/no-unpublished-require': [
+        'n/no-unpublished-require': [
             'error',
             {
                 allowModules: ['resolve', 'broccoli-funnel', 'broccoli-merge-trees'],

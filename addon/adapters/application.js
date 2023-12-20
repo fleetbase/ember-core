@@ -1,4 +1,5 @@
 import RESTAdapter from '@ember-data/adapter/rest';
+import AdapterError from '@ember-data/adapter/error';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { storageFor } from 'ember-local-storage';
@@ -144,5 +145,28 @@ export default class ApplicationAdapter extends RESTAdapter {
      */
     pathForType(type) {
         return dasherize(pluralize(type));
+    }
+
+    /**
+     * Handles the response from an AJAX request in an Ember application.
+     *
+     * @param {number} status - The HTTP status code of the response.
+     * @param {object} headers - The headers of the response.
+     * @param {object} payload - The payload of the response.
+     * @return {Object | AdapterError} response - Returns a new `AdapterError` instance with detailed error information if the response is invalid; otherwise, it returns the result of the superclass's `handleResponse` method.
+     *
+     * This method first normalizes the error response and generates a detailed message.
+     * It then checks if the response is invalid based on the status code. If invalid, it constructs an `AdapterError` with the normalized errors and detailed message.
+     * For valid responses, it delegates the handling to the superclass's `handleResponse` method.
+     */
+    handleResponse(status, headers, payload) {
+        let errors = this.normalizeErrorResponse(status, headers, payload);
+        let detailedMessage = this.generatedDetailedMessage(...arguments);
+
+        if (this.isInvalid(status, headers, payload)) {
+            return new AdapterError(errors, detailedMessage);
+        }
+
+        return super.handleResponse(...arguments);
     }
 }

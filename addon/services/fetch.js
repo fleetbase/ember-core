@@ -524,6 +524,12 @@ export default class FetchService extends Service {
         const { queue } = file;
         const headers = this.getHeaders();
 
+        // make sure this task runs once for this file in correct state
+        // this can occur when the task is called twice when upload button exists inside upload dropzone
+        if (['queued', 'failed', 'timed_out', 'aborted'].indexOf(file.state) === -1) {
+            return;
+        }
+
         // remove Content-Type header
         delete headers['Content-Type'];
 
@@ -539,7 +545,7 @@ export default class FetchService extends Service {
                 })
                 .then((response) => response.json())
                 .catch((error) => {
-                    this.notifications.serverError(error, `Upload failed.`);
+                    this.notifications.serverError(error, 'File upload failed.');
                 });
 
             const model = this.store.push(this.store.normalize('file', upload.file));
@@ -552,7 +558,7 @@ export default class FetchService extends Service {
             return model;
         } catch (error) {
             queue.remove(file);
-            this.notifications.serverError(error, `Upload failed.`);
+            this.notifications.serverError(error, 'File upload failed.');
 
             if (typeof errorCallback === 'function') {
                 errorCallback(error);
