@@ -4,7 +4,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { computed, action } from '@ember/object';
 import { isBlank } from '@ember/utils';
-import { isArray } from '@ember/array';
+import { A, isArray } from '@ember/array';
 import { later } from '@ember/runloop';
 import { dasherize, camelize } from '@ember/string';
 import { getOwner } from '@ember/application';
@@ -14,20 +14,20 @@ import RSVP from 'rsvp';
 export default class UniverseService extends Service.extend(Evented) {
     @service router;
     @service intl;
-    @tracked headerMenuItems = [];
-    @tracked organizationMenuItems = [];
-    @tracked userMenuItems = [];
+    @tracked headerMenuItems = A([]);
+    @tracked organizationMenuItems = A([]);
+    @tracked userMenuItems = A([]);
     @tracked adminRegistry = {
-        menuItems: [],
-        menuPanels: [],
+        menuItems: A([]),
+        menuPanels: A([]),
     };
     @tracked accountRegistry = {
-        menuItems: [],
-        menuPanels: [],
+        menuItems: A([]),
+        menuPanels: A([]),
     };
     @tracked settingsRegistry = {
-        menuItems: [],
-        menuPanels: [],
+        menuItems: A([]),
+        menuPanels: A([]),
     };
 
     /**
@@ -80,6 +80,130 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     @computed('settingsRegistry.menuPanels.[]') get settingsMenuPanels() {
         return this.settingsRegistry.menuPanels;
+    }
+
+    /**
+     * Transitions to a given route within a specified Ember engine.
+     *
+     * This action dynamically retrieves the specified engine's instance and its configuration to prepend the
+     * engine's route prefix to the provided route. If the engine instance or its route prefix is not found,
+     * it falls back to transitioning to the route without the prefix.
+     *
+     * @param {string} engineName - The name of the Ember engine.
+     * @param {string} route - The route to transition to within the engine.
+     * @param {...any} args - Additional arguments to pass to the router's transitionTo method.
+     * @returns {Promise} A Promise that resolves with the result of the router's transitionTo method.
+     *
+     * @example
+     * // Transitions to the 'management.fleets.index.new' route within the '@fleetbase/fleet-ops' engine.
+     * this.transitionToEngineRoute('@fleetbase/fleet-ops', 'management.fleets.index.new');
+     */
+    @action transitionToEngineRoute(engineName, route, ...args) {
+        const engineInstance = this.getEngineInstance(engineName);
+
+        if (engineInstance) {
+            const config = engineInstance.resolveRegistration('config:environment');
+
+            if (config) {
+                let mountedEngineRoutePrefix = config.mountedEngineRoutePrefix;
+
+                if (!mountedEngineRoutePrefix) {
+                    mountedEngineRoutePrefix = this._mountPathFromEngineName(engineName);
+                }
+
+                if (!mountedEngineRoutePrefix.endsWith('.')) {
+                    mountedEngineRoutePrefix = mountedEngineRoutePrefix + '.';
+                }
+
+                return this.router.transitionTo(`${mountedEngineRoutePrefix}${route}`, ...args);
+            }
+        }
+
+        return this.router.transitionTo(route, ...args);
+    }
+
+    /**
+     * Retrieves the mount point of a specified engine by its name.
+    
+     * @param {string} engineName - The name of the engine for which to get the mount point.
+     * @returns {string|null} The mount point of the engine or null if not found.
+     */
+    getEngineMountPoint(engineName) {
+        const engineInstance = this.getEngineInstance(engineName);
+        return this._getMountPointFromEngineInstance(engineInstance);
+    }
+
+    /**
+     * Determines the mount point from an engine instance by reading its configuration.
+
+     * @param {object} engineInstance - The instance of the engine.
+     * @returns {string|null} The resolved mount point or null if the instance is undefined or the configuration is not set.
+     * @private
+     */
+    _getMountPointFromEngineInstance(engineInstance) {
+        if (engineInstance) {
+            const config = engineInstance.resolveRegistration('config:environment');
+
+            if (config) {
+                let engineName = config.modulePrefix;
+                let mountedEngineRoutePrefix = config.mountedEngineRoutePrefix;
+
+                if (!mountedEngineRoutePrefix) {
+                    mountedEngineRoutePrefix = this._mountPathFromEngineName(engineName);
+                }
+
+                if (!mountedEngineRoutePrefix.endsWith('.')) {
+                    mountedEngineRoutePrefix = mountedEngineRoutePrefix + '.';
+                }
+
+                return mountedEngineRoutePrefix;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Extracts and formats the mount path from a given engine name.
+     *
+     * This function takes an engine name in the format '@scope/engine-name',
+     * extracts the 'engine-name' part, removes the '-engine' suffix if present,
+     * and formats it into a string that represents a console path.
+     *
+     * @param {string} engineName - The full name of the engine, typically in the format '@scope/engine-name'.
+     * @returns {string} A string representing the console path derived from the engine name.
+     * @example
+     * // returns 'console.some'
+     * _mountPathFromEngineName('@fleetbase/some-engine');
+     */
+    _mountPathFromEngineName(engineName) {
+        let engineNameSegments = engineName.split('/');
+        let mountName = engineNameSegments[1];
+
+        if (typeof mountName !== 'string') {
+            mountName = engineNameSegments[0];
+        }
+
+        const mountPath = mountName.replace('-engine', '');
+        return `console.${mountPath}`;
+    }
+
+    /**
+     * Refreshes the current route.
+     *
+     * This action is a simple wrapper around the router's refresh method. It can be used to re-run the
+     * model hooks and reset the controller properties on the current route, effectively reloading the route.
+     * This is particularly useful in scenarios where the route needs to be reloaded due to changes in
+     * state or data.
+     *
+     * @returns {Promise} A Promise that resolves with the result of the router's refresh method.
+     *
+     * @example
+     * // To refresh the current route
+     * this.refreshRoute();
+     */
+    @action refreshRoute() {
+        return this.router.refresh();
     }
 
     /**
@@ -756,7 +880,7 @@ export default class UniverseService extends Service.extend(Evented) {
     loadEngine(name) {
         const router = getOwner(this).lookup('router:main');
         const instanceId = 'manual'; // Arbitrary instance id, should be unique per engine
-        const mountPoint = null; // No mount point for manually loaded engines
+        const mountPoint = this._mountPathFromEngineName(name); // No mount point for manually loaded engines
 
         if (!router._enginePromises[name]) {
             router._enginePromises[name] = Object.create(null);
@@ -805,7 +929,6 @@ export default class UniverseService extends Service.extend(Evented) {
         assert("You attempted to load the engine '" + name + "', but the engine cannot be found.", owner.hasRegistration(`engine:${name}`));
 
         let engineInstances = owner.lookup('router:main')._engineInstances;
-
         if (!engineInstances[name]) {
             engineInstances[name] = Object.create(null);
         }
@@ -815,11 +938,61 @@ export default class UniverseService extends Service.extend(Evented) {
             mountPoint,
         });
 
+        // correct mountPoint using engine instance
+        let _mountPoint = this._getMountPointFromEngineInstance(engineInstance);
+        if (_mountPoint) {
+            engineInstance.mountPoint = _mountPoint;
+        }
+
+        // make sure to set dependencies from base instance
+        if (engineInstance.base) {
+            engineInstance.dependencies = this._setupEngineParentDependenciesBeforeBoot(engineInstance.base.dependencies);
+        }
+
+        // store loaded instance to engineInstances for booting
         engineInstances[name][instanceId] = engineInstance;
 
         return engineInstance.boot().then(() => {
             return engineInstance;
         });
+    }
+
+    _setupEngineParentDependenciesBeforeBoot(baseDependencies = {}) {
+        const dependencies = { ...baseDependencies };
+
+        // fix services
+        const servicesObject = {};
+        if (isArray(dependencies.services)) {
+            for (let i = 0; i < dependencies.services.length; i++) {
+                const service = dependencies.services.objectAt(i);
+
+                if (typeof service === 'object') {
+                    Object.assign(servicesObject, service);
+                    continue;
+                }
+
+                servicesObject[service] = service;
+            }
+        }
+
+        // fix external routes
+        const externalRoutesObject = {};
+        if (isArray(dependencies.externalRoutes)) {
+            for (let i = 0; i < dependencies.externalRoutes.length; i++) {
+                const externalRoute = dependencies.externalRoutes.objectAt(i);
+
+                if (typeof externalRoute === 'object') {
+                    Object.assign(externalRoutesObject, externalRoute);
+                    continue;
+                }
+
+                externalRoutesObject[externalRoute] = externalRoute;
+            }
+        }
+
+        dependencies.externalRoutes = externalRoutesObject;
+        dependencies.services = servicesObject;
+        return dependencies;
     }
 
     /**

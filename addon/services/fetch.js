@@ -5,7 +5,6 @@ import { get, set } from '@ember/object';
 import { isBlank } from '@ember/utils';
 import { dasherize } from '@ember/string';
 import { isArray } from '@ember/array';
-import { assign } from '@ember/polyfills';
 import { singularize, pluralize } from 'ember-inflector';
 import { task } from 'ember-concurrency';
 import { storageFor } from 'ember-local-storage';
@@ -256,7 +255,7 @@ export default class FetchService extends Service {
      * @return {Promise}
      */
     request(path, method = 'GET', data = {}, options = {}) {
-        const headers = assign(this.getHeaders(), options.headers ?? {});
+        const headers = Object.assign(this.getHeaders(), options.headers ?? {});
         const host = options.host ?? this.host;
         const namespace = options.namespace ?? this.namespace;
         const url = options.externalRequest === true ? path : [host, namespace, path].filter(Boolean).join('/');
@@ -525,6 +524,12 @@ export default class FetchService extends Service {
         const { queue } = file;
         const headers = this.getHeaders();
 
+        // make sure this task runs once for this file in correct state
+        // this can occur when the task is called twice when upload button exists inside upload dropzone
+        if (['queued', 'failed', 'timed_out', 'aborted'].indexOf(file.state) === -1) {
+            return;
+        }
+
         // remove Content-Type header
         delete headers['Content-Type'];
 
@@ -540,7 +545,7 @@ export default class FetchService extends Service {
                 })
                 .then((response) => response.json())
                 .catch((error) => {
-                    this.notifications.serverError(error, `Upload failed.`);
+                    this.notifications.serverError(error, 'File upload failed.');
                 });
 
             const model = this.store.push(this.store.normalize('file', upload.file));
@@ -553,7 +558,7 @@ export default class FetchService extends Service {
             return model;
         } catch (error) {
             queue.remove(file);
-            this.notifications.serverError(error, `Upload failed.`);
+            this.notifications.serverError(error, 'File upload failed.');
 
             if (typeof errorCallback === 'function') {
                 errorCallback(error);
@@ -574,7 +579,7 @@ export default class FetchService extends Service {
      * @return {Promise}
      */
     download(path, query = {}, options = {}) {
-        const headers = assign(this.getHeaders(), options.headers ?? {});
+        const headers = Object.assign(this.getHeaders(), options.headers ?? {});
 
         return new Promise((resolve, reject) => {
             return fetch(`${options.host || this.host}/${options.namespace || this.namespace}/${path}?${!isBlank(query) ? new URLSearchParams(query).toString() : ''}`, {
