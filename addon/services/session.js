@@ -218,4 +218,17 @@ export default class SessionService extends SimpleAuthSessionService {
 
         return Math.round((now - date) / 1000);
     }
+
+    /**
+     * Checks for the presence of two-factor authentication for a given user identity.
+     *
+     * @param {String} identity
+     * @return {Promise}
+     * @throws {Error} 
+     */
+    checkForTwoFactor(identity) {
+        return this.fetch.get('two-fa/check', { identity }).catch((error) => {
+            throw new Error(error.message);
+        });
+    }
 }

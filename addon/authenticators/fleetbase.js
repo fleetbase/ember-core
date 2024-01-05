@@ -59,12 +59,6 @@ export default class FleetbaseAuthenticator extends Base {
         });
     }
 
-    checkForTwoFactor(identity) {
-        return this.fetch.get('two-fa/check', { identity }).catch((error) => {
-            throw new Error(error.message);
-        });
-    }
-
     /**
      * Invalidates the current session
      *
