@@ -1,5 +1,4 @@
 /* eslint-disable no-unused-vars */
-import extractCoordinates from './extract-coordinates';
 import Terraformer from 'terraformer';
 import { isArray } from '@ember/array';
 
@@ -11,7 +10,7 @@ export default function extractLongitude(position) {
     }
 
     if (position instanceof Terraformer.Point || isArray(position.coordinates)) {
-        [latitude, longitude] = extractCoordinates(position.coordinates);
+        [longitude, latitude] = position.coordinates;
 
         return longitude;
     }
@@ -21,8 +20,6 @@ export default function extractLongitude(position) {
 
         return longitude;
     }
-
-    [latitude, longitude] = extractCoordinates(position);
 
     return longitude;
 }
