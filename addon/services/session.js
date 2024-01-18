@@ -2,6 +2,7 @@ import SimpleAuthSessionService from 'ember-simple-auth/services/session';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { later } from '@ember/runloop';
+import getWithDefault from '../utils/get-with-default';
 
 export default class SessionService extends SimpleAuthSessionService {
     /**
@@ -97,12 +98,12 @@ export default class SessionService extends SimpleAuthSessionService {
             const user = await this.currentUser.load();
 
             if (!user) {
-                return this.invalidateWithLoader(`Session authentication failed...`);
+                return this.invalidateWithLoader('Session authentication failed...');
             }
 
             return user;
         } catch (error) {
-            await this.invalidateWithLoader(error.message ?? `Session authentication failed...`);
+            await this.invalidateWithLoader(getWithDefault(error, 'message', 'Session authentication failed...'));
         }
     }
 
@@ -124,7 +125,7 @@ export default class SessionService extends SimpleAuthSessionService {
                             transition.abort();
                         }
 
-                        reject(invalidateWithLoader(`Session authentication failed...`));
+                        reject(invalidateWithLoader('Session authentication failed...'));
                     }
 
                     resolve(user);
@@ -217,5 +218,18 @@ export default class SessionService extends SimpleAuthSessionService {
         const now = new Date();
 
         return Math.round((now - date) / 1000);
+    }
+
+    /**
+     * Checks for the presence of two-factor authentication for a given user identity.
+     *
+     * @param {String} identity
+     * @return {Promise}
+     * @throws {Error}
+     */
+    checkForTwoFactor(identity) {
+        return this.fetch.get('two-fa/check', { identity }).catch((error) => {
+            throw new Error(error.message);
+        });
     }
 }
