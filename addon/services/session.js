@@ -224,7 +224,7 @@ export default class SessionService extends SimpleAuthSessionService {
      *
      * @param {String} identity
      * @return {Promise}
-     * @throws {Error} 
+     * @throws {Error}
      */
     checkForTwoFactor(identity) {
         return this.fetch.get('two-fa/check', { identity }).catch((error) => {
