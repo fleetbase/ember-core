@@ -8,7 +8,7 @@ export default function getResourceNameFromTransition(transition, options = {}) 
         let resourceName = routePathSegments[3];
 
         if (options.humanize === true) {
-            return humanize(resouceName);
+            return humanize(resourceName);
         }
 
         return resourceName;

@@ -795,7 +795,7 @@ export default class UniverseService extends Service.extend(Evented) {
             class: itemClass,
             inlineClass,
             wrapperClass,
-            overwriteWrapperClass
+            overwriteWrapperClass,
         };
 
         return menuItem;
