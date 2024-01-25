@@ -759,6 +759,12 @@ export default class UniverseService extends Service.extend(Evented) {
         const index = this._getOption(options, 'index', 0);
         const onClick = this._getOption(options, 'onClick', null);
         const section = this._getOption(options, 'section', null);
+        const iconSize = this._getOption(options, 'iconSize', null);
+        const iconClass = this._getOption(options, 'iconClass', null);
+        const itemClass = this._getOption(options, 'class', null);
+        const inlineClass = this._getOption(options, 'inlineClass', null);
+        const wrapperClass = this._getOption(options, 'wrapperClass', null);
+        const overwriteWrapperClass = this._getOption(options, 'overwriteWrapperClass', false);
 
         // dasherize route segments
         if (typeof route === 'string') {
@@ -784,6 +790,12 @@ export default class UniverseService extends Service.extend(Evented) {
             index,
             section,
             onClick,
+            iconSize,
+            iconClass,
+            class: itemClass,
+            inlineClass,
+            wrapperClass,
+            overwriteWrapperClass,
         };
 
         return menuItem;
