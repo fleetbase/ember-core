@@ -551,7 +551,7 @@ export default class FetchService extends Service {
                         errorCallback(error);
                     }
                 });
-                
+
             if (upload) {
                 const model = this.store.push(this.store.normalize('file', upload.file));
                 set(file, 'model', model);
