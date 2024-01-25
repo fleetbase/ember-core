@@ -548,14 +548,18 @@ export default class FetchService extends Service {
                     this.notifications.serverError(error, 'File upload failed.');
                 });
 
-            const model = this.store.push(this.store.normalize('file', upload.file));
-            set(file, 'model', model);
+            if (upload) {
+                const model = this.store.push(this.store.normalize('file', upload.file));
+                set(file, 'model', model);
 
-            if (typeof callback === 'function') {
-                callback(model);
+                if (typeof callback === 'function') {
+                    callback(model);
+                }
+
+                return model;
             }
 
-            return model;
+            return null;
         } catch (error) {
             queue.remove(file);
             this.notifications.serverError(error, 'File upload failed.');
