@@ -674,13 +674,13 @@ export default class UniverseService extends Service.extend(Evented) {
     @action
     registerWidget(widget) {
         // Extract properties from the widget object
-        const { name, component, gridOptions, options } = widget;
+        const { name, component, grid_options, options } = widget;
 
         // Create a new widget object with the extracted properties
         const newWidget = {
             name,
             component,
-            gridOptions,
+            grid_options,
             options,
         };
 
@@ -698,7 +698,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @public
      * @memberof UniverseService
      * @param {Array} widgets - An array of widget objects to register.
-     *   Each widget object should have 'name', 'component', 'gridOptions', and 'options' properties.
+     *   Each widget object should have 'name', 'component', 'grid_options', and 'options' properties.
      */
     @action
     registerWidgets(widgets = []) {
