@@ -95,7 +95,9 @@ export default class ApplicationAdapter extends RESTAdapter {
             const localStorageSession = JSON.parse(window.localStorage.getItem('ember_simple_auth-session'));
             if (localStorageSession) {
                 const { authenticated } = localStorageSession;
-                token = authenticated.token;
+                if (authenticated) {
+                    token = authenticated.token;
+                }
 
                 // Check isAuthenticated again
                 isAuthenticated = !!token;

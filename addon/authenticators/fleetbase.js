@@ -1,5 +1,17 @@
 import Base from 'ember-simple-auth/authenticators/base';
 import { inject as service } from '@ember/service';
+import getWithDefault from '../utils/get-with-default';
+
+export class AuthenticationError extends Error {
+    constructor(message, code) {
+        super(message);
+        this.code = code;
+    }
+
+    getCode() {
+        return this.code;
+    }
+}
 
 export default class FleetbaseAuthenticator extends Base {
     /**
@@ -35,7 +47,7 @@ export default class FleetbaseAuthenticator extends Base {
             )
             .then((response) => {
                 if (response.restore === false) {
-                    return Promise.reject(new Error(response.error));
+                    return Promise.reject(new AuthenticationError(response.error));
                 }
 
                 return response;
@@ -52,7 +64,10 @@ export default class FleetbaseAuthenticator extends Base {
     authenticate(credentials = {}, remember = false, path = 'auth/login') {
         return this.fetch.post(path, { ...credentials, remember }).then((response) => {
             if (response.errors) {
-                return Promise.reject(new Error(response.errors.firstObject ?? 'Authentication failed!'));
+                const errorMessage = getWithDefault(response.errors, '0', 'Authentication failed!');
+                const errorCode = getWithDefault(response, 'code');
+
+                return Promise.reject(new AuthenticationError(errorMessage, errorCode));
             }
 
             return response;

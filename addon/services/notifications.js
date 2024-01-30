@@ -16,7 +16,11 @@ export default class NotificationsService extends EmberNotificationsService {
             return this.error(errorMessage, options);
         }
 
-        return this.error(error ?? fallbackMessage, options);
+        if (typeof error === 'string') {
+            return this.error(error, options);
+        }
+
+        return this.error(fallbackMessage, options);
     }
 
     invoke(type, message, ...params) {
