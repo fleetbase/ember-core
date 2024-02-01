@@ -667,6 +667,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @memberof UniverseService
      * @param {Object} widget - The widget object containing name, component, gridOptions, and options.
      *   @property {String} name - The name of the widget.
+     *   @property {String} icon - The iron of the widget.
      *   @property {Function} component - The component associated with the widget.
      *   @property {Object} gridOptions - The grid options for the widget.
      *   @property {Object} options - Additional options for the widget.
@@ -674,11 +675,12 @@ export default class UniverseService extends Service.extend(Evented) {
     @action
     registerWidget(widget) {
         // Extract properties from the widget object
-        const { name, component, grid_options, options } = widget;
+        const { name, icon, component, grid_options, options } = widget;
 
         // Create a new widget object with the extracted properties
         const newWidget = {
             name,
+            icon,
             component,
             grid_options,
             options,
