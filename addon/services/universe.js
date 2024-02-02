@@ -29,9 +29,10 @@ export default class UniverseService extends Service.extend(Evented) {
         menuItems: A([]),
         menuPanels: A([]),
     };
-
-    @tracked widgets = A([]);
-    @tracked dashboards = A([]);
+    @tracked dashboardWidgets = {
+        defaultWidgets: A([]),
+        widgets: A([]),
+    };
 
     /**
      * Computed property that returns all administrative menu items.
@@ -660,9 +661,9 @@ export default class UniverseService extends Service.extend(Evented) {
     }
 
     /**
-     * Registers a new widget in the universe service.
+     * Registers a new dashboard widget in the universe service.
      *
-     * @method registerWidget
+     * @method registerDashboardWidgets
      * @public
      * @memberof UniverseService
      * @param {Object} widget - The widget object containing name, component, gridOptions, and options.
@@ -672,54 +673,88 @@ export default class UniverseService extends Service.extend(Evented) {
      *   @property {Object} gridOptions - The grid options for the widget.
      *   @property {Object} options - Additional options for the widget.
      */
-    @action
-    registerWidget(widget) {
+    registerDashboardWidgets(widget) {
+        if (isArray(widget)) {
+            widget.forEach((w) => this.registerDashboardWidgets(w));
+            return;
+        }
+
+        const newWidget = this._createDashboardWidget(widget);
+        this.dashboardWidgets.widgets.pushObject(newWidget);
+        this.trigger('widget.registered', newWidget);
+    }
+
+    /**
+     * Retrieves the widgets registered in the universe service.
+     *
+     * @method getDashboardWidgets
+     * @public
+     * @memberof UniverseService
+     * @returns {Array} An array of registered widgets
+     */
+    getDashboardWidgets() {
+        return this.dashboardWidgets.widgets;
+    }
+
+    /**
+     * Registers a new dashboard widget in the universe service.
+     *
+     * @method registerDefaultDashboardWidgets
+     * @public
+     * @memberof UniverseService
+     * @param {Object} widget - The widget object containing name, component, gridOptions, and options.
+     *   @property {String} name - The name of the widget.
+     *   @property {String} icon - The iron of the widget.
+     *   @property {Function} component - The component associated with the widget.
+     *   @property {Object} gridOptions - The grid options for the widget.
+     *   @property {Object} options - Additional options for the widget.
+     */
+    registerDefaultDashboardWidgets(widget) {
+        if (isArray(widget)) {
+            widget.forEach((w) => this.registerDefaultDashboardWidgets(w));
+            return;
+        }
+
+        const newWidget = this._createDashboardWidget(widget);
+        this.dashboardWidgets.defaultWidgets.pushObject(newWidget);
+        this.trigger('widget.registered', newWidget);
+    }
+
+    /**
+     * Retrieves the widgets registered in the universe service.
+     *
+     * @method getDefaultDashboardWidgets
+     * @public
+     * @memberof UniverseService
+     * @returns {Array} An array of registered widgets
+     */
+    getDefaultDashboardWidgets() {
+        return this.dashboardWidgets.defaultWidgets;
+    }
+
+    /**
+     * Creates a dashboard widget object
+     *
+     * @param {Object} widget
+     * @return {Widgetobject} 
+     * @memberof UniverseService
+     */
+    _createDashboardWidget(widget) {
         // Extract properties from the widget object
-        const { name, icon, component, grid_options, options } = widget;
+        const { did, name, description, icon, component, grid_options, options } = widget;
 
         // Create a new widget object with the extracted properties
         const newWidget = {
+            did,
             name,
+            description,
             icon,
             component,
             grid_options,
             options,
         };
 
-        // Register the widget
-        this.widgets.pushObject(newWidget);
-
-        // Trigger widget registered event
-        this.trigger('widget.registered', newWidget);
-    }
-
-    /**
-     * Registers multiple widgets in the universe service.
-     *
-     * @method registerWidgets
-     * @public
-     * @memberof UniverseService
-     * @param {Array} widgets - An array of widget objects to register.
-     *   Each widget object should have 'name', 'component', 'grid_options', and 'options' properties.
-     */
-    @action
-    registerWidgets(widgets = []) {
-        // Iterate through the array of widgets and register each one
-        for (const widget of widgets) {
-            this.registerWidget(widget);
-        }
-    }
-
-    /**
-     * Retrieves the widgets registered in the universe service.
-     *
-     * @method getWidgets
-     * @public
-     * @memberof UniverseService
-     * @returns {Array} An array of registered widgets
-     */
-    @action getWidgets() {
-        return this.widgets;
+        return newWidget;
     }
 
     /**
