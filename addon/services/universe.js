@@ -269,6 +269,42 @@ export default class UniverseService extends Service.extend(Evented) {
     }
 
     /**
+     * Creates multiple registries from a given array of registries. Each registry can be either a string or an array.
+     * If a registry is an array, it expects two elements: the registry name (string) and registry options (object).
+     * If a registry is a string, only the registry name is needed.
+     *
+     * The function iterates over each element in the `registries` array and creates a registry using the `createRegistry` method.
+     * It supports two types of registry definitions:
+     * 1. Array format: [registryName, registryOptions] - where registryOptions is an optional object.
+     * 2. String format: "registryName" - in this case, only the name is provided and the registry is created with default options.
+     *
+     * @param {Array} registries - An array of registries to be created. Each element can be either a string or an array.
+     * @action
+     * @memberof YourComponentOrClassName
+     */
+    @action createRegistries(registries = []) {
+        if (!isArray(registries)) {
+            throw new Error('`createRegistries()` method must take an array.');
+        }
+
+        for (let i = 0; i < registries.length; i++) {
+            const registry = registries[i];
+
+            if (isArray(registry) && registry.length === 2) {
+                let registryName = registry[0];
+                let registryOptions = registry[1] ?? {};
+
+                this.createRegistry(registryName, registryOptions);
+                continue;
+            }
+
+            if (typeof registry === 'string') {
+                this.createRegistry(registry);
+            }
+        }
+    }
+
+    /**
      * Triggers an event on for a universe registry.
      *
      * @memberof UniverseService
@@ -741,7 +777,19 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     _createDashboardWidget(widget) {
         // Extract properties from the widget object
-        const { did, name, description, icon, component, grid_options, options } = widget;
+        let { did, name, description, icon, component, grid_options, options } = widget;
+
+        // If component is a definition register to host application
+        if (typeof component === 'function') {
+            const owner = getOwner(this);
+
+            if (owner) {
+                owner.register(`component:${component.name}`, component);
+
+                // Update component name
+                component = component.name;
+            }
+        }
 
         // Create a new widget object with the extracted properties
         const newWidget = {
