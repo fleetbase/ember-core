@@ -286,7 +286,7 @@ export default class UniverseService extends Service.extend(Evented) {
         if (!isArray(registries)) {
             throw new Error('`createRegistries()` method must take an array.');
         }
-        
+
         for (let i = 0; i < registries.length; i++) {
             const registry = registries[i];
 
