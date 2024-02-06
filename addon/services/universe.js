@@ -741,7 +741,19 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     _createDashboardWidget(widget) {
         // Extract properties from the widget object
-        const { did, name, description, icon, component, grid_options, options } = widget;
+        let { did, name, description, icon, component, grid_options, options } = widget;
+
+        // If component is a definition register to host application
+        if (typeof component === 'function') {
+            const owner = getOwner(this);
+
+            if (owner) {
+                owner.register(`component:${component.name}`, component);
+
+                // Update component name
+                component = component.name;
+            }
+        }
 
         // Create a new widget object with the extracted properties
         const newWidget = {
