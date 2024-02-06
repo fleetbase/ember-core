@@ -736,7 +736,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * Creates a dashboard widget object
      *
      * @param {Object} widget
-     * @return {Widgetobject} 
+     * @return {Widgetobject}
      * @memberof UniverseService
      */
     _createDashboardWidget(widget) {
