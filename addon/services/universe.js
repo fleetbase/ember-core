@@ -769,31 +769,39 @@ export default class UniverseService extends Service.extend(Evented) {
     }
 
     /**
-     * Creates a dashboard widget object
+     * Creates a dashboard widget object from the given widget configuration.
      *
-     * @param {Object} widget
-     * @return {Widgetobject}
+     * @param {Object} widget - The widget configuration object.
+     * @param {string} widget.widgetId - The unique identifier for the widget.
+     * @param {string} widget.name - The name of the widget.
+     * @param {string} widget.description - The description of the widget.
+     * @param {string} widget.icon - The icon for the widget.
+     * @param {(Function|string)} widget.component - The component class or name for the widget.
+     * @param {Object} widget.grid_options - Grid options for the widget layout.
+     * @param {Object} widget.options - Additional options for the widget.
+     * @returns {Object} A new widget object with properties derived from the input configuration.
      * @memberof UniverseService
      */
     _createDashboardWidget(widget) {
         // Extract properties from the widget object
-        let { did, name, description, icon, component, grid_options, options } = widget;
+        let { widgetId, name, description, icon, component, grid_options, options } = widget;
 
         // If component is a definition register to host application
         if (typeof component === 'function') {
             const owner = getOwner(this);
+            const widgetId = component.widgetId || widgetId || this._createUniqueWidgetHashFromDefinition(component);
 
             if (owner) {
-                owner.register(`component:${component.name}`, component);
+                owner.register(`component:${widgetId}`, component);
 
                 // Update component name
-                component = component.name;
+                component = widgetId;
             }
         }
 
         // Create a new widget object with the extracted properties
         const newWidget = {
-            did,
+            widgetId,
             name,
             description,
             icon,
@@ -803,6 +811,29 @@ export default class UniverseService extends Service.extend(Evented) {
         };
 
         return newWidget;
+    }
+
+    /**
+     * Creates a unique hash from a component's definition. This hash is used as an identifier
+     * for the component when a direct identifier (widgetId) or a name is not available.
+     *
+     * @param {Function} component - The component class or constructor function.
+     * @returns {string} A unique hash string representing the component's definition.
+     * @memberof UniverseService
+     */
+    _createUniqueWidgetHashFromDefinition(component) {
+        if (typeof component.toString === 'function') {
+            let definition = component.toString();
+            let hash = 0;
+            for (let i = 0; i < definition.length; i++) {
+                const char = definition.charCodeAt(i);
+                hash = (hash << 5) - hash + char;
+                hash |= 0;
+            }
+            return hash.toString(16);
+        }
+
+        return component.name;
     }
 
     /**
