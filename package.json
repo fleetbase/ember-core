@@ -1,6 +1,6 @@
 {
   "name": "@fleetbase/ember-core",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Provides all the core services, decorators and utilities for building a Fleetbase extension for the Console.",
   "keywords": [
     "fleetbase-core",
@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "@babel/core": "^7.23.2",
+    "compress-json": "^3.0.0",
     "date-fns": "^2.30.0",
     "ember-auto-import": "^2.6.3",
     "ember-cli-babel": "^8.2.0",
@@ -71,13 +72,13 @@
     "ember-cli-inject-live-reload": "^2.1.0",
     "ember-cli-sri": "^2.1.1",
     "ember-cli-terser": "^4.0.2",
+    "ember-data": "^4.12.5",
     "ember-file-upload": "8.4.0",
     "ember-load-initializers": "^2.1.2",
     "ember-page-title": "^8.0.0",
     "ember-qunit": "^8.0.1",
     "ember-resolver": "^11.0.1",
     "ember-source": "~5.4.0",
-    "ember-data": "^4.12.5",
     "ember-source-channel-url": "^3.0.0",
     "ember-template-lint": "^5.11.2",
     "ember-try": "^3.0.0",
