@@ -191,7 +191,6 @@ export default class ApplicationAdapter extends RESTAdapter {
             const decompressedPayload = decompressJson(payload);
             // Replace payload with decompressed json payload
             payload = JSON.parse(decompressedPayload);
-            console.log('decompressed json payload', payload);
         }
 
         return payload;
