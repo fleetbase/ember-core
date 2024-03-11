@@ -12,7 +12,8 @@ export default class AppCacheService extends Service {
     @storageFor('local-cache') localCache;
 
     get cachePrefix() {
-        return `${this.currentUser.id}:${this.currentUser.companyId}:`;
+        const userId = this.currentUser.id ?? 'anon';
+        return `${userId}:${this.currentUser.companyId}:`;
     }
 
     @action setEmberData(key, value, except = []) {

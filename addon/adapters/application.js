@@ -7,6 +7,7 @@ import { get } from '@ember/object';
 import { isBlank } from '@ember/utils';
 import { dasherize } from '@ember/string';
 import { pluralize } from 'ember-inflector';
+import { decompress as decompressJson } from 'compress-json';
 import getUserOptions from '../utils/get-user-options';
 import config from 'ember-get-config';
 
@@ -167,6 +168,14 @@ export default class ApplicationAdapter extends RESTAdapter {
 
         if (this.isInvalid(status, headers, payload)) {
             return new AdapterError(errors, detailedMessage);
+        }
+
+        // Check if the response is compressed
+        if (headers['x-compressed-json'] === '1') {
+            // Decompress the payload
+            const decompressedPayload = decompressJson(payload);
+            // Replace payload with decompressed json payload
+            payload = JSON.parse(decompressedPayload);
         }
 
         return super.handleResponse(...arguments);

@@ -259,6 +259,7 @@ export default class UniverseService extends Service.extend(Evented) {
             name: registryName,
             menuItems: [],
             menuPanels: [],
+            renderableComponents: [],
             ...options,
         };
 
@@ -427,6 +428,26 @@ export default class UniverseService extends Service.extend(Evented) {
     }
 
     /**
+     * Retrieves renderable components from a specified registry.
+     * This action checks the internal registry, identified by the given registry name,
+     * and returns the 'renderableComponents' if they are present and are an array.
+     *
+     * @action
+     * @param {string} registryName - The name of the registry to retrieve components from.
+     * @returns {Array} An array of renderable components from the specified registry, or an empty array if none found.
+     */
+    @action getRenderableComponentsFromRegistry(registryName) {
+        const internalRegistryName = this.createInternalRegistryName(registryName);
+        const registry = this[internalRegistryName];
+
+        if (!isBlank(registry) && isArray(registry.renderableComponents)) {
+            return registry.renderableComponents;
+        }
+
+        return [];
+    }
+
+    /**
      * Loads a component from the specified registry based on a given slug and view.
      *
      * @param {string} registryName - The name of the registry where the component is located.
@@ -548,6 +569,34 @@ export default class UniverseService extends Service.extend(Evented) {
 
             resolve(foundMenuItem);
         });
+    }
+
+    /**
+     * Registers a renderable component or an array of components into a specified registry.
+     * If a single component is provided, it is registered directly.
+     * If an array of components is provided, each component in the array is registered individually.
+     * The component is also registered into the specified engine.
+     *
+     * @param {string} engineName - The name of the engine to register the component(s) into.
+     * @param {string} registryName - The registry name where the component(s) should be registered.
+     * @param {Object|Array} component - The component or array of components to register.
+     */
+    registerRenderableComponent(engineName, registryName, component) {
+        if (isArray(component)) {
+            component.forEach((_) => this.registerRenderableComponent(registryName, _));
+            return;
+        }
+
+        // register component to engine
+        this.registerComponentInEngine(engineName, component);
+
+        // register to registry
+        const internalRegistryName = this.createInternalRegistryName(registryName);
+        if (isArray(this[internalRegistryName].renderableComponents)) {
+            this[internalRegistryName].renderableComponents.pushObject(component);
+        } else {
+            this[internalRegistryName].renderableComponents = [component];
+        }
     }
 
     /**

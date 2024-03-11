@@ -24,11 +24,11 @@ module.exports = {
 
         if (app.options['ember-cli-notifications'] !== undefined) {
             app.options['ember-cli-notifications'].autoClear = true;
-            app.options['ember-cli-notifications'].clearDuration = 1000 * 5;
+            app.options['ember-cli-notifications'].clearDuration = 1000 * 3.5;
         } else {
             app.options['ember-cli-notifications'] = {
                 autoClear: true,
-                clearDuration: 1000 * 5,
+                clearDuration: 1000 * 3.5,
             };
         }
     },

@@ -9,6 +9,7 @@ import { singularize, pluralize } from 'ember-inflector';
 import { task } from 'ember-concurrency';
 import { storageFor } from 'ember-local-storage';
 import { intervalToDuration, parseISO } from 'date-fns';
+import { decompress as decompressJson } from 'compress-json';
 import config from 'ember-get-config';
 import corslite from '../utils/corslite';
 import getMimeType from '../utils/get-mime-type';
@@ -226,22 +227,31 @@ export default class FetchService extends Service {
      *
      * @return {Promise}
      */
-    parseJSON(response) {
-        return new Promise((resolve, reject) =>
-            response
-                .json()
-                .then((json) =>
-                    resolve({
-                        statusText: response.statusText,
-                        status: response.status,
-                        ok: response.ok,
-                        json,
-                    })
-                )
-                .catch(() => {
-                    reject(new Error('Oops! Something went wrong when handling your request.'));
-                })
-        );
+    async parseJSON(response) {
+        try {
+            const compressedHeader = await response.headers.get('x-compressed-json');
+            let json;
+
+            if (compressedHeader === '1') {
+                // Handle compressed json
+                const text = await response.text();
+                json = JSON.parse(text);
+                json = decompressJson(json);
+                json = JSON.parse(json);
+            } else {
+                // Handle regular json
+                json = await response.json();
+            }
+
+            return {
+                statusText: response.statusText,
+                status: response.status,
+                ok: response.ok,
+                json,
+            };
+        } catch (error) {
+            throw new Error('Error processing response: ' + error.message);
+        }
     }
 
     /**
