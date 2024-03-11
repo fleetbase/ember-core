@@ -1,6 +1,7 @@
 import Service from '@ember/service';
 import Evented from '@ember/object/evented';
 import { inject as service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
 import { dasherize } from '@ember/string';
 import { computed, get, action } from '@ember/object';
 import { isBlank } from '@ember/utils';
@@ -42,6 +43,16 @@ export default class CurrentUserService extends Service.extend(Evented) {
      * @var {Service}
      */
     @service notifications;
+
+    /**
+     * Property to hold loaded user.
+     *
+     * @var {UserModel|Object}
+     * @memberof CurrentUserService
+     */
+    @tracked user = {
+        id: 'anon',
+    };
 
     /**
      * User options in localStorage

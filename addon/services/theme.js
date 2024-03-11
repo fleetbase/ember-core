@@ -203,7 +203,7 @@ export default class ThemeService extends Service {
     setTheme(theme = 'light') {
         document.body.classList.remove(`${this.currentTheme}-theme`);
         document.body.classList.add(`${theme}-theme`);
-        this.currentUser.setOption(`theme`, theme);
+        this.currentUser.setOption('theme', theme);
         this.activeTheme = theme;
     }
 

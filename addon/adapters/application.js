@@ -7,6 +7,7 @@ import { get } from '@ember/object';
 import { isBlank } from '@ember/utils';
 import { dasherize } from '@ember/string';
 import { pluralize } from 'ember-inflector';
+import { decompress as decompressJson } from 'compress-json';
 import getUserOptions from '../utils/get-user-options';
 import config from 'ember-get-config';
 
@@ -161,14 +162,37 @@ export default class ApplicationAdapter extends RESTAdapter {
      * It then checks if the response is invalid based on the status code. If invalid, it constructs an `AdapterError` with the normalized errors and detailed message.
      * For valid responses, it delegates the handling to the superclass's `handleResponse` method.
      */
-    handleResponse(status, headers, payload) {
+    async handleResponse(status, headers, payload, requestData) {
+        let decompressedPayload = this.decompressPayload(payload, headers);
         let errors = this.normalizeErrorResponse(status, headers, payload);
-        let detailedMessage = this.generatedDetailedMessage(...arguments);
-
         if (this.isInvalid(status, headers, payload)) {
-            return new AdapterError(errors, detailedMessage);
+            return new AdapterError(errors);
         }
 
-        return super.handleResponse(...arguments);
+        return super.handleResponse(status, headers, decompressedPayload, requestData);
+    }
+
+    /**
+     * Decompresses the response payload if it's marked as compressed in the response headers.
+     *
+     * This method checks the response headers for a specific 'x-compressed-json' flag.
+     * If this flag is set, indicating that the response payload is compressed, the method
+     * decompresses the payload. The decompressed payload is then parsed as JSON and returned.
+     * If the payload is not compressed, it is returned as is.
+     *
+     * @param {object} payload - The original payload of the response.
+     * @param {object} headers - The headers of the response, used to check if the payload is compressed.
+     * @return {object} The decompressed payload if it was compressed, or the original payload otherwise.
+     */
+    async decompressPayload(payload, headers) {
+        // Check if the response is compressed
+        if (headers['x-compressed-json'] === '1' || headers['x-compressed-json'] === 1) {
+            // Decompress the payload
+            const decompressedPayload = decompressJson(payload);
+            // Replace payload with decompressed json payload
+            payload = JSON.parse(decompressedPayload);
+        }
+
+        return payload;
     }
 }
