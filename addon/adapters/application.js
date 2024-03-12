@@ -5,6 +5,7 @@ import { inject as service } from '@ember/service';
 import { storageFor } from 'ember-local-storage';
 import { get } from '@ember/object';
 import { isBlank } from '@ember/utils';
+import { isArray } from '@ember/array';
 import { dasherize } from '@ember/string';
 import { pluralize } from 'ember-inflector';
 import { decompress as decompressJson } from 'compress-json';
@@ -14,7 +15,7 @@ import config from 'ember-get-config';
 if (isBlank(config.API.host)) {
     config.API.host = `${window.location.protocol}//${window.location.hostname}:8000`;
 }
-
+const DEFAULT_ERROR_MESSAGE = 'Oops! Something went wrong. Please try again or contact support if the issue persists.';
 export default class ApplicationAdapter extends RESTAdapter {
     /**
      * Inject the `session` service
@@ -151,22 +152,22 @@ export default class ApplicationAdapter extends RESTAdapter {
     }
 
     /**
-     * Handles the response from an AJAX request in an Ember application.
+     * Handles the response from an AJAX request.
+     * It decompresses the payload if needed, checks for error responses, and returns an AdapterError for error scenarios.
+     * For valid responses, the handling is delegated to the superclass's handleResponse method.
      *
-     * @param {number} status - The HTTP status code of the response.
-     * @param {object} headers - The headers of the response.
-     * @param {object} payload - The payload of the response.
-     * @return {Object | AdapterError} response - Returns a new `AdapterError` instance with detailed error information if the response is invalid; otherwise, it returns the result of the superclass's `handleResponse` method.
-     *
-     * This method first normalizes the error response and generates a detailed message.
-     * It then checks if the response is invalid based on the status code. If invalid, it constructs an `AdapterError` with the normalized errors and detailed message.
-     * For valid responses, it delegates the handling to the superclass's `handleResponse` method.
+     * @param {number} status - HTTP status code of the response.
+     * @param {object} headers - Response headers.
+     * @param {object} payload - Response payload.
+     * @param {object} requestData - Original request data.
+     * @return {Object | AdapterError} - The response object or an AdapterError in case of errors.
      */
-    async handleResponse(status, headers, payload, requestData) {
-        let decompressedPayload = this.decompressPayload(payload, headers);
-        let errors = this.normalizeErrorResponse(status, headers, payload);
-        if (this.isInvalid(status, headers, payload)) {
-            return new AdapterError(errors);
+    handleResponse(status, headers, payload, requestData) {
+        const decompressedPayload = this.decompressPayload(payload, headers);
+        if (this.isErrorResponse(status, decompressedPayload)) {
+            const errors = this.getResponseErrors(decompressedPayload);
+            const errorMessage = this.getErrorMessage(errors);
+            return new AdapterError(errors, errorMessage);
         }
 
         return super.handleResponse(status, headers, decompressedPayload, requestData);
@@ -184,7 +185,7 @@ export default class ApplicationAdapter extends RESTAdapter {
      * @param {object} headers - The headers of the response, used to check if the payload is compressed.
      * @return {object} The decompressed payload if it was compressed, or the original payload otherwise.
      */
-    async decompressPayload(payload, headers) {
+    decompressPayload(payload, headers) {
         // Check if the response is compressed
         if (headers['x-compressed-json'] === '1' || headers['x-compressed-json'] === 1) {
             // Decompress the payload
@@ -194,5 +195,39 @@ export default class ApplicationAdapter extends RESTAdapter {
         }
 
         return payload;
+    }
+
+    /**
+     * Extracts the error message from a list of errors.
+     * Returns a default error message if the provided list is empty or undefined.
+     *
+     * @param {Array} errors - Array of error messages or objects.
+     * @return {string} - The extracted error message.
+     */
+    getErrorMessage(errors = []) {
+        return errors[0] ? errors[0] : DEFAULT_ERROR_MESSAGE;
+    }
+
+    /**
+     * Extracts errors from a payload.
+     * Assumes the payload contains an `errors` array; returns a default error message otherwise.
+     *
+     * @param {object} payload - The response payload.
+     * @return {Array} - Array of extracted errors or a default error message.
+     */
+    getResponseErrors(payload) {
+        return isArray(payload.errors) ? payload.errors : [DEFAULT_ERROR_MESSAGE];
+    }
+
+    /**
+     * Determines if the response status indicates an error.
+     * Checks both the HTTP status code and the presence of errors in the payload.
+     *
+     * @param {number} status - The HTTP status code.
+     * @param {object} payload - The response payload.
+     * @return {boolean} - True if the response indicates an error, false otherwise.
+     */
+    isErrorResponse(status, payload) {
+        return (status >= 400 && status < 600) || (!isBlank(payload) && isArray(payload.errors));
     }
 }
