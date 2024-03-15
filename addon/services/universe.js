@@ -592,10 +592,15 @@ export default class UniverseService extends Service.extend(Evented) {
 
         // register to registry
         const internalRegistryName = this.createInternalRegistryName(registryName);
-        if (isArray(this[internalRegistryName].renderableComponents)) {
-            this[internalRegistryName].renderableComponents.pushObject(component);
+        if (!isBlank(this[internalRegistryName])) {
+            if (isArray(this[internalRegistryName].renderableComponents)) {
+                this[internalRegistryName].renderableComponents.pushObject(component);
+            } else {
+                this[internalRegistryName].renderableComponents = [component];
+            }
         } else {
-            this[internalRegistryName].renderableComponents = [component];
+            this.createRegistry(registryName);
+            return this.registerRenderableComponent(...arguments);
         }
     }
 
