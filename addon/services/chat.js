@@ -1,9 +1,10 @@
 import Service, { inject as service } from '@ember/service';
+import Evented from '@ember/object/evented';
 import { tracked } from '@glimmer/tracking';
 import { isArray } from '@ember/array';
 import { task } from 'ember-concurrency';
 
-export default class ChatService extends Service {
+export default class ChatService extends Service.extend(Evented) {
     @service store;
     @service currentUser;
     @tracked channels = [];
@@ -11,12 +12,14 @@ export default class ChatService extends Service {
 
     openChannel(chatChannelRecord) {
         this.openChannels.pushObject(chatChannelRecord);
+        this.trigger('chat.opened', chatChannelRecord);
     }
 
     closeChannel(chatChannelRecord) {
         const index = this.openChannels.findIndex((_) => _.id === chatChannelRecord.id);
         if (index >= 0) {
             this.openChannels.removeAt(index);
+            this.trigger('chat.closed', chatChannelRecord);
         }
     }
 
@@ -26,16 +29,22 @@ export default class ChatService extends Service {
 
     createChatChannel(name) {
         const chatChannel = this.store.createRecord('chat-channel', { name });
-        return chatChannel.save();
+        return chatChannel.save().finally(() => {
+            this.trigger('chat.created', chatChannelRecord);
+        });
     }
 
     deleteChatChannel(chatChannelRecord) {
-        return chatChannelRecord.destroyRecord();
+        return chatChannelRecord.destroyRecord().finally(() => {
+            this.trigger('chat.deleted', chatChannelRecord);
+        });
     }
 
     updateChatChannel(chatChannelRecord, props = {}) {
         chatChannelRecord.setProperties(props);
-        return chatChannelRecord.save();
+        return chatChannelRecord.save().finally(() => {
+            this.trigger('chat.updated', chatChannelRecord);
+        });
     }
 
     addParticipant(chatChannelRecord, userRecord) {
@@ -43,11 +52,15 @@ export default class ChatService extends Service {
             chat_channel_uuid: chatChannelRecord.id,
             user_uuid: userRecord.id,
         });
-        return chatParticipant.save();
+        return chatParticipant.save().finally(() => {
+            this.trigger('chat.added_participant', chatChannelRecord, chatParticipant);
+        });
     }
 
     removeParticipant(chatParticipant) {
-        return chatParticipant.destroyRecord();
+        return chatParticipant.destroyRecord().finally(() => {
+            this.trigger('chat.removed_participant', chatChannelRecord, chatParticipant);
+        });
     }
 
     async sendMessage(chatChannelRecord, senderRecord, messageContent = '') {
@@ -56,13 +69,17 @@ export default class ChatService extends Service {
             sender_uuid: senderRecord.id,
             content: messageContent,
         });
-        await chatMessage.save();
+        await chatMessage.save().finally(() => {
+            this.trigger('chat.message_created', chatMessage, chatChannelRecord);
+        });
         chatChannelRecord.messages.pushObject(chatMessage);
         await this.loadMessages.perform(chatChannelRecord);
     }
 
     deleteMessage(chatMessageRecord) {
-        return chatMessageRecord.destroyRecord();
+        return chatMessageRecord.destroyRecord().finally(() => {
+            this.trigger('chat.message_deleted', chatMessageRecord);
+        });
     }
 
     @task *loadMessages(chatChannelRecord) {
