@@ -3,6 +3,7 @@ import Evented from '@ember/object/evented';
 import { tracked } from '@glimmer/tracking';
 import { isArray } from '@ember/array';
 import { task } from 'ember-concurrency';
+import isModel from '../utils/is-model';
 
 export default class ChatService extends Service.extend(Evented) {
     @service store;
@@ -28,8 +29,8 @@ export default class ChatService extends Service.extend(Evented) {
     }
 
     createChatChannel(name) {
-        const chatChannel = this.store.createRecord('chat-channel', { name });
-        return chatChannel.save().finally(() => {
+        const chatChannelRecord = this.store.createRecord('chat-channel', { name });
+        return chatChannelRecord.save().finally(() => {
             this.trigger('chat.created', chatChannelRecord);
         });
     }
@@ -53,13 +54,13 @@ export default class ChatService extends Service.extend(Evented) {
             user_uuid: userRecord.id,
         });
         return chatParticipant.save().finally(() => {
-            this.trigger('chat.added_participant', chatChannelRecord, chatParticipant);
+            this.trigger('chat.added_participant', chatParticipant, chatChannelRecord);
         });
     }
 
-    removeParticipant(chatParticipant) {
+    removeParticipant(chatChannelRecord, chatParticipant) {
         return chatParticipant.destroyRecord().finally(() => {
-            this.trigger('chat.removed_participant', chatChannelRecord, chatParticipant);
+            this.trigger('chat.removed_participant', chatParticipant, chatChannelRecord);
         });
     }
 
@@ -69,17 +70,36 @@ export default class ChatService extends Service.extend(Evented) {
             sender_uuid: senderRecord.id,
             content: messageContent,
         });
-        await chatMessage.save().finally(() => {
-            this.trigger('chat.message_created', chatMessage, chatChannelRecord);
-        });
-        chatChannelRecord.messages.pushObject(chatMessage);
-        await this.loadMessages.perform(chatChannelRecord);
+        await chatMessage
+            .save()
+            .then((chatMessage) => {
+                if (!this.messageExistInChat(chatChannelRecord, chatMessage)) {
+                    chatChannelRecord.messages.pushObject(chatMessage);
+                }
+                return chatMessage;
+            })
+            .finally(() => {
+                this.trigger('chat.message_created', chatMessage, chatChannelRecord);
+            });
     }
 
     deleteMessage(chatMessageRecord) {
         return chatMessageRecord.destroyRecord().finally(() => {
             this.trigger('chat.message_deleted', chatMessageRecord);
         });
+    }
+
+    insertMessageFromSocket(chatChannelRecord, data) {
+        const normalizedChatMessage = this.store.normalize('chat-message', data);
+        const chatMessageRecord = this.store.push(normalizedChatMessage);
+        if (this.messageExistInChat(chatChannelRecord, chatMessageRecord)) {
+            return;
+        }
+        chatChannelRecord.messages.pushObject(chatMessageRecord);
+    }
+
+    messageExistInChat(chatChannelRecord, chatMessageRecord) {
+        return chatChannelRecord.messages.find((_) => _.id === chatMessageRecord.id) !== undefined;
     }
 
     @task *loadMessages(chatChannelRecord) {
