@@ -70,7 +70,7 @@ export default class ChatService extends Service.extend(Evented) {
             sender_uuid: senderRecord.id,
             content: messageContent,
         });
-        await chatMessage
+        return chatMessage
             .save()
             .then((chatMessage) => {
                 if (!this.messageExistInChat(chatChannelRecord, chatMessage)) {
