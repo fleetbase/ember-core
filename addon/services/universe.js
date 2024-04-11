@@ -993,7 +993,10 @@ export default class UniverseService extends Service.extend(Evented) {
         const index = this._getOption(options, 'index', 0);
         const onClick = this._getOption(options, 'onClick', null);
         const section = this._getOption(options, 'section', null);
+        const iconComponent = this._getOption(options, 'iconComponent', null);
+        const iconComponentOptions = this._getOption(options, 'iconComponentOptions', {});
         const iconSize = this._getOption(options, 'iconSize', null);
+        const iconPrefix = this._getOption(options, 'iconPrefix', null);
         const iconClass = this._getOption(options, 'iconClass', null);
         const itemClass = this._getOption(options, 'class', null);
         const inlineClass = this._getOption(options, 'inlineClass', null);
@@ -1024,7 +1027,10 @@ export default class UniverseService extends Service.extend(Evented) {
             index,
             section,
             onClick,
+            iconComponent,
+            iconComponentOptions,
             iconSize,
+            iconPrefix,
             iconClass,
             class: itemClass,
             inlineClass,
