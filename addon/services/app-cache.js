@@ -38,8 +38,12 @@ export default class AppCacheService extends Service {
         return this;
     }
 
-    @action get(key) {
-        return this.localCache.get(`${this.cachePrefix}${dasherize(key)}`);
+    @action get(key, defaultValue = null) {
+        const value = this.localCache.get(`${this.cachePrefix}${dasherize(key)}`);
+        if (value === undefined) {
+            return defaultValue;
+        }
+        return value;
     }
 
     @action has(key) {

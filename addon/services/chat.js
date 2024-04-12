@@ -3,16 +3,19 @@ import Evented from '@ember/object/evented';
 import { tracked } from '@glimmer/tracking';
 import { isArray } from '@ember/array';
 import { task } from 'ember-concurrency';
+import { all } from 'rsvp';
 import isModel from '../utils/is-model';
 
 export default class ChatService extends Service.extend(Evented) {
     @service store;
     @service currentUser;
+    @service appCache;
     @tracked channels = [];
     @tracked openChannels = [];
 
     openChannel(chatChannelRecord) {
         this.openChannels.pushObject(chatChannelRecord);
+        this.rememberOpenedChannel(chatChannelRecord);
         this.trigger('chat.opened', chatChannelRecord);
     }
 
@@ -22,6 +25,45 @@ export default class ChatService extends Service.extend(Evented) {
             this.openChannels.removeAt(index);
             this.trigger('chat.closed', chatChannelRecord);
         }
+        this.forgetOpenedChannel(chatChannelRecord);
+    }
+
+    rememberOpenedChannel(chatChannelRecord) {
+        let openedChats = this.appCache.get('open-chats', []);
+        if (isArray(openedChats) && !openedChats.includes(chatChannelRecord.id)) {
+            openedChats.pushObject(chatChannelRecord.id);
+        } else {
+            openedChats = [chatChannelRecord.id];
+        }
+        this.appCache.set('open-chats', openedChats);
+    }
+
+    forgetOpenedChannel(chatChannelRecord) {
+        let openedChats = this.appCache.get('open-chats', []);
+        if (isArray(openedChats)) {
+            openedChats.removeObject(chatChannelRecord.id);
+        } else {
+            openedChats = [];
+        }
+        this.appCache.set('open-chats', openedChats);
+    }
+
+    restoreOpenedChats() {
+        const openedChats = this.appCache.get('open-chats', []);
+        if (isArray(openedChats)) {
+            const findAll = openedChats.map((id) => this.store.findRecord('chat-channel', id));
+            return all(findAll).then((openedChatRecords) => {
+                if (isArray(openedChatRecords)) {
+                    for (let i = 0; i < openedChatRecords.length; i++) {
+                        const chatChannelRecord = openedChatRecords[i];
+                        this.openChannel(chatChannelRecord);
+                    }
+                }
+                return openedChatRecords;
+            });
+        }
+
+        return [];
     }
 
     getOpenChannels() {
@@ -64,19 +106,26 @@ export default class ChatService extends Service.extend(Evented) {
         });
     }
 
-    async sendMessage(chatChannelRecord, senderRecord, messageContent = '') {
+    async sendMessage(chatChannelRecord, senderRecord, messageContent = '', attachments = []) {
         const chatMessage = this.store.createRecord('chat-message', {
             chat_channel_uuid: chatChannelRecord.id,
             sender_uuid: senderRecord.id,
             content: messageContent,
+            attachment_files: attachments,
         });
+
         return chatMessage
             .save()
-            .then((chatMessage) => {
-                if (!this.messageExistInChat(chatChannelRecord, chatMessage)) {
-                    chatChannelRecord.messages.pushObject(chatMessage);
+            .then((chatMessageRecord) => {
+                if (this.doesntExistsInFeed(chatChannelRecord, 'message', chatMessageRecord)) {
+                    chatChannelRecord.feed.pushObject({
+                        type: 'message',
+                        created_at: chatMessageRecord.created_at,
+                        data: chatMessageRecord.serialize(),
+                        record: chatMessageRecord,
+                    });
                 }
-                return chatMessage;
+                return chatMessageRecord;
             })
             .finally(() => {
                 this.trigger('chat.message_created', chatMessage, chatChannelRecord);
@@ -89,17 +138,77 @@ export default class ChatService extends Service.extend(Evented) {
         });
     }
 
-    insertMessageFromSocket(chatChannelRecord, data) {
-        const normalizedChatMessage = this.store.normalize('chat-message', data);
-        const chatMessageRecord = this.store.push(normalizedChatMessage);
-        if (this.messageExistInChat(chatChannelRecord, chatMessageRecord)) {
+    insertChatMessageFromSocket(chatChannelRecord, data) {
+        // normalize and create record
+        const normalized = this.store.normalize('chat-message', data);
+        const record = this.store.push(normalized);
+
+        // make sure it doesn't exist in feed already
+        if (this.existsInFeed(chatChannelRecord, 'message', record)) {
             return;
         }
-        chatChannelRecord.messages.pushObject(chatMessageRecord);
+
+        // create feed item
+        const item = {
+            type: 'message',
+            created_at: record.created_at,
+            data,
+            record,
+        };
+
+        // add item to feed
+        chatChannelRecord.feed.pushObject(item);
     }
 
-    messageExistInChat(chatChannelRecord, chatMessageRecord) {
-        return chatChannelRecord.messages.find((_) => _.id === chatMessageRecord.id) !== undefined;
+    insertChatLogFromSocket(chatChannelRecord, data) {
+        // normalize and create record
+        const normalized = this.store.normalize('chat-log', data);
+        const record = this.store.push(normalized);
+
+        // make sure it doesn't exist in feed already
+        if (this.existsInFeed(chatChannelRecord, 'log', record)) {
+            return;
+        }
+
+        // create feed item
+        const item = {
+            type: 'log',
+            created_at: record.created_at,
+            data,
+            record,
+        };
+
+        // add item to feed
+        chatChannelRecord.feed.pushObject(item);
+    }
+
+    insertChatAttachmentFromSocket(chatChannelRecord, data) {
+        // normalize and create record
+        const normalized = this.store.normalize('chat-attachment', data);
+        const record = this.store.push(normalized);
+
+        // Find the chat message the record belongs to in the feed
+        const chatMessage = chatChannelRecord.feed.find((item) => {
+            return item.type === 'message' && item.record.id === record.chat_message_uuid;
+        });
+
+        // If we have the chat message then we can insert it to attachments
+        // This should work because chat message will always be created before the chat attachment
+        if (chatMessage) {
+            // Make sure the attachment isn't already attached to the message
+            const isNotAttached = chatMessage.record.attachments.find((attachment) => attachment.id === record.id) === undefined;
+            if (isNotAttached) {
+                chatMessage.record.attachments.pushObject(record);
+            }
+        }
+    }
+
+    existsInFeed(chatChannelRecord, type, record) {
+        return chatChannelRecord.feed.find((_) => _.type === type && _.record.id === record.id) !== undefined;
+    }
+
+    doesntExistsInFeed(chatChannelRecord, type, record) {
+        return chatChannelRecord.feed.find((_) => _.type === type && _.record.id === record.id) === undefined;
     }
 
     @task *loadMessages(chatChannelRecord) {

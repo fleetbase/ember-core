@@ -91,10 +91,11 @@ export default function download(data, strFileName, strMimeType) {
             anchor.className = 'download-js-link';
             anchor.innerHTML = 'downloading...';
             anchor.style.display = 'none';
-            anchor.addEventListener('click', function (e) {
+            function handleClick(e) {
                 e.stopPropagation();
-                this.removeEventListener('click', arguments.callee);
-            });
+                anchor.removeEventListener('click', handleClick);
+            }
+            anchor.addEventListener('click', handleClick);
             document.body.appendChild(anchor);
             later(
                 this,
