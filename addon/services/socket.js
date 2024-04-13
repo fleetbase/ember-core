@@ -1,6 +1,7 @@
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { isBlank } from '@ember/utils';
+import { later } from '@ember/runloop';
 import toBoolean from '../utils/to-boolean';
 import config from 'ember-get-config';
 
@@ -29,22 +30,28 @@ export default class SocketService extends Service {
     }
 
     async listen(channelId, callback) {
-        const channel = this.socket.subscribe(channelId);
+        later(
+            this,
+            async () => {
+                const channel = this.socket.subscribe(channelId);
 
-        // Track channel
-        this.channels.pushObject(channel);
+                // Track channel
+                this.channels.pushObject(channel);
 
-        // Listen to channel for events
-        await channel.listener('subscribe').once();
+                // Listen to channel for events
+                await channel.listener('subscribe').once();
 
-        // Listen for channel subscription
-        (async () => {
-            for await (let output of channel) {
-                if (typeof callback === 'function') {
-                    callback(output);
-                }
-            }
-        })();
+                // Listen for channel subscription
+                (async () => {
+                    for await (let output of channel) {
+                        if (typeof callback === 'function') {
+                            callback(output);
+                        }
+                    }
+                })();
+            },
+            300
+        );
     }
 
     closeChannels() {

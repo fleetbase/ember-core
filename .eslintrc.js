@@ -34,6 +34,7 @@ module.exports = {
         'ember/no-incorrect-calls-with-inline-anonymous-functions': 'off',
         'ember/no-private-routing-service': 'off',
         'no-useless-escape': 'off',
+        'no-inner-declarations': 'off',
         'n/no-unpublished-require': [
             'error',
             {
