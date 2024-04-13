@@ -4,7 +4,6 @@ import { tracked } from '@glimmer/tracking';
 import { isArray } from '@ember/array';
 import { task } from 'ember-concurrency';
 import { all } from 'rsvp';
-import isModel from '../utils/is-model';
 
 export default class ChatService extends Service.extend(Evented) {
     @service store;
@@ -14,6 +13,9 @@ export default class ChatService extends Service.extend(Evented) {
     @tracked openChannels = [];
 
     openChannel(chatChannelRecord) {
+        if (this.openChannels.includes(chatChannelRecord)) {
+            return;
+        }
         this.openChannels.pushObject(chatChannelRecord);
         this.rememberOpenedChannel(chatChannelRecord);
         this.trigger('chat.opened', chatChannelRecord);
@@ -117,7 +119,7 @@ export default class ChatService extends Service.extend(Evented) {
         return chatMessage
             .save()
             .then((chatMessageRecord) => {
-                if (this.doesntExistsInFeed(chatChannelRecord, 'message', chatMessageRecord)) {
+                if (chatChannelRecord.doesntExistsInFeed('message', chatMessageRecord)) {
                     chatChannelRecord.feed.pushObject({
                         type: 'message',
                         created_at: chatMessageRecord.created_at,
@@ -128,12 +130,14 @@ export default class ChatService extends Service.extend(Evented) {
                 return chatMessageRecord;
             })
             .finally(() => {
+                this.trigger('chat.feed_updated', chatMessage, chatChannelRecord);
                 this.trigger('chat.message_created', chatMessage, chatChannelRecord);
             });
     }
 
     deleteMessage(chatMessageRecord) {
         return chatMessageRecord.destroyRecord().finally(() => {
+            this.trigger('chat.feed_updated', chatMessageRecord);
             this.trigger('chat.message_deleted', chatMessageRecord);
         });
     }
@@ -144,7 +148,7 @@ export default class ChatService extends Service.extend(Evented) {
         const record = this.store.push(normalized);
 
         // make sure it doesn't exist in feed already
-        if (this.existsInFeed(chatChannelRecord, 'message', record)) {
+        if (chatChannelRecord.existsInFeed('message', record)) {
             return;
         }
 
@@ -158,6 +162,10 @@ export default class ChatService extends Service.extend(Evented) {
 
         // add item to feed
         chatChannelRecord.feed.pushObject(item);
+
+        // trigger event
+        this.trigger('chat.feed_updated', record, chatChannelRecord);
+        this.trigger('chat.message_created', record, chatChannelRecord);
     }
 
     insertChatLogFromSocket(chatChannelRecord, data) {
@@ -166,7 +174,7 @@ export default class ChatService extends Service.extend(Evented) {
         const record = this.store.push(normalized);
 
         // make sure it doesn't exist in feed already
-        if (this.existsInFeed(chatChannelRecord, 'log', record)) {
+        if (chatChannelRecord.existsInFeed('log', record)) {
             return;
         }
 
@@ -180,6 +188,10 @@ export default class ChatService extends Service.extend(Evented) {
 
         // add item to feed
         chatChannelRecord.feed.pushObject(item);
+
+        // trigger event
+        this.trigger('chat.feed_updated', record, chatChannelRecord);
+        this.trigger('chat.log_created', record, chatChannelRecord);
     }
 
     insertChatAttachmentFromSocket(chatChannelRecord, data) {
@@ -199,16 +211,34 @@ export default class ChatService extends Service.extend(Evented) {
             const isNotAttached = chatMessage.record.attachments.find((attachment) => attachment.id === record.id) === undefined;
             if (isNotAttached) {
                 chatMessage.record.attachments.pushObject(record);
+                // trigger event
+                this.trigger('chat.feed_updated', record, chatChannelRecord);
+                this.trigger('chat.attachment_created', record, chatChannelRecord);
             }
         }
     }
 
-    existsInFeed(chatChannelRecord, type, record) {
-        return chatChannelRecord.feed.find((_) => _.type === type && _.record.id === record.id) !== undefined;
-    }
+    insertChatReceiptFromSocket(chatChannelRecord, data) {
+        // normalize and create record
+        const normalized = this.store.normalize('chat-receipt', data);
+        const record = this.store.push(normalized);
 
-    doesntExistsInFeed(chatChannelRecord, type, record) {
-        return chatChannelRecord.feed.find((_) => _.type === type && _.record.id === record.id) === undefined;
+        // Find the chat message the record belongs to in the feed
+        const chatMessage = chatChannelRecord.feed.find((item) => {
+            return item.type === 'message' && item.record.id === record.chat_message_uuid;
+        });
+
+        // If we have the chat message then we can insert it to receipts
+        // This should work because chat message will always be created before the chat receipt
+        if (chatMessage) {
+            // Make sure the receipt isn't already attached to the message
+            const isNotAttached = chatMessage.record.receipts.find((receipt) => receipt.id === record.id) === undefined;
+            if (isNotAttached) {
+                chatMessage.record.receipts.pushObject(record);
+                // trigger event
+                this.trigger('chat.receipt_created', record, chatChannelRecord);
+            }
+        }
     }
 
     @task *loadMessages(chatChannelRecord) {
