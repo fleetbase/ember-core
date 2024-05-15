@@ -598,12 +598,18 @@ export default class FetchService extends Service {
      */
     download(path, query = {}, options = {}) {
         const headers = Object.assign(this.getHeaders(), options.headers ?? {});
+        const method = options.method ?? 'GET';
+        const credentials = options.credentials ?? this.credentials;
+        const baseUrl = `${options.host || this.host}/${options.namespace || this.namespace}`;
+        const params = method.toUpperCase() === 'GET' ? `?${!isBlank(query) ? new URLSearchParams(query).toString() : ''}` : '';
+        const body = method.toUpperCase() !== 'GET' ? JSON.stringify(query) : {};
 
         return new Promise((resolve, reject) => {
-            return fetch(`${options.host || this.host}/${options.namespace || this.namespace}/${path}?${!isBlank(query) ? new URLSearchParams(query).toString() : ''}`, {
-                method: 'GET',
-                credentials: options.credentials || this.credentials,
+            return fetch(`${baseUrl}/${path}${params}`, {
+                method,
+                credentials,
                 headers,
+                body,
             })
                 .then((response) => {
                     options.fileName = this.getFilenameFromResponse(response, options.fileName);
