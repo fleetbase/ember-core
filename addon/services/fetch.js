@@ -15,6 +15,7 @@ import corslite from '../utils/corslite';
 import getMimeType from '../utils/get-mime-type';
 import download from '../utils/download';
 import getUserOptions from '../utils/get-user-options';
+import isEmptyObject from '../utils/is-empty-object';
 import fetch from 'fetch';
 
 if (isBlank(config.API.host)) {
@@ -339,7 +340,7 @@ export default class FetchService extends Service {
             return this.cachedGet(...arguments);
         }
 
-        const urlParams = !isBlank(query) ? new URLSearchParams(query).toString() : '';
+        const urlParams = !isEmptyObject(query) ? new URLSearchParams(query).toString() : '';
 
         return this.request(`${path}${urlParams ? '?' + urlParams : ''}`, 'GET', {}, options);
     }
@@ -506,7 +507,7 @@ export default class FetchService extends Service {
         let version = options?.version ?? 'v1';
         let host = options?.host ?? `https://${options?.subdomain ?? 'routing'}.fleetbase.io`;
         let route = coordinates.map((coords) => coords.join(',')).join(';');
-        let params = !isBlank(query) ? new URLSearchParams(query).toString() : '';
+        let params = !isEmptyObject(query) ? new URLSearchParams(query).toString() : '';
         let path = `${host}/${service}/${version}/${profile}/${route}`;
         let url = `${path}${params ? '?' + params : ''}`;
 
@@ -601,16 +602,22 @@ export default class FetchService extends Service {
         const method = options.method ?? 'GET';
         const credentials = options.credentials ?? this.credentials;
         const baseUrl = `${options.host || this.host}/${options.namespace || this.namespace}`;
-        const params = method.toUpperCase() === 'GET' ? `?${!isBlank(query) ? new URLSearchParams(query).toString() : ''}` : '';
-        const body = method.toUpperCase() !== 'GET' ? JSON.stringify(query) : {};
+        const isReadOnlyRequest = ['GET', 'HEAD'].includes(method.toUpperCase());
+        const params = isReadOnlyRequest && !isEmptyObject(query) ? `?${new URLSearchParams(query).toString()}` : '';
+        const body = !isReadOnlyRequest ? JSON.stringify(query) : {};
+        const fetchOptions = {
+            method,
+            credentials,
+            headers,
+        };
+
+        // Only supply body to fetch if not GET or HEAD request
+        if (!isReadOnlyRequest) {
+            fetchOptions.body = body;
+        }
 
         return new Promise((resolve, reject) => {
-            return fetch(`${baseUrl}/${path}${params}`, {
-                method,
-                credentials,
-                headers,
-                body,
-            })
+            return fetch(`${baseUrl}/${path}${params}`, fetchOptions)
                 .then((response) => {
                     options.fileName = this.getFilenameFromResponse(response, options.fileName);
                     options.mimeType = this.getMimeTypeFromResponse(response, options.mimeType);
