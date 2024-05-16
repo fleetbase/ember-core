@@ -75,7 +75,7 @@ export default class LoaderService extends Service {
         }
 
         const loadingMessage = typeof options.loadingMessage === 'string' ? options.loadingMessage : 'Loading...';
-        const opacity = typeof options.opacity === 'number' ? options.opacity : 0.1;
+        const opacity = typeof options.opacity === 'number' ? options.opacity : 0;
         const isDarkMode = document.body.dataset.theme ? document.body.dataset.theme === 'dark' : true;
         const preserveTargetPosition = options.preserveTargetPosition === true;
         const loaderContainerClass = options.loaderContainerClass ?? '';
