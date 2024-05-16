@@ -198,6 +198,7 @@ export default class CrudService extends Service {
 
         // set the model uri endpoint
         const modelEndpoint = dasherize(pluralize(modelName));
+        const exportParams = options.params ?? {};
 
         this.modalsManager.show('modals/export-form', {
             title: `Export ${pluralize(modelName)}`,
@@ -215,8 +216,10 @@ export default class CrudService extends Service {
                         `${modelEndpoint}/export`,
                         {
                             format,
+                            ...exportParams,
                         },
                         {
+                            method: 'POST',
                             fileName: `${modelEndpoint}-${formatDate(new Date(), 'yyyy-MM-dd-HH:mm')}.${format}`,
                         }
                     )
