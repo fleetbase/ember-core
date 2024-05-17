@@ -198,25 +198,29 @@ export default class CrudService extends Service {
 
         // set the model uri endpoint
         const modelEndpoint = dasherize(pluralize(modelName));
+        const exportParams = options.params ?? {};
 
         this.modalsManager.show('modals/export-form', {
             title: `Export ${pluralize(modelName)}`,
             acceptButtonText: 'Download',
             modalClass: 'modal-sm',
+            format: 'xlsx',
             formatOptions: ['csv', 'xlsx', 'xls', 'html', 'pdf'],
             setFormat: ({ target }) => {
                 this.modalsManager.setOption('format', target.value || null);
             },
             confirm: (modal, done) => {
-                const format = modal.getOption('format') || 'xlsx';
+                const format = modal.getOption('format') ?? 'xlsx';
                 modal.startLoading();
                 return this.fetch
                     .download(
                         `${modelEndpoint}/export`,
                         {
                             format,
+                            ...exportParams,
                         },
                         {
+                            method: 'POST',
                             fileName: `${modelEndpoint}-${formatDate(new Date(), 'yyyy-MM-dd-HH:mm')}.${format}`,
                         }
                     )
