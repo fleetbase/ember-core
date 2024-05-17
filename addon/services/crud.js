@@ -237,4 +237,103 @@ export default class CrudService extends Service {
             ...options,
         });
     }
+
+    @action import(modelName, option = {}) {
+        // always lowercase modelname
+        modelName = modelName.toLowerCase();
+
+        // set the model uri endpoint
+        const modelEndpoint = dasherize(pluralize(modelName));
+
+        // function to check if queue is empty
+        const checkQueue = () => {
+            const uploadQueue = this.modalsManager.getOption('uploadQueue');
+
+            if (uploadQueue.length) {
+                this.modalsManager.setOption('acceptButtonDisabled', false);
+            } else {
+                this.modalsManager.setOption('acceptButtonDisabled', true);
+            }
+        };
+
+        this.modalsManager.show('modals/import-form', {
+            title: `Import ${pluralize(modelName)} with spreadsheets`,
+            acceptButtonText: 'Start Import',
+            acceptButtonScheme: 'magic',
+            acceptButtonIcon: 'upload',
+            acceptButtonDisabled: true,
+            isProcessing: false,
+            uploadQueue: [],
+            fileQueueColumns: [
+                { name: 'Type', valuePath: 'extension', key: 'type' },
+                { name: 'File Name', valuePath: 'name', key: 'fileName' },
+                { name: 'File Size', valuePath: 'size', key: 'fileSize' },
+                { name: 'Upload Date', valuePath: 'file.lastModifiedDate', key: 'uploadDate' },
+                { name: '', valuePath: '', key: 'delete' },
+            ],
+            acceptedFileTypes: ['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv'],
+            queueFile: (file) => {
+                const uploadQueue = this.modalsManager.getOption('uploadQueue');
+
+                uploadQueue.pushObject(file);
+                checkQueue();
+            },
+            removeFile: (file) => {
+                const { queue } = file;
+                const uploadQueue = this.modalsManager.getOption('uploadQueue');
+
+                uploadQueue.removeObject(file);
+                queue.remove(file);
+                checkQueue();
+            },
+            confirm: async (modal, done) => {
+                const uploadQueue = this.modalsManager.getOption('uploadQueue');
+                const uploadedFiles = [];
+                const uploadTask = (file) => {
+                    return new Promise((resolve) => {
+                        this.fetch.uploadFile.perform(
+                            file,
+                            {
+                                path: `uploads/import-sources/${this.currentUser.companyId}/${modelEndpoint}`,
+                                type: 'import-source',
+                            },
+                            (uploadedFile) => {
+                                uploadedFiles.pushObject(uploadedFile);
+
+                                resolve(uploadedFile);
+                            }
+                        );
+                    });
+                };
+
+                if (!uploadQueue.length) {
+                    return this.notifications.warning('No spreadsheets uploaded for import to process.');
+                }
+
+                modal.startLoading();
+                modal.setOption('acceptButtonText', 'Uploading...');
+
+                for (let i = 0; i < uploadQueue.length; i++) {
+                    const file = uploadQueue.objectAt(i);
+                    await uploadTask(file);
+                }
+
+                this.modalsManager.setOption('acceptButtonText', 'Processing...');
+                this.modalsManager.setOption('isProcessing', true);
+
+                const files = uploadedFiles.map((file) => file.id);
+
+                try {
+                    const response = await this.fetch.post(`${modelEndpoint}/import`, { files });
+                } catch (error) {
+                    return this.notifications.serverError(error);
+                }
+
+                if (typeof options.onImportCompleted === 'function') {
+                    options.onImportCompleted(response);
+                }
+            },
+            ...options,
+        });
+    }
 }
