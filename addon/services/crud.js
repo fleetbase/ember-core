@@ -238,7 +238,7 @@ export default class CrudService extends Service {
         });
     }
 
-    @action import(modelName, option = {}) {
+    @action import(modelName, options = {}) {
         // always lowercase modelname
         modelName = modelName.toLowerCase();
 
@@ -286,7 +286,7 @@ export default class CrudService extends Service {
                 queue.remove(file);
                 checkQueue();
             },
-            confirm: async (modal, done) => {
+            confirm: async (modal) => {
                 const uploadQueue = this.modalsManager.getOption('uploadQueue');
                 const uploadedFiles = [];
                 const uploadTask = (file) => {
