@@ -204,12 +204,13 @@ export default class CrudService extends Service {
             title: `Export ${pluralize(modelName)}`,
             acceptButtonText: 'Download',
             modalClass: 'modal-sm',
+            format: 'xlsx',
             formatOptions: ['csv', 'xlsx', 'xls', 'html', 'pdf'],
             setFormat: ({ target }) => {
                 this.modalsManager.setOption('format', target.value || null);
             },
             confirm: (modal, done) => {
-                const format = modal.getOption('format') || 'xlsx';
+                const format = modal.getOption('format') ?? 'xlsx';
                 modal.startLoading();
                 return this.fetch
                     .download(
