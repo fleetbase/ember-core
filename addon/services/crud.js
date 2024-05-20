@@ -41,6 +41,11 @@ export default class CrudService extends Service {
     @service store;
 
     /**
+     * @service currentUser
+     */
+    @service currentUser;
+
+    /**
      * Generic deletion modal with options
      *
      * @param {Model} model
@@ -278,6 +283,7 @@ export default class CrudService extends Service {
                 uploadQueue.pushObject(file);
                 checkQueue();
             },
+
             removeFile: (file) => {
                 const { queue } = file;
                 const uploadQueue = this.modalsManager.getOption('uploadQueue');
@@ -299,7 +305,6 @@ export default class CrudService extends Service {
                             },
                             (uploadedFile) => {
                                 uploadedFiles.pushObject(uploadedFile);
-
                                 resolve(uploadedFile);
                             }
                         );
@@ -325,12 +330,12 @@ export default class CrudService extends Service {
 
                 try {
                     const response = await this.fetch.post(`${modelEndpoint}/import`, { files });
+                    if (typeof options.onImportCompleted === 'function') {
+                        options.onImportCompleted(response, files);
+                        console.log('options', options);
+                    }
                 } catch (error) {
                     return this.notifications.serverError(error);
-                }
-
-                if (typeof options.onImportCompleted === 'function') {
-                    options.onImportCompleted(response);
                 }
             },
             ...options,
