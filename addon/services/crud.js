@@ -247,6 +247,13 @@ export default class CrudService extends Service {
         });
     }
 
+    /**
+     * Prompts a spreadsheet upload for an import process.
+     *
+     * @param {String} modelName
+     * @param {Object} [options={}]
+     * @memberof CrudService
+     */
     @action import(modelName, options = {}) {
         // always lowercase modelname
         modelName = modelName.toLowerCase();
@@ -336,7 +343,6 @@ export default class CrudService extends Service {
                     const response = await this.fetch.post(`${modelEndpoint}/import`, { files });
                     if (typeof options.onImportCompleted === 'function') {
                         options.onImportCompleted(response, files);
-                        console.log('options', options);
                     }
                 } catch (error) {
                     return this.notifications.serverError(error);
