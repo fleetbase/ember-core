@@ -1,6 +1,6 @@
 {
   "name": "@fleetbase/ember-core",
-  "version": "0.2.11",
+  "version": "0.2.12",
   "description": "Provides all the core services, decorators and utilities for building a Fleetbase extension for the Console.",
   "keywords": [
     "fleetbase-core",
@@ -9,7 +9,7 @@
     "ember-addon"
   ],
   "repository": "https://github.com/fleetbase/ember-core",
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "author": "Fleetbase Pte Ltd <hello@fleetbase.io>",
   "directories": {
     "app": "app",
