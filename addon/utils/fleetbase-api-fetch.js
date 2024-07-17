@@ -53,7 +53,7 @@ export default async function fleetbaseApiFetch(method, uri, params = {}, fetchO
     } catch (error) {
         // If a fallback response is provided use it instead
         if (fetchOptions && fetchOptions.fallbackResponse !== undefined) {
-            return fetcOptions.fallbackResponse;
+            return fetchOptions.fallbackResponse;
         }
 
         // Handle errors (network errors, JSON parsing errors, etc.)

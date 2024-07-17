@@ -11,6 +11,7 @@ import { getOwner } from '@ember/application';
 import { assert, debug } from '@ember/debug';
 import RSVP from 'rsvp';
 import loadInstalledExtensions from '../utils/load-installed-extensions';
+import loadExtensions from '../utils/load-extensions';
 import getWithDefault from '../utils/get-with-default';
 
 export default class UniverseService extends Service.extend(Evented) {
