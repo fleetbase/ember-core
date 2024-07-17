@@ -8,8 +8,11 @@ import { A, isArray } from '@ember/array';
 import { later } from '@ember/runloop';
 import { dasherize, camelize } from '@ember/string';
 import { getOwner } from '@ember/application';
-import { assert } from '@ember/debug';
+import { assert, debug } from '@ember/debug';
 import RSVP from 'rsvp';
+import loadInstalledExtensions from '../utils/load-installed-extensions';
+import loadExtensions from '../utils/load-extensions';
+import getWithDefault from '../utils/get-with-default';
 
 export default class UniverseService extends Service.extend(Evented) {
     @service router;
@@ -1267,6 +1270,155 @@ export default class UniverseService extends Service.extend(Evented) {
         }
 
         return null;
+    }
+
+    /**
+     * Boot all installed engines, ensuring dependencies are resolved.
+     *
+     * This method attempts to boot all installed engines by first checking if all
+     * their dependencies are already booted. If an engine has dependencies that
+     * are not yet booted, it is deferred and retried after its dependencies are
+     * booted. If some dependencies are never booted, an error is logged.
+     *
+     * @method bootEngines
+     * @param {ApplicationInstance|null} owner - The Ember ApplicationInstance that owns the engines.
+     * @return {void}
+     */
+    bootEngines(owner = null) {
+        const booted = [];
+        const pending = [];
+
+        // If no owner provided use the owner of this service
+        if (owner === null) {
+            owner = getOwner(this);
+        }
+
+        const tryBootEngine = (extension) => {
+            this.loadEngine(extension.name).then((engineInstance) => {
+                if (engineInstance.base && engineInstance.base.setupExtension) {
+                    const engineDependencies = getWithDefault(engineInstance.base, 'engineDependencies', []);
+
+                    // Check if all dependency engines are booted
+                    const allDependenciesBooted = engineDependencies.every((dep) => booted.includes(dep));
+
+                    if (!allDependenciesBooted) {
+                        pending.push({ extension, engineInstance });
+                        return;
+                    }
+
+                    engineInstance.base.setupExtension(owner, engineInstance, this);
+                    booted.push(extension.name);
+                    debug(`Booted : ${extension.name}`);
+
+                    // Try booting pending engines again
+                    tryBootPendingEngines();
+                }
+            });
+        };
+
+        const tryBootPendingEngines = () => {
+            const stillPending = [];
+
+            pending.forEach(({ extension, engineInstance }) => {
+                const engineDependencies = getWithDefault(engineInstance.base, 'engineDependencies', []);
+                const allDependenciesBooted = engineDependencies.every((dep) => booted.includes(dep));
+
+                if (allDependenciesBooted) {
+                    engineInstance.base.setupExtension(owner, engineInstance, this);
+                    booted.push(extension.name);
+                    debug(`Booted : ${extension.name}`);
+                } else {
+                    stillPending.push({ extension, engineInstance });
+                }
+            });
+
+            // If no progress was made, log an error in debug/development mode
+            assert('Some engines have unmet dependencies and cannot be booted:', pending.length === stillPending.length);
+
+            pending.length = 0;
+            pending.push(...stillPending);
+        };
+
+        loadInstalledExtensions().then((extensions) => {
+            extensions.forEach((extension) => {
+                tryBootEngine(extension);
+            });
+        });
+    }
+
+    /**
+     * Boots all installed engines, ensuring dependencies are resolved.
+     *
+     * This method loads all installed extensions and then attempts to boot each engine.
+     * For each extension, it loads the engine and, if the engine has a `setupExtension`
+     * method in its base, it calls this method to complete the setup. This function ensures
+     * that dependencies are resolved before booting the engines. If some dependencies are
+     * never booted, an error is logged.
+     *
+     * @method legacyBootEngines
+     * @param {ApplicationInstance|null} owner - The Ember ApplicationInstance that owns the engines.
+     * @return {void}
+     */
+    legacyBootEngines(owner = null) {
+        const booted = [];
+        const pending = [];
+
+        // If no owner provided use the owner of this service
+        if (owner === null) {
+            owner = getOwner(this);
+        }
+
+        const tryBootEngine = (extension) => {
+            this.loadEngine(extension.name).then((engineInstance) => {
+                if (engineInstance.base && engineInstance.base.setupExtension) {
+                    const engineDependencies = getWithDefault(engineInstance.base, 'engineDependencies', []);
+
+                    // Check if all dependency engines are booted
+                    const allDependenciesBooted = engineDependencies.every((dep) => booted.includes(dep));
+
+                    if (!allDependenciesBooted) {
+                        pending.push({ extension, engineInstance });
+                        return;
+                    }
+
+                    engineInstance.base.setupExtension(owner, engineInstance, this);
+                    booted.push(extension.name);
+                    debug(`Booted : ${extension.name}`);
+
+                    // Try booting pending engines again
+                    tryBootPendingEngines();
+                }
+            });
+        };
+
+        const tryBootPendingEngines = () => {
+            const stillPending = [];
+
+            pending.forEach(({ extension, engineInstance }) => {
+                const engineDependencies = getWithDefault(engineInstance.base, 'engineDependencies', []);
+                const allDependenciesBooted = engineDependencies.every((dep) => booted.includes(dep));
+
+                if (allDependenciesBooted) {
+                    engineInstance.base.setupExtension(owner, engineInstance, this);
+                    booted.push(extension.name);
+                    debug(`Booted : ${extension.name}`);
+                } else {
+                    stillPending.push({ extension, engineInstance });
+                }
+            });
+
+            // If no progress was made, log an error in debug/development mode
+            assert('Some engines have unmet dependencies and cannot be booted:', pending.length === stillPending.length);
+
+            pending.length = 0;
+            pending.push(...stillPending);
+        };
+
+        loadExtensions().then((extensions) => {
+            extensions.forEach((extension) => {
+                tryBootEngine(extension);
+            });
+        });
     }
 
     /**
