@@ -13,6 +13,7 @@ import RSVP from 'rsvp';
 import loadInstalledExtensions from '../utils/load-installed-extensions';
 import loadExtensions from '../utils/load-extensions';
 import getWithDefault from '../utils/get-with-default';
+import config from 'ember-get-config';
 
 export default class UniverseService extends Service.extend(Evented) {
     @service router;
@@ -1287,6 +1288,7 @@ export default class UniverseService extends Service.extend(Evented) {
     bootEngines(owner = null) {
         const booted = [];
         const pending = [];
+        const additionalCoreExtensions = config.APP.extensions ?? [];
 
         // If no owner provided use the owner of this service
         if (owner === null) {
@@ -1339,7 +1341,7 @@ export default class UniverseService extends Service.extend(Evented) {
             pending.push(...stillPending);
         };
 
-        loadInstalledExtensions().then((extensions) => {
+        loadInstalledExtensions(additionalCoreExtensions).then((extensions) => {
             extensions.forEach((extension) => {
                 tryBootEngine(extension);
             });
