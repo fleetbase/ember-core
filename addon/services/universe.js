@@ -13,6 +13,7 @@ import RSVP from 'rsvp';
 import loadInstalledExtensions from '../utils/load-installed-extensions';
 import loadExtensions from '../utils/load-extensions';
 import getWithDefault from '../utils/get-with-default';
+import config from 'ember-get-config';
 
 export default class UniverseService extends Service.extend(Evented) {
     @service router;
@@ -1058,29 +1059,88 @@ export default class UniverseService extends Service.extend(Evented) {
     }
 
     /**
-     * Manually registers a component in a specified engine.
+     * Registers a component class under one or more names within a specified engine instance.
+     * This function provides flexibility in component registration by supporting registration under the component's
+     * full class name, a simplified alias derived from the class name, and an optional custom name provided through the options.
+     * This flexibility facilitates varied referencing styles within different parts of the application, enhancing modularity and reuse.
      *
-     * @method registerComponentInEngine
-     * @public
-     * @memberof UniverseService
-     * @param {String} engineName - The name of the engine where the component should be registered.
-     * @param {Object} componentClass - The component class to register, which should have a 'name' property.
+     * @param {string} engineName - The name of the engine where the component will be registered.
+     * @param {class} componentClass - The component class to be registered. Must be a class, not an instance.
+     * @param {Object} [options] - Optional parameters for additional configuration.
+     * @param {string} [options.registerAs] - A custom name under which the component can also be registered.
+     *
+     * @example
+     * // Register a component with its default and alias names
+     * registerComponentInEngine('mainEngine', HeaderComponent);
+     *
+     * // Additionally register the component under a custom name
+     * registerComponentInEngine('mainEngine', HeaderComponent, { registerAs: 'header' });
+     *
+     * @remarks
+     * - The function does not return any value.
+     * - Registration only occurs if:
+     *   - The specified engine instance exists.
+     *   - The component class is properly defined with a non-empty name.
+     *   - The custom name, if provided, must be a valid string.
+     *   - Allows flexible component referencing by registering under multiple names.
      */
-    registerComponentInEngine(engineName, componentClass) {
+    registerComponentInEngine(engineName, componentClass, options = {}) {
         const engineInstance = this.getEngineInstance(engineName);
-        if (engineInstance && !isBlank(componentClass) && typeof componentClass.name === 'string') {
+        this.registerComponentToEngineInstance(engineInstance, componentClass, options);
+    }
+
+    /**
+     * Registers a component class under its full class name, a simplified alias, and an optional custom name within a specific engine instance.
+     * This helper function does the actual registration of the component to the engine instance. It registers the component under its
+     * full class name, a dasherized alias of the class name (with 'Component' suffix removed if present), and any custom name provided via options.
+     *
+     * @param {EngineInstance} engineInstance - The engine instance where the component will be registered.
+     * @param {class} componentClass - The component class to be registered. This should be a class reference, not an instance.
+     * @param {Object} [options] - Optional parameters for further configuration.
+     * @param {string} [options.registerAs] - A custom name under which the component can be registered.
+     *
+     * @example
+     * // Typical usage within the system (not usually called directly by users)
+     * registerComponentToEngineInstance(engineInstance, HeaderComponent, { registerAs: 'header' });
+     *
+     * @remarks
+     * - No return value.
+     * - The registration is performed only if:
+     *   - The engine instance is valid and not null.
+     *   - The component class has a defined and non-empty name.
+     *   - The custom name, if provided, is a valid string.
+     * - This function directly manipulates the engine instance's registration map.
+     */
+    registerComponentToEngineInstance(engineInstance, componentClass, options = {}) {
+        if (engineInstance && componentClass && typeof componentClass.name === 'string') {
             engineInstance.register(`component:${componentClass.name}`, componentClass);
+            engineInstance.register(`component:${dasherize(componentClass.name.replace('Component', ''))}`, componentClass);
+            if (options && typeof options.registerAs === 'string') {
+                engineInstance.register(`component:${options.registerAs}`, componentClass);
+            }
         }
     }
 
     /**
-     * Manually registers a service in a specified engine.
+     * Registers a service from one engine instance to another within the application.
+     * This method retrieves an instance of a service from the current engine and then registers it
+     * in a target engine, allowing the service to be shared across different parts of the application.
      *
-     * @method registerComponentInEngine
-     * @public
-     * @memberof UniverseService
-     * @param {String} engineName - The name of the engine where the component should be registered.
-     * @param {Object} serviceClass - The service class to register, which should have a 'name' property.
+     * @param {string} targetEngineName - The name of the engine where the service should be registered.
+     * @param {string} serviceName - The name of the service to be shared and registered.
+     * @param {Object} currentEngineInstance - The engine instance that currently holds the service to be shared.
+     *
+     * @example
+     * // Assuming 'appEngine' and 'componentEngine' are existing engine instances and 'logger' is a service in 'appEngine'
+     * registerServiceInEngine('componentEngine', 'logger', appEngine);
+     *
+     * Note:
+     * - This function does not return any value.
+     * - It only performs registration if all provided parameters are valid:
+     *   - Both engine instances must exist.
+     *   - The service name must be a string.
+     *   - The service must exist in the current engine instance.
+     *   - The service is registered without instantiating a new copy in the target engine.
      */
     registerServiceInEngine(targetEngineName, serviceName, currentEngineInstance) {
         // Get the target engine instance
@@ -1111,11 +1171,16 @@ export default class UniverseService extends Service.extend(Evented) {
      *   userService.doSomething();
      * }
      */
-    getServiceFromEngine(engineName, serviceName) {
+    getServiceFromEngine(engineName, serviceName, options = {}) {
         const engineInstance = this.getEngineInstance(engineName);
 
         if (engineInstance && typeof serviceName === 'string') {
             const serviceInstance = engineInstance.lookup(`service:${serviceName}`);
+            if (options && options.inject) {
+                for (let injectionName in options.inject) {
+                    serviceInstance[injectionName] = options.inject[injectionName];
+                }
+            }
             return serviceInstance;
         }
 
@@ -1287,6 +1352,7 @@ export default class UniverseService extends Service.extend(Evented) {
     bootEngines(owner = null) {
         const booted = [];
         const pending = [];
+        const additionalCoreExtensions = config.APP.extensions ?? [];
 
         // If no owner provided use the owner of this service
         if (owner === null) {
@@ -1296,9 +1362,11 @@ export default class UniverseService extends Service.extend(Evented) {
         const tryBootEngine = (extension) => {
             this.loadEngine(extension.name).then((engineInstance) => {
                 if (engineInstance.base && engineInstance.base.setupExtension) {
-                    const engineDependencies = getWithDefault(engineInstance.base, 'engineDependencies', []);
+                    if (booted.includes(extension.name)) {
+                        return;
+                    }
 
-                    // Check if all dependency engines are booted
+                    const engineDependencies = getWithDefault(engineInstance.base, 'engineDependencies', []);
                     const allDependenciesBooted = engineDependencies.every((dep) => booted.includes(dep));
 
                     if (!allDependenciesBooted) {
@@ -1320,6 +1388,10 @@ export default class UniverseService extends Service.extend(Evented) {
             const stillPending = [];
 
             pending.forEach(({ extension, engineInstance }) => {
+                if (booted.includes(extension.name)) {
+                    return;
+                }
+
                 const engineDependencies = getWithDefault(engineInstance.base, 'engineDependencies', []);
                 const allDependenciesBooted = engineDependencies.every((dep) => booted.includes(dep));
 
@@ -1333,13 +1405,13 @@ export default class UniverseService extends Service.extend(Evented) {
             });
 
             // If no progress was made, log an error in debug/development mode
-            assert('Some engines have unmet dependencies and cannot be booted:', pending.length === stillPending.length);
+            assert(`Some engines have unmet dependencies and cannot be booted:`, stillPending.length === 0 && pending.length === 0);
 
             pending.length = 0;
             pending.push(...stillPending);
         };
 
-        loadInstalledExtensions().then((extensions) => {
+        loadInstalledExtensions(additionalCoreExtensions).then((extensions) => {
             extensions.forEach((extension) => {
                 tryBootEngine(extension);
             });
