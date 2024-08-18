@@ -4,9 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  broccoli-persistent-filter: ^3.1.3
-
 importers:
 
   .:
@@ -21,8 +18,8 @@ importers:
         specifier: ^2.30.0
         version: 2.30.0
       ember-auto-import:
-        specifier: ^2.6.3
-        version: 2.6.3(webpack@5.89.0)
+        specifier: ^2.7.4
+        version: 2.7.4(webpack@5.89.0)
       ember-can:
         specifier: ^6.0.0
         version: 6.0.0(@babel/core@7.23.2)(@ember/string@3.1.1)(ember-inflector@4.0.2)(ember-resolver@11.0.1(ember-source@5.4.0(@babel/core@7.23.2)(@glimmer/component@1.1.2(@babel/core@7.23.2))(rsvp@4.8.5)(webpack@5.89.0)))(ember-source@5.4.0(@babel/core@7.23.2)(@glimmer/component@1.1.2(@babel/core@7.23.2))(rsvp@4.8.5)(webpack@5.89.0))
@@ -1639,6 +1636,9 @@ packages:
     resolution: {integrity: sha512-Z7tMw1ytTXt5jqMcOP+OQteU1VuNK9Y02uuJtKQ1Sv69jXQKKg5cibLwGJow8yzZP+eAc18EmLGPal0bp36rvQ==}
     engines: {node: '>=8'}
 
+  async-disk-cache@1.3.5:
+    resolution: {integrity: sha512-VZpqfR0R7CEOJZ/0FOTgWq70lCrZyS1rkI8PXugDUkTKyyAUgZ2zQ09gLhMkEn+wN8LYeUTPxZdXtlX/kmbXKQ==}
+
   async-disk-cache@2.1.0:
     resolution: {integrity: sha512-iH+boep2xivfD9wMaZWkywYIURSmsL96d6MoqrC94BnGSvXE4Quf8hnJiHGFYhw/nLeIa1XyRaf4vvcvkwAefg==}
     engines: {node: 8.* || >= 10.*}
@@ -1922,6 +1922,13 @@ packages:
   broccoli-output-wrapper@3.2.5:
     resolution: {integrity: sha512-bQAtwjSrF4Nu0CK0JOy5OZqw9t5U0zzv2555EA/cF8/a8SLDTIetk9UgrtMVw7qKLKdSpOZ2liZNeZZDaKgayw==}
     engines: {node: 10.* || >= 12.*}
+
+  broccoli-persistent-filter@1.4.6:
+    resolution: {integrity: sha512-0RejLwoC95kv4kta8KAa+FmECJCK78Qgm8SRDEK7YyU0N9Cx6KpY3UCDy9WELl3mCXLN8TokNxc7/hp3lL4lfw==}
+
+  broccoli-persistent-filter@2.3.1:
+    resolution: {integrity: sha512-hVsmIgCDrl2NFM+3Gs4Cr2TA6UPaIZip99hN8mtkaUPgM8UeVnCbxelCvBjUBHo0oaaqP5jzqqnRVvb568Yu5g==}
+    engines: {node: 6.* || >= 8.*}
 
   broccoli-persistent-filter@3.1.3:
     resolution: {integrity: sha512-Q+8iezprZzL9voaBsDY3rQVl7c7H5h+bvv8SpzCZXPZgfBFCbx7KFQ2c3rZR6lW5k4Kwoqt7jG+rZMUg67Gwxw==}
@@ -2640,6 +2647,10 @@ packages:
   duplexer3@0.1.5:
     resolution: {integrity: sha512-1A8za6ws41LQgv9HrE/66jyC5yuSjQ3L/KOpFtoBilsAK2iA2wuS5rTt1OCzIvtS2V7nVmedsUU+DGRcjBmOYA==}
 
+  editions@1.3.4:
+    resolution: {integrity: sha512-gzao+mxnYDzIysXKMQi/+M1mjy/rjestjg6OPoYTtI+3Izp23oiGZitsl9lPDPiTGXbcSIk1iJWhliSaglxnUg==}
+    engines: {node: '>=0.8'}
+
   editions@2.3.1:
     resolution: {integrity: sha512-ptGvkwTvGdGfC0hfhKg0MT+TRLRKGtUiWGBInxOm5pz7ssADezahjCUaYuZ8Dr+C05FW0AECIIPt4WBxVINEhA==}
     engines: {node: '>=0.8'}
@@ -2650,12 +2661,8 @@ packages:
   electron-to-chromium@1.4.673:
     resolution: {integrity: sha512-zjqzx4N7xGdl5468G+vcgzDhaHkaYgVcf9MqgexcTqsl2UHSCmOj/Bi3HAprg4BZCpC7HyD8a6nZl6QAZf72gw==}
 
-  ember-auto-import@2.6.3:
-    resolution: {integrity: sha512-uLhrRDJYWCRvQ4JQ1e64XlSrqAKSd6PXaJ9ZsZI6Tlms9T4DtQFxNXasqji2ZRJBVrxEoLCRYX3RTldsQ0vNGQ==}
-    engines: {node: 12.* || 14.* || >= 16}
-
-  ember-auto-import@2.7.2:
-    resolution: {integrity: sha512-pkWIljmJClYL17YBk8FjO7NrZPQoY9v0b+FooJvaHf/xlDQIBYVP7OaDHbNuNbpj7+wAwSDAnnwxjCoLsmm4cw==}
+  ember-auto-import@2.7.4:
+    resolution: {integrity: sha512-6CdXSegJJc8nwwK7+1lIcBUnMVrJRNd4ZdMgcKbCAwPvcGxMgRVBddSzrX/+q/UuflvTEO26Dk1g7Z6KHMXUhw==}
     engines: {node: 12.* || 14.* || >= 16}
 
   ember-cache-primitive-polyfill@1.0.1:
@@ -4051,6 +4058,10 @@ packages:
   isobject@3.0.1:
     resolution: {integrity: sha512-WhB9zCku7EGTj/HQQRz5aUQEUeoQZH2bWcltRErOpymJ4boYE6wL9Tbr23krRPSZ+C5zqNSrSw+Cc7sZZ4b7vg==}
     engines: {node: '>=0.10.0'}
+
+  istextorbinary@2.1.0:
+    resolution: {integrity: sha512-kT1g2zxZ5Tdabtpp9VSdOzW9lb6LXImyWbzbQeTxoRtHhurC9Ej9Wckngr2+uepPL09ky/mJHmN9jeJPML5t6A==}
+    engines: {node: '>=0.12'}
 
   istextorbinary@2.6.0:
     resolution: {integrity: sha512-+XRlFseT8B3L9KyjxxLjfXSLMuErKDsd8DBNrsaxoViABMEZlOSCstwmw0qpoFX3+U6yWU1yhLudAe6/lETGGA==}
@@ -5683,6 +5694,9 @@ packages:
   symlink-or-copy@1.3.1:
     resolution: {integrity: sha512-0K91MEXFpBUaywiwSSkmKjnGcasG/rVBXFLJz5DrgGabpYD6N+3yZrfD6uUIfpuTu65DZLHi7N8CizHc07BPZA==}
 
+  sync-disk-cache@1.3.4:
+    resolution: {integrity: sha512-GlkGeM81GPPEKz/lH7QUTbvqLq7K/IUTuaKDSMulP9XQ42glqNJIN/RKgSOw4y8vxL1gOVvj+W7ruEO4s36eCw==}
+
   sync-disk-cache@2.1.0:
     resolution: {integrity: sha512-vngT2JmkSapgq0z7uIoYtB9kWOOzMihAAYq/D3Pjm/ODOGMgS4r++B+OZ09U4hWR6EaOdy9eqQ7/8ygbH3wehA==}
     engines: {node: 8.* || >= 10.*}
@@ -6261,7 +6275,7 @@ snapshots:
       '@babel/helper-plugin-utils': 7.22.5
       debug: 4.3.4
       lodash.debounce: 4.0.8
-      resolve: 1.22.2
+      resolve: 1.22.8
     transitivePeerDependencies:
       - supports-color
 
@@ -7030,7 +7044,7 @@ snapshots:
       '@ember/edition-utils': 1.2.0
       '@ember/string': 3.1.1
       '@embroider/macros': 1.13.5
-      ember-auto-import: 2.6.3(webpack@5.89.0)
+      ember-auto-import: 2.7.4(webpack@5.89.0)
       ember-cli-babel: 7.26.11
     transitivePeerDependencies:
       - '@glint/template'
@@ -7228,7 +7242,7 @@ snapshots:
       '@simple-dom/interface': 1.4.0
       broccoli-debug: 0.6.5
       broccoli-funnel: 3.0.8
-      ember-auto-import: 2.6.3(webpack@5.89.0)
+      ember-auto-import: 2.7.4(webpack@5.89.0)
       ember-cli-babel: 7.26.11
       ember-cli-htmlbars: 6.3.0
       ember-source: 5.4.0(@babel/core@7.23.2)(@glimmer/component@1.1.2(@babel/core@7.23.2))(rsvp@4.8.5)(webpack@5.89.0)
@@ -8003,6 +8017,18 @@ snapshots:
 
   astral-regex@2.0.0: {}
 
+  async-disk-cache@1.3.5:
+    dependencies:
+      debug: 2.6.9
+      heimdalljs: 0.2.6
+      istextorbinary: 2.1.0
+      mkdirp: 0.5.6
+      rimraf: 2.7.1
+      rsvp: 3.6.2
+      username-sync: 1.0.3
+    transitivePeerDependencies:
+      - supports-color
+
   async-disk-cache@2.1.0:
     dependencies:
       debug: 4.3.4
@@ -8242,7 +8268,7 @@ snapshots:
     dependencies:
       broccoli-asset-rewrite: 2.0.0
       broccoli-filter: 1.3.0
-      broccoli-persistent-filter: 3.1.3
+      broccoli-persistent-filter: 1.4.6
       json-stable-stringify: 1.1.1
       minimatch: 3.1.2
       rsvp: 3.6.2
@@ -8261,7 +8287,7 @@ snapshots:
       '@babel/polyfill': 7.12.1
       broccoli-funnel: 2.0.2
       broccoli-merge-trees: 3.0.2
-      broccoli-persistent-filter: 3.1.3
+      broccoli-persistent-filter: 2.3.1
       clone: 2.1.2
       hash-for-dep: 1.5.1
       heimdalljs: 0.2.6
@@ -8473,6 +8499,43 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  broccoli-persistent-filter@1.4.6:
+    dependencies:
+      async-disk-cache: 1.3.5
+      async-promise-queue: 1.0.5
+      broccoli-plugin: 1.3.1
+      fs-tree-diff: 0.5.9
+      hash-for-dep: 1.5.1
+      heimdalljs: 0.2.6
+      heimdalljs-logger: 0.1.10
+      mkdirp: 0.5.6
+      promise-map-series: 0.2.3
+      rimraf: 2.7.1
+      rsvp: 3.6.2
+      symlink-or-copy: 1.3.1
+      walk-sync: 0.3.4
+    transitivePeerDependencies:
+      - supports-color
+
+  broccoli-persistent-filter@2.3.1:
+    dependencies:
+      async-disk-cache: 1.3.5
+      async-promise-queue: 1.0.5
+      broccoli-plugin: 1.3.1
+      fs-tree-diff: 2.0.1
+      hash-for-dep: 1.5.1
+      heimdalljs: 0.2.6
+      heimdalljs-logger: 0.1.10
+      mkdirp: 0.5.6
+      promise-map-series: 0.2.3
+      rimraf: 2.7.1
+      rsvp: 4.8.5
+      symlink-or-copy: 1.3.1
+      sync-disk-cache: 1.3.4
+      walk-sync: 1.1.4
+    transitivePeerDependencies:
+      - supports-color
+
   broccoli-persistent-filter@3.1.3:
     dependencies:
       async-disk-cache: 2.1.0
@@ -8573,7 +8636,7 @@ snapshots:
       broccoli-debug: 0.6.5
       broccoli-funnel: 2.0.2
       broccoli-merge-trees: 3.0.2
-      broccoli-persistent-filter: 3.1.3
+      broccoli-persistent-filter: 2.3.1
       broccoli-plugin: 2.1.0
       chalk: 2.4.2
       debug: 4.3.4
@@ -9116,6 +9179,8 @@ snapshots:
 
   duplexer3@0.1.5: {}
 
+  editions@1.3.4: {}
+
   editions@2.3.1:
     dependencies:
       errlop: 2.2.0
@@ -9125,45 +9190,7 @@ snapshots:
 
   electron-to-chromium@1.4.673: {}
 
-  ember-auto-import@2.6.3(webpack@5.89.0):
-    dependencies:
-      '@babel/core': 7.23.2
-      '@babel/plugin-proposal-class-properties': 7.18.6(@babel/core@7.23.2)
-      '@babel/plugin-proposal-decorators': 7.23.2(@babel/core@7.23.2)
-      '@babel/preset-env': 7.23.9(@babel/core@7.23.2)
-      '@embroider/macros': 1.13.5
-      '@embroider/shared-internals': 2.5.2
-      babel-loader: 8.3.0(@babel/core@7.23.2)(webpack@5.89.0)
-      babel-plugin-ember-modules-api-polyfill: 3.5.0
-      babel-plugin-ember-template-compilation: 2.2.1
-      babel-plugin-htmlbars-inline-precompile: 5.3.1
-      babel-plugin-syntax-dynamic-import: 6.18.0
-      broccoli-debug: 0.6.5
-      broccoli-funnel: 3.0.8
-      broccoli-merge-trees: 4.2.0
-      broccoli-plugin: 4.0.7
-      broccoli-source: 3.0.1
-      css-loader: 5.2.7(webpack@5.89.0)
-      debug: 4.3.4
-      fs-extra: 10.1.0
-      fs-tree-diff: 2.0.1
-      handlebars: 4.7.8
-      js-string-escape: 1.0.1
-      lodash: 4.17.21
-      mini-css-extract-plugin: 2.8.0(webpack@5.89.0)
-      parse5: 6.0.1
-      resolve: 1.22.2
-      resolve-package-path: 4.0.3
-      semver: 7.6.0
-      style-loader: 2.0.0(webpack@5.89.0)
-      typescript-memoize: 1.1.1
-      walk-sync: 3.0.0
-    transitivePeerDependencies:
-      - '@glint/template'
-      - supports-color
-      - webpack
-
-  ember-auto-import@2.7.2(webpack@5.89.0):
+  ember-auto-import@2.7.4(webpack@5.89.0):
     dependencies:
       '@babel/core': 7.23.2
       '@babel/plugin-proposal-class-properties': 7.18.6(@babel/core@7.23.2)
@@ -9172,7 +9199,7 @@ snapshots:
       '@babel/plugin-transform-class-static-block': 7.23.4(@babel/core@7.23.2)
       '@babel/preset-env': 7.23.9(@babel/core@7.23.2)
       '@embroider/macros': 1.13.5
-      '@embroider/shared-internals': 2.5.2
+      '@embroider/shared-internals': 2.6.2
       babel-loader: 8.3.0(@babel/core@7.23.2)(webpack@5.89.0)
       babel-plugin-ember-modules-api-polyfill: 3.5.0
       babel-plugin-ember-template-compilation: 2.2.1
@@ -9193,7 +9220,7 @@ snapshots:
       mini-css-extract-plugin: 2.8.0(webpack@5.89.0)
       minimatch: 3.1.2
       parse5: 6.0.1
-      resolve: 1.22.2
+      resolve: 1.22.8
       resolve-package-path: 4.0.3
       semver: 7.6.0
       style-loader: 2.0.0(webpack@5.89.0)
@@ -9336,7 +9363,7 @@ snapshots:
       '@ember/edition-utils': 1.2.0
       babel-plugin-htmlbars-inline-precompile: 3.2.0
       broccoli-debug: 0.6.5
-      broccoli-persistent-filter: 3.1.3
+      broccoli-persistent-filter: 2.3.1
       broccoli-plugin: 3.1.0
       common-tags: 1.8.2
       ember-cli-babel-plugin-helpers: 1.1.1
@@ -9798,7 +9825,7 @@ snapshots:
       '@embroider/macros': 1.13.5
       '@glimmer/env': 0.1.7
       broccoli-merge-trees: 4.2.0
-      ember-auto-import: 2.6.3(webpack@5.89.0)
+      ember-auto-import: 2.7.4(webpack@5.89.0)
       ember-cli-babel: 7.26.11
       ember-inflector: 4.0.2
     transitivePeerDependencies:
@@ -9834,7 +9861,7 @@ snapshots:
       '@embroider/macros': 1.13.5
       '@glimmer/component': 1.1.2(@babel/core@7.23.2)
       '@glimmer/tracking': 1.1.2
-      ember-auto-import: 2.6.3(webpack@5.89.0)
+      ember-auto-import: 2.7.4(webpack@5.89.0)
       ember-modifier: 4.1.0(ember-source@5.4.0(@babel/core@7.23.2)(@glimmer/component@1.1.2(@babel/core@7.23.2))(rsvp@4.8.5)(webpack@5.89.0))
       tracked-built-ins: 3.3.0
     transitivePeerDependencies:
@@ -9868,7 +9895,7 @@ snapshots:
       broccoli-stew: 3.0.0
       calculate-cache-key-for-tree: 2.0.0
       cldr-core: 44.1.0
-      ember-auto-import: 2.7.2(webpack@5.89.0)
+      ember-auto-import: 2.7.4(webpack@5.89.0)
       ember-cli-babel: 8.2.0(@babel/core@7.23.2)
       ember-cli-typescript: 5.2.1
       eventemitter3: 5.0.1
@@ -10015,7 +10042,7 @@ snapshots:
       broccoli-funnel: 3.0.8
       broccoli-merge-trees: 4.2.0
       chalk: 4.1.2
-      ember-auto-import: 2.6.3(webpack@5.89.0)
+      ember-auto-import: 2.7.4(webpack@5.89.0)
       ember-cli-babel: 7.26.11
       ember-cli-get-component-path-option: 1.0.0
       ember-cli-is-package-missing: 1.0.0
@@ -11508,6 +11535,12 @@ snapshots:
 
   isobject@3.0.1: {}
 
+  istextorbinary@2.1.0:
+    dependencies:
+      binaryextensions: 2.3.0
+      editions: 1.3.4
+      textextensions: 2.6.0
+
   istextorbinary@2.6.0:
     dependencies:
       binaryextensions: 2.3.0
@@ -12594,7 +12627,7 @@ snapshots:
   resolve-package-path@2.0.0:
     dependencies:
       path-root: 0.1.1
-      resolve: 1.22.2
+      resolve: 1.22.8
 
   resolve-package-path@3.1.0:
     dependencies:
@@ -13222,6 +13255,16 @@ snapshots:
   svg-tags@1.0.0: {}
 
   symlink-or-copy@1.3.1: {}
+
+  sync-disk-cache@1.3.4:
+    dependencies:
+      debug: 2.6.9
+      heimdalljs: 0.2.6
+      mkdirp: 0.5.6
+      rimraf: 2.7.1
+      username-sync: 1.0.3
+    transitivePeerDependencies:
+      - supports-color
 
   sync-disk-cache@2.1.0:
     dependencies:
