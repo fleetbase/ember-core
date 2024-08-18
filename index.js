@@ -41,6 +41,7 @@ module.exports = {
             new Funnel(path.dirname(require.resolve('socketcluster-client')), {
                 files: ['socketcluster-client.min.js'],
                 destDir: '/assets',
+                allowEmpty: true,
             })
         );
 

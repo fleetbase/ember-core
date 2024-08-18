@@ -55,6 +55,13 @@ export default class CurrentUserService extends Service.extend(Evented) {
     };
 
     /**
+     * The current users permissions.
+     *
+     * @memberof CurrentUserService
+     */
+    @tracked permissions = [];
+
+    /**
      * User options in localStorage
      *
      * @var StorageObject
@@ -97,79 +104,12 @@ export default class CurrentUserService extends Service.extend(Evented) {
     @alias('user.company_uuid') companyId;
 
     /**
-     * Loads the current authenticated user
+     * Alias for if user is admin.
      *
-     * @void
+     * @var {Boolean}
+     * @memberof CurrentUserService
      */
-    async load() {
-        if (this.session.isAuthenticated) {
-            let user = await this.store.findRecord('user', 'me');
-            this.set('user', user);
-            this.trigger('user.loaded', user);
-        }
-    }
-
-    /**
-     * Resolves a user model.
-     *
-     * @return {Promise}
-     */
-    @action promiseUser(options = {}) {
-        const NoUserAuthenticatedError = new Error('Failed to authenticate user.');
-
-        return new Promise((resolve, reject) => {
-            if (this.session.isAuthenticated) {
-                return this.store
-                    .queryRecord('user', { me: true })
-                    .then((user) => {
-                        // set the `current user`
-                        this.set('user', user);
-                        this.trigger('user.loaded', user);
-
-                        // set environment from user option
-                        this.theme.setEnvironment();
-
-                        // @TODO Create an event dispatch for when an authenticated user is resolved from the server
-                        if (typeof options?.onUserResolved === 'function') {
-                            options.onUserResolved(user);
-                        }
-
-                        resolve(user);
-                    })
-                    .catch(() => {
-                        reject(NoUserAuthenticatedError);
-                    });
-            } else {
-                reject(NoUserAuthenticatedError);
-            }
-        });
-    }
-
-    /**
-     * Loads and resolved all current users installed order configurations.
-     *
-     * @return {Promise}
-     */
-    @action getInstalledOrderConfigs(params = {}) {
-        return new Promise((resolve, reject) => {
-            this.fetch
-                .get('fleet-ops/order-configs/get-installed', params)
-                .then((configs) => {
-                    const serialized = [];
-
-                    for (let i = 0; i < configs.length; i++) {
-                        const config = configs.objectAt(i);
-                        const normalizedConfig = this.store.normalize('order-config', config);
-                        const serializedConfig = this.store.push(normalizedConfig);
-
-                        serialized.pushObject(serializedConfig);
-                    }
-
-                    resolve(serialized);
-                })
-                .catch(reject);
-        });
-    }
+    @alias('user.is_admin') isAdmin;
 
     /**
      * The prefix for this user options
@@ -200,6 +140,115 @@ export default class CurrentUserService extends Service.extend(Evented) {
         return this.whois('country_code');
     }
 
+    /**
+     * Loads the current authenticated user
+     *
+     * @return Promise<UserModel>|null
+     */
+    async load() {
+        if (this.session.isAuthenticated) {
+            let user = await this.store.findRecord('user', 'me');
+            this.set('user', user);
+            this.trigger('user.loaded', user);
+
+            // Set permissions
+            this.permissions = this.getUserPermissions(user);
+
+            return user;
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolves a user model.
+     *
+     * @return {Promise<User>}
+     */
+    @action promiseUser(options = {}) {
+        const NoUserAuthenticatedError = new Error('Failed to authenticate user.');
+
+        return new Promise((resolve, reject) => {
+            if (this.session.isAuthenticated) {
+                try {
+                    this.store.queryRecord('user', { me: true }).then((user) => {
+                        // set the `current user`
+                        this.set('user', user);
+                        this.trigger('user.loaded', user);
+
+                        // Set permissions
+                        this.permissions = this.getUserPermissions(user);
+
+                        // set environment from user option
+                        this.theme.setEnvironment();
+
+                        // @TODO Create an event dispatch for when an authenticated user is resolved from the server
+                        if (typeof options?.onUserResolved === 'function') {
+                            options.onUserResolved(user);
+                        }
+
+                        resolve(user);
+                    });
+                } catch (error) {
+                    reject(NoUserAuthenticatedError);
+                }
+            } else {
+                reject(NoUserAuthenticatedError);
+            }
+        });
+    }
+
+    /**
+     * Gets all user permissions.
+     *
+     * @param {UserModel} user
+     * @return {Array}
+     * @memberof CurrentUserService
+     */
+    getUserPermissions(user) {
+        const permissions = [];
+
+        // get direct applied permissions
+        if (user.get('permissions')) {
+            permissions.pushObjects(user.get('permissions').toArray());
+        }
+
+        // get role permissions and role policies permissions
+        if (user.get('role')) {
+            if (user.get('role.permissions')) {
+                permissions.pushObjects(user.get('role.permissions').toArray());
+            }
+
+            if (user.get('role.policies')) {
+                for (let i = 0; i < user.get('role.policies').length; i++) {
+                    const policy = user.get('role.policies').objectAt(i);
+                    if (policy.get('permissions')) {
+                        permissions.pushObjects(policy.get('permissions').toArray());
+                    }
+                }
+            }
+        }
+
+        // get direct applied policy permissions
+        if (user.get('policies')) {
+            for (let i = 0; i < user.get('policies').length; i++) {
+                const policy = user.get('policies').objectAt(i);
+                if (policy.get('permissions')) {
+                    permissions.pushObjects(policy.get('permissions').toArray());
+                }
+            }
+        }
+
+        return permissions;
+    }
+
+    /**
+     * Alias to get a user's whois property
+     *
+     * @param {String} key
+     * @return {Mixed}
+     * @memberof CurrentUserService
+     */
     @action whois(key) {
         return this.getWhoisProperty(key);
     }

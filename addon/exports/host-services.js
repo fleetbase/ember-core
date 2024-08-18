@@ -15,6 +15,7 @@ const hostServices = [
     'fileQueue',
     'universe',
     'intl',
+    'abilities',
     { hostRouter: 'router' },
 ];
 

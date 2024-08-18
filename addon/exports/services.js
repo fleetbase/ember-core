@@ -16,6 +16,7 @@ const services = [
     'fileQueue',
     'universe',
     'intl',
+    'abilities',
 ];
 
 export default services;
