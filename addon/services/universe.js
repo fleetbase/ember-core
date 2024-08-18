@@ -847,7 +847,7 @@ export default class UniverseService extends Service.extend(Evented) {
         // If component is a definition register to host application
         if (typeof component === 'function') {
             const owner = getOwner(this);
-            const widgetId = component.widgetId || widgetId || this._createUniqueWidgetHashFromDefinition(component);
+            widgetId = component.widgetId || widgetId || this._createUniqueWidgetHashFromDefinition(component);
 
             if (owner) {
                 owner.register(`component:${widgetId}`, component);
