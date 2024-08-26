@@ -5,25 +5,8 @@ import { later } from '@ember/runloop';
 import getWithDefault from '../utils/get-with-default';
 
 export default class SessionService extends SimpleAuthSessionService {
-    /**
-     * Inject the router service
-     *
-     * @var {Service}
-     */
     @service router;
-
-    /**
-     * Inject the current user service
-     *
-     * @var {Service}
-     */
     @service currentUser;
-
-    /**
-     * Inject the current user service
-     *
-     * @var {Service}
-     */
     @service fetch;
 
     /**
@@ -69,23 +52,22 @@ export default class SessionService extends SimpleAuthSessionService {
         }
 
         const loaderNode = this.showLoader('Starting session...');
-
         this.isLoaderNodeOpen = true;
 
-        this.router
-            .transitionTo(this.redirectTo)
-            .finally(() => {
-                later(
-                    this,
-                    () => {
-                        // remove node from body
-                        document.body.removeChild(loaderNode);
-                        this.isLoaderNodeOpen = false;
-                    },
-                    600 * 6
-                );
-            })
-            .catch((error) => console.log(error));
+        try {
+            await this.router.transitionTo(this.redirectTo);
+            later(
+                this,
+                () => {
+                    // remove node from body
+                    document.body.removeChild(loaderNode);
+                    this.isLoaderNodeOpen = false;
+                },
+                600 * 6
+            );
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
     }
 
     /**
@@ -113,31 +95,28 @@ export default class SessionService extends SimpleAuthSessionService {
      * @param {Transition} transition
      * @void
      */
-    promiseCurrentUser(transition = null) {
+    async promiseCurrentUser(transition = null) {
         const invalidateWithLoader = this.invalidateWithLoader.bind(this);
 
-        return new Promise((resolve, reject) => {
-            return this.currentUser
-                .promiseUser()
-                .then((user) => {
-                    if (!user) {
-                        if (transition !== null) {
-                            transition.abort();
-                        }
+        try {
+            const user = await this.currentUser.promiseUser();
+            if (!user) {
+                if (transition) {
+                    transition.abort();
+                }
 
-                        reject(invalidateWithLoader('Session authentication failed...'));
-                    }
+                await invalidateWithLoader('Session authentication failed...');
+                throw new Error('Session authentication failed...');
+            }
 
-                    resolve(user);
-                })
-                .catch((error) => {
-                    if (transition !== null) {
-                        transition.abort();
-                    }
-
-                    reject(invalidateWithLoader(error.message ?? `Session authentication failed...`));
-                });
-        });
+            return user;
+        } catch (error) {
+            if (transition) {
+                transition.abort();
+            }
+            await invalidateWithLoader(error.message ?? 'Session authentication failed...');
+            throw error;
+        }
     }
 
     /**
