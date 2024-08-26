@@ -3,119 +3,36 @@ import Evented from '@ember/object/evented';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { dasherize } from '@ember/string';
-import { computed, get, action } from '@ember/object';
+import { computed, get } from '@ember/object';
 import { isBlank } from '@ember/utils';
 import { alias } from '@ember/object/computed';
 import { storageFor } from 'ember-local-storage';
 
 export default class CurrentUserService extends Service.extend(Evented) {
-    /**
-     * Inject the `session` service
-     *
-     * @var {Service}
-     */
     @service session;
-
-    /**
-     * Inject the `store` service
-     *
-     * @var {Service}
-     */
     @service store;
-
-    /**
-     * Inject the `fetch` service
-     *
-     * @var {Service}
-     */
     @service fetch;
-
-    /**
-     * Inject the `theme` service
-     *
-     * @var {Service}
-     */
     @service theme;
-
-    /**
-     * Inject the `notifications` service
-     *
-     * @var {Service}
-     */
     @service notifications;
+    @service intl;
 
-    /**
-     * Property to hold loaded user.
-     *
-     * @var {UserModel|Object}
-     * @memberof CurrentUserService
-     */
-    @tracked user = {
-        id: 'anon',
-    };
-
-    /**
-     * The current users permissions.
-     *
-     * @memberof CurrentUserService
-     */
+    @tracked user = { id: 'anon' };
+    @tracked company = {};
     @tracked permissions = [];
+    @tracked organizations = [];
+    @tracked whoisData = {};
+    @tracked locale = 'en-us';
 
-    /**
-     * User options in localStorage
-     *
-     * @var StorageObject
-     */
     @storageFor('user-options') options;
-
-    /**
-     * Alias for current user id
-     *
-     * @var {String}
-     */
     @alias('user.id') id;
-
-    /**
-     * Alias for current user name
-     *
-     * @var {String}
-     */
     @alias('user.name') name;
-
-    /**
-     * Alias for current user phone
-     *
-     * @var {String}
-     */
     @alias('user.phone') phone;
-
-    /**
-     * Alias for current user phone
-     *
-     * @var {String}
-     */
     @alias('user.email') email;
-
-    /**
-     * Alias for current user's company id
-     *
-     * @var {String}
-     */
-    @alias('user.company_uuid') companyId;
-
-    /**
-     * Alias for if user is admin.
-     *
-     * @var {Boolean}
-     * @memberof CurrentUserService
-     */
+    @alias('user.avatar_url') avatarUrl;
     @alias('user.is_admin') isAdmin;
+    @alias('user.company_uuid') companyId;
+    @alias('user.company_name') companyName;
 
-    /**
-     * The prefix for this user options
-     *
-     * @var {String}
-     */
     @computed('id') get optionsPrefix() {
         return `${this.id}:`;
     }
@@ -140,19 +57,17 @@ export default class CurrentUserService extends Service.extend(Evented) {
         return this.whois('country_code');
     }
 
-    /**
-     * Loads the current authenticated user
-     *
-     * @return Promise<UserModel>|null
-     */
     async load() {
         if (this.session.isAuthenticated) {
-            let user = await this.store.findRecord('user', 'me');
+            const user = await this.store.findRecord('user', 'me');
             this.set('user', user);
             this.trigger('user.loaded', user);
 
             // Set permissions
             this.permissions = this.getUserPermissions(user);
+
+            // Load preferences
+            await this.loadPreferences();
 
             return user;
         }
@@ -160,51 +75,97 @@ export default class CurrentUserService extends Service.extend(Evented) {
         return null;
     }
 
-    /**
-     * Resolves a user model.
-     *
-     * @return {Promise<User>}
-     */
-    @action promiseUser(options = {}) {
+    async promiseUser(options = {}) {
         const NoUserAuthenticatedError = new Error('Failed to authenticate user.');
+        if (!this.session.isAuthenticated) {
+            throw NoUserAuthenticatedError;
+        }
 
-        return new Promise((resolve, reject) => {
-            if (this.session.isAuthenticated) {
-                try {
-                    this.store.queryRecord('user', { me: true }).then((user) => {
-                        // set the `current user`
-                        this.set('user', user);
-                        this.trigger('user.loaded', user);
+        try {
+            const user = await this.store.queryRecord('user', { me: true });
 
-                        // Set permissions
-                        this.permissions = this.getUserPermissions(user);
+            // Set current user
+            this.set('user', user);
+            this.trigger('user.loaded', user);
 
-                        // set environment from user option
-                        this.theme.setEnvironment();
+            // Set permissions
+            this.permissions = this.getUserPermissions(user);
 
-                        // @TODO Create an event dispatch for when an authenticated user is resolved from the server
-                        if (typeof options?.onUserResolved === 'function') {
-                            options.onUserResolved(user);
-                        }
+            // Set environment from user option
+            this.theme.setEnvironment();
 
-                        resolve(user);
-                    });
-                } catch (error) {
-                    reject(NoUserAuthenticatedError);
-                }
-            } else {
-                reject(NoUserAuthenticatedError);
+            // Load user preferces
+            await this.loadPreferences();
+
+            // Optional callback
+            if (typeof options?.onUserResolved === 'function') {
+                options.onUserResolved(user);
             }
-        });
+
+            return user;
+        } catch (error) {
+            console.log(error.message);
+            throw error;
+        }
     }
 
-    /**
-     * Gets all user permissions.
-     *
-     * @param {UserModel} user
-     * @return {Array}
-     * @memberof CurrentUserService
-     */
+    async loadPreferences() {
+        await this.loadLocale();
+        await this.loadWhois();
+        await this.loadOrganizations();
+    }
+
+    async loadLocale() {
+        try {
+            const { locale } = await this.fetch.get('users/locale');
+            this.setOption('locale', locale);
+            this.intl.setLocale(locale);
+            this.locale = locale;
+
+            return locale;
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+    }
+
+    async loadOrganizations() {
+        try {
+            const organizations = await this.fetch.get('auth/organizations', {}, { normalizeToEmberData: true, normalizeModelType: 'company' });
+            this.setOption('organizations', organizations);
+            this.organizations = organizations;
+
+            return organizations;
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+    }
+
+    async loadWhois() {
+        this.fetch.shouldResetCache();
+
+        try {
+            const whois = await this.fetch.cachedGet(
+                'lookup/whois',
+                {},
+                {
+                    expirationInterval: 60,
+                    expirationIntervalUnit: 'minutes',
+                }
+            );
+            this.setOption('whois', whois);
+            this.whoisData = whois;
+
+            return whois;
+        } catch (error) {
+            this.notifications.serverError(error);
+        }
+    }
+
+    getCompany() {
+        this.company = this.store.peekRecord('company', this.user.company_uuid);
+        return this.company;
+    }
+
     getUserPermissions(user) {
         const permissions = [];
 
@@ -242,25 +203,11 @@ export default class CurrentUserService extends Service.extend(Evented) {
         return permissions;
     }
 
-    /**
-     * Alias to get a user's whois property
-     *
-     * @param {String} key
-     * @return {Mixed}
-     * @memberof CurrentUserService
-     */
-    @action whois(key) {
+    whois(key) {
         return this.getWhoisProperty(key);
     }
 
-    /**
-     * Sets a user's option in local storage
-     *
-     * @param {String} key
-     * @param {Mixed} value
-     * @return {CurrentUserService}
-     */
-    @action setOption(key, value) {
+    setOption(key, value) {
         key = `${this.optionsPrefix}${dasherize(key)}`;
 
         this.options.set(key, value);
@@ -268,26 +215,14 @@ export default class CurrentUserService extends Service.extend(Evented) {
         return this;
     }
 
-    /**
-     * Retrieves a user option from local storage
-     *
-     * @param {String} key
-     * @return {Mixed}
-     */
-    @action getOption(key, defaultValue = null) {
+    getOption(key, defaultValue = null) {
         key = `${this.optionsPrefix}${dasherize(key)}`;
 
         const value = this.options.get(key);
         return value !== undefined ? value : defaultValue;
     }
 
-    /**
-     * Retrieves a user option from local storage
-     *
-     * @param {String} key
-     * @return {Mixed}
-     */
-    @action getWhoisProperty(prop) {
+    getWhoisProperty(prop) {
         const whois = this.getOption('whois');
 
         if (!whois || typeof whois !== 'object') {
@@ -297,23 +232,11 @@ export default class CurrentUserService extends Service.extend(Evented) {
         return get(whois, prop);
     }
 
-    /**
-     * Checks if an option exists in users local storage
-     *
-     * @param {String} key
-     * @return {Boolean}
-     */
-    @action hasOption(key) {
+    hasOption(key) {
         return this.getOption(key) !== undefined;
     }
 
-    /**
-     * Checks if an option exists in users local storage
-     *
-     * @param {String} key
-     * @return {Boolean}
-     */
-    @action filledOption(key) {
+    filledOption(key) {
         return !isBlank(this.getOption(key));
     }
 }

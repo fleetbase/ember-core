@@ -213,7 +213,7 @@ export default class ThemeService extends Service {
      * @void
      */
     setEnvironment() {
-        const isSandbox = this.currentUser.getOption('sandbox') || false;
+        const isSandbox = this.currentUser.getOption('sandbox', false);
 
         if (isSandbox) {
             document.body.classList.add('sandbox-console');

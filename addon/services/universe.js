@@ -1006,6 +1006,7 @@ export default class UniverseService extends Service.extend(Evented) {
         const inlineClass = this._getOption(options, 'inlineClass', null);
         const wrapperClass = this._getOption(options, 'wrapperClass', null);
         const overwriteWrapperClass = this._getOption(options, 'overwriteWrapperClass', false);
+        const id = this._getOption(options, 'id', dasherize(title));
 
         // dasherize route segments
         if (typeof route === 'string') {
@@ -1015,9 +1016,11 @@ export default class UniverseService extends Service.extend(Evented) {
                 .join('.');
         }
 
-        // todo: create menu item class
+        // @todo: create menu item class
         const menuItem = {
+            id,
             title,
+            text: title,
             route,
             icon,
             priority,
