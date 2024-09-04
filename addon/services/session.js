@@ -8,6 +8,7 @@ export default class SessionService extends SimpleAuthSessionService {
     @service router;
     @service currentUser;
     @service fetch;
+    @service notifications;
 
     /**
      * Set where to transition to
