@@ -1,6 +1,6 @@
 import { isBlank } from '@ember/utils';
 
-export default function isEmptyObject (obj) {
+export default function isEmptyObject(obj) {
     if (isBlank(obj)) {
         return true;
     }

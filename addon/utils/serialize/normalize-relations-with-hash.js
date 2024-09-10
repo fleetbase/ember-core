@@ -1,7 +1,7 @@
 import { get, setProperties } from '@ember/object';
 import { isBlank } from '@ember/utils';
 
-export default function serializeNormalizeRelationsWithinHash (hash, primaryKey = 'uuid') {
+export default function serializeNormalizeRelationsWithinHash(hash, primaryKey = 'uuid') {
     if (typeof hash !== 'object') {
         return hash;
     }

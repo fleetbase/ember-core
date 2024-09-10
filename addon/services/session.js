@@ -30,7 +30,7 @@ export default class SessionService extends SimpleAuthSessionService {
      *
      * @return {SessionService}
      */
-    isOnboarding () {
+    isOnboarding() {
         this._isOnboarding = true;
 
         return this;
@@ -39,7 +39,7 @@ export default class SessionService extends SimpleAuthSessionService {
     /**
      * Manually authenticate user
      */
-    manuallyAuthenticate (authToken) {
+    manuallyAuthenticate(authToken) {
         return this.session._setup('authenticator:fleetbase', { token: authToken }, true);
     }
 
@@ -48,7 +48,7 @@ export default class SessionService extends SimpleAuthSessionService {
      *
      * @void
      */
-    async handleAuthentication () {
+    async handleAuthentication() {
         if (this._isOnboarding) {
             return;
         }
@@ -81,7 +81,7 @@ export default class SessionService extends SimpleAuthSessionService {
      *
      * @void
      */
-    async loadCurrentUser () {
+    async loadCurrentUser() {
         try {
             const user = await this.currentUser.load();
 
@@ -101,7 +101,7 @@ export default class SessionService extends SimpleAuthSessionService {
      * @param {Transition} transition
      * @void
      */
-    async promiseCurrentUser (transition = null) {
+    async promiseCurrentUser(transition = null) {
         const invalidateWithLoader = this.invalidateWithLoader.bind(this);
 
         try {
@@ -132,7 +132,7 @@ export default class SessionService extends SimpleAuthSessionService {
      * @param {String} loadingMessage
      * @return {HTMLElement} loader
      */
-    showLoader (loadingMessage) {
+    showLoader(loadingMessage) {
         const loader = document.createElement('div');
         loader.classList.add('overloader');
         loader.innerHTML = `<div class="flex items-center justify-center">
@@ -154,7 +154,7 @@ export default class SessionService extends SimpleAuthSessionService {
      * @param {String} loadingMessage
      * @return {Promise}
      */
-    invalidateWithLoader (loadingMessage = 'Ending session...') {
+    invalidateWithLoader(loadingMessage = 'Ending session...') {
         // if loader node is open already just invalidate
         if (this.isLoaderNodeOpen === true) {
             return this.session.invalidate();
@@ -180,7 +180,7 @@ export default class SessionService extends SimpleAuthSessionService {
      *
      * @void
      */
-    setRedirect (whereTo = 'console') {
+    setRedirect(whereTo = 'console') {
         this.redirectTo = whereTo;
     }
 
@@ -189,7 +189,7 @@ export default class SessionService extends SimpleAuthSessionService {
      *
      * @return {Date}
      */
-    getExpiresAtDate () {
+    getExpiresAtDate() {
         return new Date(this.data.authenticated.expires_at);
     }
 
@@ -198,7 +198,7 @@ export default class SessionService extends SimpleAuthSessionService {
      *
      * @return {Integer}
      */
-    getSessionSecondsRemaining () {
+    getSessionSecondsRemaining() {
         const date = this.getExpiresAtDate();
         const now = new Date();
 
@@ -212,8 +212,8 @@ export default class SessionService extends SimpleAuthSessionService {
      * @return {Promise}
      * @throws {Error}
      */
-    checkForTwoFactor (identity) {
-        return this.fetch.get('two-fa/check', { identity }).catch(error => {
+    checkForTwoFactor(identity) {
+        return this.fetch.get('two-fa/check', { identity }).catch((error) => {
             throw new Error(error.message);
         });
     }
