@@ -15,7 +15,7 @@ export default class ThemeService extends Service {
      */
     get router() {
         const owner = getOwner(this);
-        const router = owner.lookup('service:router');
+        const router = owner.lookup('router:main');
 
         return router;
     }

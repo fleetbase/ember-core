@@ -2,6 +2,7 @@ import SimpleAuthSessionService from 'ember-simple-auth/services/session';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { later } from '@ember/runloop';
+import { debug } from '@ember/debug';
 import getWithDefault from '../utils/get-with-default';
 
 export default class SessionService extends SimpleAuthSessionService {
@@ -29,7 +30,7 @@ export default class SessionService extends SimpleAuthSessionService {
      *
      * @return {SessionService}
      */
-    isOnboarding() {
+    isOnboarding () {
         this._isOnboarding = true;
 
         return this;
@@ -38,7 +39,7 @@ export default class SessionService extends SimpleAuthSessionService {
     /**
      * Manually authenticate user
      */
-    manuallyAuthenticate(authToken) {
+    manuallyAuthenticate (authToken) {
         return this.session._setup('authenticator:fleetbase', { token: authToken }, true);
     }
 
@@ -47,16 +48,13 @@ export default class SessionService extends SimpleAuthSessionService {
      *
      * @void
      */
-    async handleAuthentication() {
+    async handleAuthentication () {
         if (this._isOnboarding) {
             return;
         }
 
         const loaderNode = this.showLoader('Starting session...');
-        this.isLoaderNodeOpen = true;
-
-        try {
-            await this.router.transitionTo(this.redirectTo);
+        const removeLoaderNode = () => {
             later(
                 this,
                 () => {
@@ -64,11 +62,18 @@ export default class SessionService extends SimpleAuthSessionService {
                     document.body.removeChild(loaderNode);
                     this.isLoaderNodeOpen = false;
                 },
-                600 * 6
+                600 * 3
             );
+        };
+        this.isLoaderNodeOpen = true;
+
+        try {
+            await this.router.transitionTo(this.redirectTo);
         } catch (error) {
-            this.notifications.serverError(error);
+            debug(`Session's handleAuthentication() failed to transition: ${error.message}`);
         }
+
+        removeLoaderNode();
     }
 
     /**
@@ -76,7 +81,7 @@ export default class SessionService extends SimpleAuthSessionService {
      *
      * @void
      */
-    async loadCurrentUser() {
+    async loadCurrentUser () {
         try {
             const user = await this.currentUser.load();
 
@@ -96,7 +101,7 @@ export default class SessionService extends SimpleAuthSessionService {
      * @param {Transition} transition
      * @void
      */
-    async promiseCurrentUser(transition = null) {
+    async promiseCurrentUser (transition = null) {
         const invalidateWithLoader = this.invalidateWithLoader.bind(this);
 
         try {
@@ -115,6 +120,7 @@ export default class SessionService extends SimpleAuthSessionService {
             if (transition) {
                 transition.abort();
             }
+
             await invalidateWithLoader(error.message ?? 'Session authentication failed...');
             throw error;
         }
@@ -126,7 +132,7 @@ export default class SessionService extends SimpleAuthSessionService {
      * @param {String} loadingMessage
      * @return {HTMLElement} loader
      */
-    showLoader(loadingMessage) {
+    showLoader (loadingMessage) {
         const loader = document.createElement('div');
         loader.classList.add('overloader');
         loader.innerHTML = `<div class="flex items-center justify-center">
@@ -148,15 +154,14 @@ export default class SessionService extends SimpleAuthSessionService {
      * @param {String} loadingMessage
      * @return {Promise}
      */
-    invalidateWithLoader(loadingMessage = 'Ending session...') {
+    invalidateWithLoader (loadingMessage = 'Ending session...') {
         // if loader node is open already just invalidate
         if (this.isLoaderNodeOpen === true) {
             return this.session.invalidate();
         }
 
         const loaderNode = this.showLoader(loadingMessage);
-
-        this.isLoaderNodeOpen = false;
+        this.isLoaderNodeOpen = true;
 
         return this.session.invalidate().then(() => {
             later(
@@ -175,7 +180,7 @@ export default class SessionService extends SimpleAuthSessionService {
      *
      * @void
      */
-    setRedirect(whereTo = 'console') {
+    setRedirect (whereTo = 'console') {
         this.redirectTo = whereTo;
     }
 
@@ -184,7 +189,7 @@ export default class SessionService extends SimpleAuthSessionService {
      *
      * @return {Date}
      */
-    getExpiresAtDate() {
+    getExpiresAtDate () {
         return new Date(this.data.authenticated.expires_at);
     }
 
@@ -193,7 +198,7 @@ export default class SessionService extends SimpleAuthSessionService {
      *
      * @return {Integer}
      */
-    getSessionSecondsRemaining() {
+    getSessionSecondsRemaining () {
         const date = this.getExpiresAtDate();
         const now = new Date();
 
@@ -207,8 +212,8 @@ export default class SessionService extends SimpleAuthSessionService {
      * @return {Promise}
      * @throws {Error}
      */
-    checkForTwoFactor(identity) {
-        return this.fetch.get('two-fa/check', { identity }).catch((error) => {
+    checkForTwoFactor (identity) {
+        return this.fetch.get('two-fa/check', { identity }).catch(error => {
             throw new Error(error.message);
         });
     }
