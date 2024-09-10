@@ -7,8 +7,9 @@ import { isBlank } from '@ember/utils';
 import { A, isArray } from '@ember/array';
 import { later } from '@ember/runloop';
 import { dasherize, camelize } from '@ember/string';
+import { pluralize } from 'ember-inflector';
 import { getOwner } from '@ember/application';
-import { assert, debug } from '@ember/debug';
+import { assert, debug, warn } from '@ember/debug';
 import RSVP from 'rsvp';
 import loadInstalledExtensions from '../utils/load-installed-extensions';
 import loadExtensions from '../utils/load-extensions';
@@ -18,18 +19,21 @@ import config from 'ember-get-config';
 export default class UniverseService extends Service.extend(Evented) {
     @service router;
     @service intl;
+    @tracked applicationInstance;
+    @tracked enginesBooted = false;
+    @tracked bootedExtensions = A([]);
     @tracked headerMenuItems = A([]);
     @tracked organizationMenuItems = A([]);
     @tracked userMenuItems = A([]);
-    @tracked adminRegistry = {
+    @tracked consoleAdminRegistry = {
         menuItems: A([]),
         menuPanels: A([]),
     };
-    @tracked accountRegistry = {
+    @tracked consoleAccountRegistry = {
         menuItems: A([]),
         menuPanels: A([]),
     };
-    @tracked settingsRegistry = {
+    @tracked consoleSettingsRegistry = {
         menuItems: A([]),
         menuPanels: A([]),
     };
@@ -37,6 +41,7 @@ export default class UniverseService extends Service.extend(Evented) {
         defaultWidgets: A([]),
         widgets: A([]),
     };
+    @tracked hooks = {};
 
     /**
      * Computed property that returns all administrative menu items.
@@ -47,8 +52,8 @@ export default class UniverseService extends Service.extend(Evented) {
      * @memberof UniverseService
      * @returns {Array} Array of administrative menu items
      */
-    @computed('adminRegistry.menuItems.[]') get adminMenuItems() {
-        return this.adminRegistry.menuItems;
+    @computed('consoleAdminRegistry.menuItems.[]') get adminMenuItems() {
+        return this.consoleAdminRegistry.menuItems;
     }
 
     /**
@@ -60,8 +65,8 @@ export default class UniverseService extends Service.extend(Evented) {
      * @memberof UniverseService
      * @returns {Array} Array of administrative menu panels
      */
-    @computed('adminRegistry.menuPanels.[]') get adminMenuPanels() {
-        return this.adminRegistry.menuPanels;
+    @computed('consoleAdminRegistry.menuPanels.[]') get adminMenuPanels() {
+        return this.consoleAdminRegistry.menuPanels;
     }
 
     /**
@@ -73,8 +78,8 @@ export default class UniverseService extends Service.extend(Evented) {
      * @memberof UniverseService
      * @returns {Array} Array of administrative menu items
      */
-    @computed('settingsRegistry.menuItems.[]') get settingsMenuItems() {
-        return this.settingsRegistry.menuItems;
+    @computed('consoleSettingsRegistry.menuItems.[]') get settingsMenuItems() {
+        return this.consoleSettingsRegistry.menuItems;
     }
 
     /**
@@ -86,8 +91,8 @@ export default class UniverseService extends Service.extend(Evented) {
      * @memberof UniverseService
      * @returns {Array} Array of administrative menu panels
      */
-    @computed('settingsRegistry.menuPanels.[]') get settingsMenuPanels() {
-        return this.settingsRegistry.menuPanels;
+    @computed('consoleSettingsRegistry.menuPanels.[]') get settingsMenuPanels() {
+        return this.consoleSettingsRegistry.menuPanels;
     }
 
     /**
@@ -128,6 +133,15 @@ export default class UniverseService extends Service.extend(Evented) {
         }
 
         return this.router.transitionTo(route, ...args);
+    }
+
+    /**
+     * Retrieves the application instance.
+     *
+     * @returns {ApplicationInstance} - The application instance object.
+     */
+    getApplicationInstance() {
+        return this.applicationInstance;
     }
 
     /**
@@ -230,13 +244,21 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Transition} Returns a Transition object representing the transition to the route.
      */
     @action transitionMenuItem(route, menuItem) {
-        const { slug, view } = menuItem;
+        const { slug, view, section } = menuItem;
 
-        if (view) {
-            return this.router.transitionTo(route, slug, view);
+        if (section && slug && view) {
+            return this.router.transitionTo(route, section, slug, { queryParams: { view } });
         }
 
-        return this.router.transitionTo(route, slug, 'index');
+        if (section && slug) {
+            return this.router.transitionTo(route, section, slug);
+        }
+
+        if (slug && view) {
+            return this.router.transitionTo(route, slug, { queryParams: { view } });
+        }
+
+        return this.router.transitionTo(route, slug);
     }
 
     /**
@@ -259,13 +281,20 @@ export default class UniverseService extends Service.extend(Evented) {
     @action createRegistry(registryName, options = {}) {
         const internalRegistryName = this.createInternalRegistryName(registryName);
 
-        this[internalRegistryName] = {
-            name: registryName,
-            menuItems: [],
-            menuPanels: [],
-            renderableComponents: [],
-            ...options,
-        };
+        if (this[internalRegistryName] == undefined) {
+            this[internalRegistryName] = {
+                name: registryName,
+                menuItems: [],
+                menuPanels: [],
+                renderableComponents: [],
+                ...options,
+            };
+        } else {
+            this[internalRegistryName] = {
+                ...this[internalRegistryName],
+                ...options,
+            };
+        }
 
         // trigger registry created event
         this.trigger('registry.created', this[internalRegistryName]);
@@ -519,10 +548,11 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {string} registryName - The name of the registry where the menu item is located.
      * @param {string} slug - The slug of the menu item.
      * @param {string} [view=null] - The view of the menu item, if applicable.
+     * @param {string} [section=null] - The section of the menu item, if applicable.
      *
      * @returns {Promise} Returns a Promise that resolves with the menu item if it is found, or null.
      */
-    lookupMenuItemFromRegistry(registryName, slug, view = null) {
+    lookupMenuItemFromRegistry(registryName, slug, view = null, section = null) {
         const internalRegistryName = this.createInternalRegistryName(registryName);
         const registry = this[internalRegistryName];
 
@@ -537,8 +567,7 @@ export default class UniverseService extends Service.extend(Evented) {
             for (let i = 0; i < registry.menuItems.length; i++) {
                 const menuItem = registry.menuItems[i];
 
-                // no view hack
-                if (menuItem && menuItem.slug === slug && menuItem.view === null && view === 'index') {
+                if (menuItem && menuItem.slug === slug && menuItem.section === section && menuItem.view === view) {
                     foundMenuItem = menuItem;
                     break;
                 }
@@ -557,8 +586,7 @@ export default class UniverseService extends Service.extend(Evented) {
                     for (let j = 0; j < menuPanel.items.length; j++) {
                         const menuItem = menuPanel.items[j];
 
-                        // no view hack
-                        if (menuItem && menuItem.slug === slug && menuItem.view === null && view === 'index') {
+                        if (menuItem && menuItem.slug === slug && menuItem.section === section && menuItem.view === view) {
                             foundMenuItem = menuItem;
                             break;
                         }
@@ -573,6 +601,134 @@ export default class UniverseService extends Service.extend(Evented) {
 
             resolve(foundMenuItem);
         });
+    }
+
+    /**
+     * Gets the view param from the transition object.
+     *
+     * @param {Transition} transition
+     * @return {String|Null}
+     * @memberof UniverseService
+     */
+    getViewFromTransition(transition) {
+        const queryParams = transition.to.queryParams ?? { view: null };
+        return queryParams.view;
+    }
+
+    /**
+     * Creates an internal registry name for hooks based on a given registry name.
+     * The registry name is transformed to camel case and appended with 'Hooks'.
+     * Non-alphanumeric characters are replaced with hyphens.
+     *
+     * @param {string} registryName - The name of the registry for which to create an internal hook registry name.
+     * @returns {string} - The internal hook registry name, formatted as camel case with 'Hooks' appended.
+     */
+    createInternalHookRegistryName(registryName) {
+        return `${camelize(registryName.replace(/[^a-zA-Z0-9]/g, '-'))}Hooks`;
+    }
+
+    /**
+     * Registers a hook function under a specified registry name.
+     * The hook is stored in an internal registry, and its hash is computed for identification.
+     * If the hook is already registered, it is appended to the existing list of hooks.
+     *
+     * @param {string} registryName - The name of the registry where the hook should be registered.
+     * @param {Function} hook - The hook function to be registered.
+     */
+    registerHook(registryName, hook) {
+        if (typeof hook !== 'function') {
+            throw new Error('The hook must be a function.');
+        }
+
+        // no duplicate hooks
+        if (this.didRegisterHook(registryName, hook)) {
+            return;
+        }
+
+        const internalHookRegistryName = this.createInternalHookRegistryName(registryName);
+        const hookRegistry = this.hooks[internalHookRegistryName] || [];
+        hookRegistry.pushObject({ id: this._createHashFromFunctionDefinition(hook), hook });
+
+        this.hooks[internalHookRegistryName] = hookRegistry;
+    }
+
+    /**
+     * Checks if a hook was registered already.
+     *
+     * @param {String} registryName
+     * @param {Function} hook
+     * @return {Boolean}
+     * @memberof UniverseService
+     */
+    didRegisterHook(registryName, hook) {
+        const hooks = this.getHooks(registryName);
+        const hookId = this._createHashFromFunctionDefinition(hook);
+        return isArray(hooks) && hooks.some((h) => h.id === hookId);
+    }
+
+    /**
+     * Retrieves the list of hooks registered under a specified registry name.
+     * If no hooks are registered, returns an empty array.
+     *
+     * @param {string} registryName - The name of the registry for which to retrieve hooks.
+     * @returns {Array<Object>} - An array of hook objects registered under the specified registry name.
+     * Each object contains an `id` and a `hook` function.
+     */
+    getHooks(registryName) {
+        const internalHookRegistryName = this.createInternalHookRegistryName(registryName);
+        return this.hooks[internalHookRegistryName] ?? [];
+    }
+
+    /**
+     * Executes all hooks registered under a specified registry name with the given parameters.
+     * Each hook is called with the provided parameters.
+     *
+     * @param {string} registryName - The name of the registry under which hooks should be executed.
+     * @param {...*} params - The parameters to pass to each hook function.
+     */
+    executeHooks(registryName, ...params) {
+        const hooks = this.getHooks(registryName);
+        hooks.forEach(({ hook }) => {
+            try {
+                hook(...params);
+            } catch (error) {
+                debug(`Error executing hook: ${error}`);
+            }
+        });
+    }
+
+    /**
+     * Calls all hooks registered under a specified registry name with the given parameters.
+     * This is an alias for `executeHooks` for consistency in naming.
+     *
+     * @param {string} registryName - The name of the registry under which hooks should be called.
+     * @param {...*} params - The parameters to pass to each hook function.
+     */
+    callHooks(registryName, ...params) {
+        this.executeHooks(registryName, ...params);
+    }
+
+    /**
+     * Calls a specific hook identified by its ID under a specified registry name with the given parameters.
+     * Only the hook with the matching ID is executed.
+     *
+     * @param {string} registryName - The name of the registry where the hook is registered.
+     * @param {string} hookId - The unique identifier of the hook to be called.
+     * @param {...*} params - The parameters to pass to the hook function.
+     */
+    callHook(registryName, hookId, ...params) {
+        const hooks = this.getHooks(registryName);
+        const hook = hooks.find((h) => h.id === hookId);
+
+        if (hook) {
+            try {
+                hook.hook(...params);
+            } catch (error) {
+                debug(`Error executing hook: ${error}`);
+            }
+        } else {
+            warn(`Hook with ID ${hookId} not found.`);
+        }
     }
 
     /**
@@ -685,6 +841,26 @@ export default class UniverseService extends Service.extend(Evented) {
     }
 
     /**
+     * Register multiple menu items to a registry.
+     *
+     * @param {String} registryName
+     * @param {Array} [menuItems=[]]
+     * @memberof UniverseService
+     */
+    registerMenuItems(registryName, menuItems = []) {
+        for (let i = 0; i < menuItems.length; i++) {
+            const menuItem = menuItems[i];
+            if (menuItem && menuItem.title) {
+                if (menuItem.options) {
+                    this.registerMenuItem(registryName, menuItem.title, menuItem.options);
+                } else {
+                    this.registerMenuItem(registryName, menuItem.title, menuItem);
+                }
+            }
+        }
+    }
+
+    /**
      * Registers a menu item's component to one or multiple engines.
      *
      * @method registerMenuItemComponentToEngine
@@ -724,7 +900,7 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     registerAdminMenuPanel(title, items = [], options = {}) {
         options.section = this._getOption(options, 'section', 'admin');
-        this.registerMenuPanel('admin', title, items, options);
+        this.registerMenuPanel('console:admin', title, items, options);
     }
 
     /**
@@ -737,7 +913,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Object} options Additional options for the item
      */
     registerAdminMenuItem(title, options = {}) {
-        this.registerMenuItem('admin', title, options);
+        this.registerMenuItem('console:admin', title, options);
     }
 
     /**
@@ -751,94 +927,252 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Object} options Additional options for the panel
      */
     registerSettingsMenuPanel(title, items = [], options = {}) {
-        this.registerMenuPanel('settings', title, items, options);
+        this.registerMenuPanel('console:settings', title, items, options);
     }
 
     /**
-     * Registers a new dashboard widget in the universe service.
+     * Registers a new settings menu item.
      *
-     * @method registerDashboardWidgets
+     * @method registerSettingsMenuItem
      * @public
      * @memberof UniverseService
-     * @param {Object} widget - The widget object containing name, component, gridOptions, and options.
-     *   @property {String} name - The name of the widget.
-     *   @property {String} icon - The iron of the widget.
-     *   @property {Function} component - The component associated with the widget.
-     *   @property {Object} gridOptions - The grid options for the widget.
-     *   @property {Object} options - Additional options for the widget.
+     * @param {String} title The title of the item
+     * @param {Object} options Additional options for the item
      */
-    registerDashboardWidgets(widget) {
-        if (isArray(widget)) {
-            widget.forEach((w) => this.registerDashboardWidgets(w));
+    registerSettingsMenuItem(title, options = {}) {
+        this.registerMenuItem('console:settings', title, options);
+    }
+
+    /**
+     * Registers a new account menu panel.
+     *
+     * @method registerAccountMenuPanel
+     * @public
+     * @memberof UniverseService
+     * @param {String} title The title of the panel
+     * @param {Array} items The items of the panel
+     * @param {Object} options Additional options for the panel
+     */
+    registerAccountMenuPanel(title, items = [], options = {}) {
+        this.registerMenuPanel('console:account', title, items, options);
+    }
+
+    /**
+     * Registers a new account menu item.
+     *
+     * @method registerAccountMenuItem
+     * @public
+     * @memberof UniverseService
+     * @param {String} title The title of the item
+     * @param {Object} options Additional options for the item
+     */
+    registerAccountMenuItem(title, options = {}) {
+        this.registerMenuItem('console:account', title, options);
+    }
+
+    /**
+     * Registers a new dashboard with the given name.
+     * Initializes the dashboard with empty arrays for default widgets and widgets.
+     *
+     * @param {string} dashboardName - The name of the dashboard to register.
+     * @returns {void}
+     */
+    registerDashboard(dashboardName) {
+        const internalDashboardRegistryName = this.createInternalDashboardName(dashboardName);
+        if (this[internalDashboardRegistryName] !== undefined) {
             return;
         }
 
-        const newWidget = this._createDashboardWidget(widget);
-        this.dashboardWidgets.widgets.pushObject(newWidget);
+        this[internalDashboardRegistryName] = {
+            defaultWidgets: A([]),
+            widgets: A([]),
+        };
+
+        this.trigger('dashboard.registered', this[internalDashboardRegistryName]);
+    }
+
+    /**
+     * Retrieves the registry for a specific dashboard.
+     *
+     * @param {string} dashboardName - The name of the dashboard to get the registry for.
+     * @returns {Object} - The registry object for the specified dashboard, including default and registered widgets.
+     */
+    getDashboardRegistry(dashboardName) {
+        const internalDashboardRegistryName = this.createInternalDashboardName(dashboardName);
+        return this[internalDashboardRegistryName];
+    }
+
+    /**
+     * Checks if a dashboard has been registered.
+     *
+     * @param {String} dashboardName
+     * @return {Boolean}
+     * @memberof UniverseService
+     */
+    didRegisterDashboard(dashboardName) {
+        const internalDashboardRegistryName = this.createInternalDashboardName(dashboardName);
+        return this[internalDashboardRegistryName] !== undefined;
+    }
+
+    /**
+     * Retrieves the widget registry for a specific dashboard and type.
+     *
+     * @param {string} dashboardName - The name of the dashboard to get the widget registry for.
+     * @param {string} [type='widgets'] - The type of widget registry to retrieve (e.g., 'widgets', 'defaultWidgets').
+     * @returns {Array} - An array of widget objects for the specified dashboard and type.
+     */
+    getWidgetRegistry(dashboardName, type = 'widgets') {
+        const internalDashboardRegistryName = this.createInternalDashboardName(dashboardName);
+        const typeKey = pluralize(type);
+        return isArray(this[internalDashboardRegistryName][typeKey]) ? this[internalDashboardRegistryName][typeKey] : [];
+    }
+
+    /**
+     * Registers widgets for a specific dashboard.
+     * Supports registering multiple widgets and different types of widget collections.
+     *
+     * @param {string} dashboardName - The name of the dashboard to register widgets for.
+     * @param {Array|Object} widgets - An array of widget objects or a single widget object to register.
+     * @param {string} [type='widgets'] - The type of widgets to register (e.g., 'widgets', 'defaultWidgets').
+     * @returns {void}
+     */
+    registerWidgets(dashboardName, widgets = [], type = 'widgets') {
+        const internalDashboardRegistryName = this.createInternalDashboardName(dashboardName);
+        if (isArray(widgets)) {
+            widgets.forEach((w) => this.registerWidgets(dashboardName, w, type));
+            return;
+        }
+
+        const typeKey = pluralize(type);
+        const newWidget = this._createDashboardWidget(widgets);
+        const widgetRegistry = this.getWidgetRegistry(dashboardName, type);
+        if (this.widgetRegistryHasWidget(widgetRegistry, newWidget)) {
+            return;
+        }
+
+        this[internalDashboardRegistryName][typeKey] = [...widgetRegistry, newWidget];
         this.trigger('widget.registered', newWidget);
     }
 
     /**
-     * Retrieves the widgets registered in the universe service.
+     * Checks if a widget with the same ID as the pending widget is already registered in the specified dashboard and type.
      *
-     * @method getDashboardWidgets
-     * @public
-     * @memberof UniverseService
-     * @returns {Array} An array of registered widgets
+     * @param {string} dashboardName - The name of the dashboard to check.
+     * @param {Object} widgetPendingRegistry - The widget to check for in the registry.
+     * @param {string} [type='widgets'] - The type of widget registry to check (e.g., 'widgets', 'defaultWidgets').
+     * @returns {boolean} - `true` if a widget with the same ID is found in the registry; otherwise, `false`.
+     */
+    didRegisterWidget(dashboardName, widgetPendingRegistry, type = 'widgets') {
+        const widgetRegistry = this.getWidgetRegistry(dashboardName, type);
+        return widgetRegistry.includes((widget) => widget.widgetId === widgetPendingRegistry.widgetId);
+    }
+
+    /**
+     * Checks if a widget with the same ID as the pending widget exists in the provided widget registry instance.
+     *
+     * @param {Array} [widgetRegistryInstance=[]] - An array of widget objects to check.
+     * @param {Object} widgetPendingRegistry - The widget to check for in the registry.
+     * @returns {boolean} - `true` if a widget with the same ID is found in the registry; otherwise, `false`.
+     */
+    widgetRegistryHasWidget(widgetRegistryInstance = [], widgetPendingRegistry) {
+        return widgetRegistryInstance.includes((widget) => widget.widgetId === widgetPendingRegistry.widgetId);
+    }
+
+    /**
+     * Registers widgets for the default 'dashboard' dashboard.
+     *
+     * @param {Array} [widgets=[]] - An array of widget objects to register.
+     * @returns {void}
+     */
+    registerDashboardWidgets(widgets = []) {
+        this.registerWidgets('dashboard', widgets);
+    }
+
+    /**
+     * Registers default widgets for the default 'dashboard' dashboard.
+     *
+     * @param {Array} [widgets=[]] - An array of default widget objects to register.
+     * @returns {void}
+     */
+    registerDefaultDashboardWidgets(widgets = []) {
+        this.registerWidgets('dashboard', widgets, 'defaultWidgets');
+    }
+
+    /**
+     * Registers default widgets for a specified dashboard.
+     *
+     * @param {String} dashboardName
+     * @param {Array} [widgets=[]] - An array of default widget objects to register.
+     * @returns {void}
+     */
+    registerDefaultWidgets(dashboardName, widgets = []) {
+        this.registerWidgets(dashboardName, widgets, 'defaultWidgets');
+    }
+
+    /**
+     * Retrieves widgets for a specific dashboard.
+     *
+     * @param {string} dashboardName - The name of the dashboard to retrieve widgets for.
+     * @param {string} [type='widgets'] - The type of widgets to retrieve (e.g., 'widgets', 'defaultWidgets').
+     * @returns {Array} - An array of widgets for the specified dashboard and type.
+     */
+    getWidgets(dashboardName, type = 'widgets') {
+        const typeKey = pluralize(type);
+        const internalDashboardRegistryName = this.createInternalDashboardName(dashboardName);
+        return isArray(this[internalDashboardRegistryName][typeKey]) ? this[internalDashboardRegistryName][typeKey] : [];
+    }
+
+    /**
+     * Retrieves default widgets for a specific dashboard.
+     *
+     * @param {string} dashboardName - The name of the dashboard to retrieve default widgets for.
+     * @returns {Array} - An array of default widgets for the specified dashboard.
+     */
+    getDefaultWidgets(dashboardName) {
+        return this.getWidgets(dashboardName, 'defaultWidgets');
+    }
+
+    /**
+     * Retrieves widgets for the default 'dashboard' dashboard.
+     *
+     * @returns {Array} - An array of widgets for the default 'dashboard' dashboard.
      */
     getDashboardWidgets() {
-        return this.dashboardWidgets.widgets;
+        return this.getWidgets('dashboard');
     }
 
     /**
-     * Registers a new dashboard widget in the universe service.
+     * Retrieves default widgets for the default 'dashboard' dashboard.
      *
-     * @method registerDefaultDashboardWidgets
-     * @public
-     * @memberof UniverseService
-     * @param {Object} widget - The widget object containing name, component, gridOptions, and options.
-     *   @property {String} name - The name of the widget.
-     *   @property {String} icon - The iron of the widget.
-     *   @property {Function} component - The component associated with the widget.
-     *   @property {Object} gridOptions - The grid options for the widget.
-     *   @property {Object} options - Additional options for the widget.
-     */
-    registerDefaultDashboardWidgets(widget) {
-        if (isArray(widget)) {
-            widget.forEach((w) => this.registerDefaultDashboardWidgets(w));
-            return;
-        }
-
-        const newWidget = this._createDashboardWidget(widget);
-        this.dashboardWidgets.defaultWidgets.pushObject(newWidget);
-        this.trigger('widget.registered', newWidget);
-    }
-
-    /**
-     * Retrieves the widgets registered in the universe service.
-     *
-     * @method getDefaultDashboardWidgets
-     * @public
-     * @memberof UniverseService
-     * @returns {Array} An array of registered widgets
+     * @returns {Array} - An array of default widgets for the default 'dashboard' dashboard.
      */
     getDefaultDashboardWidgets() {
-        return this.dashboardWidgets.defaultWidgets;
+        return this.getWidgets('dashboard', 'defaultWidgets');
     }
 
     /**
-     * Creates a dashboard widget object from the given widget configuration.
+     * Creates an internal name for a dashboard based on its given name.
      *
-     * @param {Object} widget - The widget configuration object.
-     * @param {string} widget.widgetId - The unique identifier for the widget.
+     * @param {string} dashboardName - The name of the dashboard.
+     * @returns {string} - The internal name for the dashboard, formatted as `${dashboardName}Widgets`.
+     */
+    createInternalDashboardName(dashboardName) {
+        return `${camelize(dashboardName.replace(/[^a-zA-Z0-9]/g, '-'))}Widgets`;
+    }
+
+    /**
+     * Creates a new widget object from a widget definition.
+     * If the component is a function, it is registered with the host application.
+     *
+     * @param {Object} widget - The widget definition.
+     * @param {string} widget.widgetId - The unique ID of the widget.
      * @param {string} widget.name - The name of the widget.
-     * @param {string} widget.description - The description of the widget.
-     * @param {string} widget.icon - The icon for the widget.
-     * @param {(Function|string)} widget.component - The component class or name for the widget.
-     * @param {Object} widget.grid_options - Grid options for the widget layout.
-     * @param {Object} widget.options - Additional options for the widget.
-     * @returns {Object} A new widget object with properties derived from the input configuration.
-     * @memberof UniverseService
+     * @param {string} [widget.description] - A description of the widget.
+     * @param {string} [widget.icon] - An icon for the widget.
+     * @param {Function|string} [widget.component] - A component definition or name for the widget.
+     * @param {Object} [widget.grid_options] - Grid options for the widget.
+     * @param {Object} [widget.options] - Additional options for the widget.
+     * @returns {Object} - The newly created widget object.
      */
     _createDashboardWidget(widget) {
         // Extract properties from the widget object
@@ -872,16 +1206,31 @@ export default class UniverseService extends Service.extend(Evented) {
     }
 
     /**
-     * Creates a unique hash from a component's definition. This hash is used as an identifier
-     * for the component when a direct identifier (widgetId) or a name is not available.
+     * Generates a unique hash for a widget component based on its function definition.
+     * This method delegates the hash creation to the `_createHashFromFunctionDefinition` method.
      *
-     * @param {Function} component - The component class or constructor function.
-     * @returns {string} A unique hash string representing the component's definition.
-     * @memberof UniverseService
+     * @param {Function} component - The function representing the widget component.
+     * @returns {string} - The unique hash representing the widget component.
      */
     _createUniqueWidgetHashFromDefinition(component) {
-        if (typeof component.toString === 'function') {
-            let definition = component.toString();
+        return this._createHashFromFunctionDefinition(component);
+    }
+
+    /**
+     * Creates a hash value from a function definition. The hash is generated based on the function's string representation.
+     * If the function has a name, it returns that name. Otherwise, it converts the function's string representation
+     * into a hash value. This is done by iterating over the characters of the string and performing a simple hash calculation.
+     *
+     * @param {Function} func - The function whose definition will be hashed.
+     * @returns {string} - The hash value derived from the function's definition. If the function has a name, it is returned directly.
+     */
+    _createHashFromFunctionDefinition(func) {
+        if (func.name) {
+            return func.name;
+        }
+
+        if (typeof func.toString === 'function') {
+            let definition = func.toString();
             let hash = 0;
             for (let i = 0; i < definition.length; i++) {
                 const char = definition.charCodeAt(i);
@@ -891,20 +1240,7 @@ export default class UniverseService extends Service.extend(Evented) {
             return hash.toString(16);
         }
 
-        return component.name;
-    }
-
-    /**
-     * Registers a new settings menu item.
-     *
-     * @method registerSettingsMenuItem
-     * @public
-     * @memberof UniverseService
-     * @param {String} title The title of the item
-     * @param {Object} options Additional options for the item
-     */
-    registerSettingsMenuItem(title, options = {}) {
-        this.registerMenuItem('settings', title, options);
+        return func.name;
     }
 
     /**
@@ -992,7 +1328,7 @@ export default class UniverseService extends Service.extend(Evented) {
         const componentParams = this._getOption(options, 'componentParams', {});
         const renderComponentInPlace = this._getOption(options, 'renderComponentInPlace', false);
         const slug = this._getOption(options, 'slug', dasherize(title));
-        const view = this._getOption(options, 'view');
+        const view = this._getOption(options, 'view', dasherize(title));
         const queryParams = this._getOption(options, 'queryParams', {});
         const index = this._getOption(options, 'index', 0);
         const onClick = this._getOption(options, 'onClick', null);
@@ -1007,6 +1343,11 @@ export default class UniverseService extends Service.extend(Evented) {
         const wrapperClass = this._getOption(options, 'wrapperClass', null);
         const overwriteWrapperClass = this._getOption(options, 'overwriteWrapperClass', false);
         const id = this._getOption(options, 'id', dasherize(title));
+        const type = this._getOption(options, 'type', null);
+        const buttonType = this._getOption(options, 'buttonType', null);
+        const permission = this._getOption(options, 'permission', null);
+        const disabled = this._getOption(options, 'disabled', null);
+        const isLoading = this._getOption(options, 'isLoading', null);
 
         // dasherize route segments
         if (typeof route === 'string') {
@@ -1043,6 +1384,11 @@ export default class UniverseService extends Service.extend(Evented) {
             inlineClass,
             wrapperClass,
             overwriteWrapperClass,
+            type,
+            buttonType,
+            permission,
+            disabled,
+            isLoading,
         };
 
         return menuItem;
@@ -1120,6 +1466,7 @@ export default class UniverseService extends Service.extend(Evented) {
             engineInstance.register(`component:${dasherize(componentClass.name.replace('Component', ''))}`, componentClass);
             if (options && typeof options.registerAs === 'string') {
                 engineInstance.register(`component:${options.registerAs}`, componentClass);
+                this.trigger('component.registered', componentClass, engineInstance);
             }
         }
     }
@@ -1157,6 +1504,7 @@ export default class UniverseService extends Service.extend(Evented) {
             if (sharedService) {
                 // Register the service in the target engine
                 targetEngineInstance.register(`service:${serviceName}`, sharedService, { instantiate: false });
+                this.trigger('service.registered', serviceName, targetEngineInstance);
             }
         }
     }
@@ -1275,6 +1623,7 @@ export default class UniverseService extends Service.extend(Evented) {
         // store loaded instance to engineInstances for booting
         engineInstances[name][instanceId] = engineInstance;
 
+        this.trigger('engine.loaded', engineInstance);
         return engineInstance.boot().then(() => {
             return engineInstance;
         });
@@ -1341,6 +1690,35 @@ export default class UniverseService extends Service.extend(Evented) {
     }
 
     /**
+     * Returns a promise that resolves when the `enginesBooted` property is set to true.
+     * The promise will reject with a timeout error if the property does not become true within the specified timeout.
+     *
+     * @function booting
+     * @returns {Promise<void>} A promise that resolves when `enginesBooted` is true or rejects with an error after a timeout.
+     */
+    booting() {
+        return new Promise((resolve, reject) => {
+            const check = () => {
+                if (this.enginesBooted === true) {
+                    this.trigger('booted');
+                    clearInterval(intervalId);
+                    resolve();
+                }
+            };
+
+            const intervalId = setInterval(check, 100);
+            later(
+                this,
+                () => {
+                    clearInterval(intervalId);
+                    reject(new Error('Timeout: Universe was unable to boot engines'));
+                },
+                5000
+            );
+        });
+    }
+
+    /**
      * Boot all installed engines, ensuring dependencies are resolved.
      *
      * This method attempts to boot all installed engines by first checking if all
@@ -1362,10 +1740,13 @@ export default class UniverseService extends Service.extend(Evented) {
             owner = getOwner(this);
         }
 
+        // Set application instance
+        this.applicationInstance = owner;
+
         const tryBootEngine = (extension) => {
             this.loadEngine(extension.name).then((engineInstance) => {
                 if (engineInstance.base && engineInstance.base.setupExtension) {
-                    if (booted.includes(extension.name)) {
+                    if (this.bootedExtensions.includes(extension.name)) {
                         return;
                     }
 
@@ -1379,6 +1760,8 @@ export default class UniverseService extends Service.extend(Evented) {
 
                     engineInstance.base.setupExtension(owner, engineInstance, this);
                     booted.push(extension.name);
+                    this.bootedExtensions.pushObject(extension.name);
+                    this.trigger('extension.booted', extension);
                     debug(`Booted : ${extension.name}`);
 
                     // Try booting pending engines again
@@ -1391,7 +1774,7 @@ export default class UniverseService extends Service.extend(Evented) {
             const stillPending = [];
 
             pending.forEach(({ extension, engineInstance }) => {
-                if (booted.includes(extension.name)) {
+                if (this.bootedExtensions.includes(extension.name)) {
                     return;
                 }
 
@@ -1401,6 +1784,8 @@ export default class UniverseService extends Service.extend(Evented) {
                 if (allDependenciesBooted) {
                     engineInstance.base.setupExtension(owner, engineInstance, this);
                     booted.push(extension.name);
+                    this.bootedExtensions.pushObject(extension.name);
+                    this.trigger('extension.booted', extension);
                     debug(`Booted : ${extension.name}`);
                 } else {
                     stillPending.push({ extension, engineInstance });
@@ -1414,10 +1799,12 @@ export default class UniverseService extends Service.extend(Evented) {
             pending.push(...stillPending);
         };
 
-        loadInstalledExtensions(additionalCoreExtensions).then((extensions) => {
+        return loadInstalledExtensions(additionalCoreExtensions).then((extensions) => {
             extensions.forEach((extension) => {
                 tryBootEngine(extension);
             });
+
+            this.enginesBooted = true;
         });
     }
 
@@ -1443,6 +1830,9 @@ export default class UniverseService extends Service.extend(Evented) {
             owner = getOwner(this);
         }
 
+        // Set application instance
+        this.applicationInstance = owner;
+
         const tryBootEngine = (extension) => {
             this.loadEngine(extension.name).then((engineInstance) => {
                 if (engineInstance.base && engineInstance.base.setupExtension) {
@@ -1458,6 +1848,8 @@ export default class UniverseService extends Service.extend(Evented) {
 
                     engineInstance.base.setupExtension(owner, engineInstance, this);
                     booted.push(extension.name);
+                    this.bootedExtensions.pushObject(extension.name);
+                    this.trigger('extension.booted', extension);
                     debug(`Booted : ${extension.name}`);
 
                     // Try booting pending engines again
@@ -1476,6 +1868,8 @@ export default class UniverseService extends Service.extend(Evented) {
                 if (allDependenciesBooted) {
                     engineInstance.base.setupExtension(owner, engineInstance, this);
                     booted.push(extension.name);
+                    this.bootedExtensions.pushObject(extension.name);
+                    this.trigger('extension.booted', extension);
                     debug(`Booted : ${extension.name}`);
                 } else {
                     stillPending.push({ extension, engineInstance });
@@ -1489,11 +1883,24 @@ export default class UniverseService extends Service.extend(Evented) {
             pending.push(...stillPending);
         };
 
-        loadExtensions().then((extensions) => {
+        return loadExtensions().then((extensions) => {
             extensions.forEach((extension) => {
                 tryBootEngine(extension);
             });
+
+            this.enginesBooted = true;
         });
+    }
+
+    /**
+     * Checks if an extension has been booted.
+     *
+     * @param {String} name
+     * @return {Boolean}
+     * @memberof UniverseService
+     */
+    didBootEngine(name) {
+        return this.bootedExtensions.includes(name);
     }
 
     /**

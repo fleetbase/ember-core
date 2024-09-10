@@ -1,3 +1,9 @@
+import { isBlank } from '@ember/utils';
+
 export default function isEmptyObject(obj) {
-    return Object.keys(obj).length === 0 && obj.constructor === Object;
+    if (isBlank(obj)) {
+        return true;
+    }
+
+    return obj.constructor === Object && Object.keys(obj).length === 0;
 }

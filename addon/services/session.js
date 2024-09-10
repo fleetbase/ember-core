@@ -2,12 +2,14 @@ import SimpleAuthSessionService from 'ember-simple-auth/services/session';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { later } from '@ember/runloop';
+import { debug } from '@ember/debug';
 import getWithDefault from '../utils/get-with-default';
 
 export default class SessionService extends SimpleAuthSessionService {
     @service router;
     @service currentUser;
     @service fetch;
+    @service notifications;
 
     /**
      * Set where to transition to
@@ -52,10 +54,7 @@ export default class SessionService extends SimpleAuthSessionService {
         }
 
         const loaderNode = this.showLoader('Starting session...');
-        this.isLoaderNodeOpen = true;
-
-        try {
-            await this.router.transitionTo(this.redirectTo);
+        const removeLoaderNode = () => {
             later(
                 this,
                 () => {
@@ -63,11 +62,18 @@ export default class SessionService extends SimpleAuthSessionService {
                     document.body.removeChild(loaderNode);
                     this.isLoaderNodeOpen = false;
                 },
-                600 * 6
+                600 * 3
             );
+        };
+        this.isLoaderNodeOpen = true;
+
+        try {
+            await this.router.transitionTo(this.redirectTo);
         } catch (error) {
-            this.notifications.serverError(error);
+            debug(`Session's handleAuthentication() failed to transition: ${error.message}`);
         }
+
+        removeLoaderNode();
     }
 
     /**
@@ -114,6 +120,7 @@ export default class SessionService extends SimpleAuthSessionService {
             if (transition) {
                 transition.abort();
             }
+
             await invalidateWithLoader(error.message ?? 'Session authentication failed...');
             throw error;
         }
@@ -154,8 +161,7 @@ export default class SessionService extends SimpleAuthSessionService {
         }
 
         const loaderNode = this.showLoader(loadingMessage);
-
-        this.isLoaderNodeOpen = false;
+        this.isLoaderNodeOpen = true;
 
         return this.session.invalidate().then(() => {
             later(
