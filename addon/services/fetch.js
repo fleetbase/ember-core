@@ -27,7 +27,7 @@ export default class FetchService extends Service {
      * Creates an instance of FetchService.
      * @memberof FetchService
      */
-    constructor() {
+    constructor () {
         super(...arguments);
 
         this.headers = this.getHeaders();
@@ -61,7 +61,7 @@ export default class FetchService extends Service {
      *
      * @return {Object}
      */
-    getHeaders() {
+    getHeaders () {
         const headers = {};
         const isAuthenticated = this.session.isAuthenticated;
         const userId = this.session.data.authenticated.user;
@@ -92,7 +92,7 @@ export default class FetchService extends Service {
      * @return {FetchService}
      * @memberof FetchService
      */
-    refreshHeaders() {
+    refreshHeaders () {
         this.headers = this.getHeaders();
 
         return this;
@@ -105,7 +105,7 @@ export default class FetchService extends Service {
      * @return {FetchService}
      * @memberof FetchService
      */
-    setNamespace(namespace) {
+    setNamespace (namespace) {
         this.namespace = namespace;
 
         return this;
@@ -118,7 +118,7 @@ export default class FetchService extends Service {
      * @return {FetchService}
      * @memberof FetchService
      */
-    setHost(host) {
+    setHost (host) {
         this.host = host;
 
         return this;
@@ -174,7 +174,7 @@ export default class FetchService extends Service {
      *
      * @return {Model}            An ember model
      */
-    normalizeModel(payload, modelType = null) {
+    normalizeModel (payload, modelType = null) {
         if (modelType === null) {
             const modelTypeKeys = Object.keys(payload);
             modelType = modelTypeKeys.length ? modelTypeKeys.firstObject : false;
@@ -187,11 +187,11 @@ export default class FetchService extends Service {
         const type = dasherize(singularize(modelType));
 
         if (isArray(payload)) {
-            return payload.map((instance) => this.store.push(this.store.normalize(type, instance)));
+            return payload.map(instance => this.store.push(this.store.normalize(type, instance)));
         }
 
         if (isArray(payload[modelType])) {
-            return payload[modelType].map((instance) => this.store.push(this.store.normalize(type, instance)));
+            return payload[modelType].map(instance => this.store.push(this.store.normalize(type, instance)));
         }
 
         if (!isBlank(payload) && isBlank(payload[modelType])) {
@@ -209,7 +209,7 @@ export default class FetchService extends Service {
      *
      * @return {Model}            An ember model
      */
-    jsonToModel(attributes = {}, modelType) {
+    jsonToModel (attributes = {}, modelType) {
         if (typeof attributes === 'string') {
             attributes = JSON.parse(attributes);
         }
@@ -228,7 +228,7 @@ export default class FetchService extends Service {
      *
      * @return {Promise}
      */
-    async parseJSON(response) {
+    async parseJSON (response) {
         try {
             const compressedHeader = await response.headers.get('x-compressed-json');
             let json;
@@ -265,7 +265,7 @@ export default class FetchService extends Service {
      *
      * @return {Promise}
      */
-    request(path, method = 'GET', data = {}, options = {}) {
+    request (path, method = 'GET', data = {}, options = {}) {
         const headers = Object.assign(this.getHeaders(), options.headers ?? {});
         const host = options.host ?? this.host;
         const namespace = options.namespace ?? this.namespace;
@@ -280,7 +280,7 @@ export default class FetchService extends Service {
                 ...data,
             })
                 .then(this.parseJSON)
-                .then((response) => {
+                .then(response => {
                     if (response.ok) {
                         if (options.normalizeToEmberData) {
                             const normalized = this.normalizeModel(response.json, options.normalizeModelType);
@@ -334,7 +334,7 @@ export default class FetchService extends Service {
      *
      * @return {Promise}
      */
-    get(path, query = {}, options = {}) {
+    get (path, query = {}, options = {}) {
         // handle if want to request from cache
         if (options.fromCache === true) {
             return this.cachedGet(...arguments);
@@ -355,13 +355,13 @@ export default class FetchService extends Service {
      *
      * @return {Promise}
      */
-    cachedGet(path, query = {}, options = {}) {
+    cachedGet (path, query = {}, options = {}) {
         const pathKey = dasherize(path);
         const pathKeyVersion = new Date().toISOString();
 
         const request = () => {
             delete options.fromCache;
-            return this.get(path, query, options).then((response) => {
+            return this.get(path, query, options).then(response => {
                 // cache the response
                 this.localCache.set(pathKey, response);
                 this.localCache.set(`${pathKey}-version`, pathKeyVersion);
@@ -373,7 +373,7 @@ export default class FetchService extends Service {
 
         // check to see if in storage already
         if (this.localCache.get(pathKey)) {
-            return new Promise((resolve) => {
+            return new Promise(resolve => {
                 // get cached data
                 const data = this.localCache.get(pathKey);
 
@@ -409,14 +409,24 @@ export default class FetchService extends Service {
         return request();
     }
 
-    flushRequestCache(path) {
+    /**
+     * Flushes the local cache for a specific path by setting its value and version to undefined.
+     *
+     * @param {string} path - The path for which the cache should be flushed.
+     */
+    flushRequestCache (path) {
         const pathKey = dasherize(path);
 
         this.localCache.set(pathKey, undefined);
         this.localCache.set(`${pathKey}-version`, undefined);
     }
 
-    shouldResetCache() {
+    /**
+     * Determines whether the cache should be reset by comparing the current version
+     * of the console with the cached version. If they differ, the cache is cleared
+     * and the new version is saved.
+     */
+    shouldResetCache () {
         const consoleVersion = this.localCache.get('console-version');
 
         if (!consoleVersion || consoleVersion !== config.APP.version) {
@@ -434,7 +444,7 @@ export default class FetchService extends Service {
      *
      * @return {Promise}
      */
-    post(path, data = {}, options = {}) {
+    post (path, data = {}, options = {}) {
         return this.request(path, 'POST', { body: JSON.stringify(data) }, options);
     }
 
@@ -447,7 +457,7 @@ export default class FetchService extends Service {
      *
      * @return {Promise}
      */
-    put(path, data = {}, options = {}) {
+    put (path, data = {}, options = {}) {
         return this.request(path, 'PUT', { body: JSON.stringify(data) }, options);
     }
 
@@ -460,7 +470,7 @@ export default class FetchService extends Service {
      *
      * @return {Promise}
      */
-    delete(path, data = {}, options = {}) {
+    delete (path, data = {}, options = {}) {
         return this.request(path, 'DELETE', { body: JSON.stringify(data) }, options);
     }
 
@@ -472,7 +482,7 @@ export default class FetchService extends Service {
      *
      * @return {Promise}
      */
-    patch(path, data = {}, options = {}) {
+    patch (path, data = {}, options = {}) {
         return this.request(path, 'PATCH', { body: JSON.stringify(data) }, options);
     }
 
@@ -485,9 +495,9 @@ export default class FetchService extends Service {
      *
      * @return {Promise}
      */
-    upload(path, files = [], options = {}) {
+    upload (path, files = [], options = {}) {
         const body = new FormData();
-        files.forEach((file) => {
+        files.forEach(file => {
             body.append('file', file);
         });
         return this.request(path, 'POST', { body }, options);
@@ -502,12 +512,12 @@ export default class FetchService extends Service {
      * @param {String} profile
      * @param {String} version
      */
-    routing(coordinates, query = {}, options = {}) {
+    routing (coordinates, query = {}, options = {}) {
         let service = options?.service ?? 'trip';
         let profile = options?.profile ?? 'driving';
         let version = options?.version ?? 'v1';
         let host = options?.host ?? `https://${options?.subdomain ?? 'routing'}.fleetbase.io`;
-        let route = coordinates.map((coords) => coords.join(',')).join(';');
+        let route = coordinates.map(coords => coords.join(',')).join(';');
         let params = !isEmptyObject(query) ? new URLSearchParams(query).toString() : '';
         let path = `${host}/${service}/${version}/${profile}/${route}`;
         let url = `${path}${params ? '?' + params : ''}`;
@@ -555,8 +565,8 @@ export default class FetchService extends Service {
                     withCredentials: true,
                     headers,
                 })
-                .then((response) => response.json())
-                .catch((error) => {
+                .then(response => response.json())
+                .catch(error => {
                     this.notifications.serverError(error, 'File upload failed.');
 
                     if (typeof errorCallback === 'function') {
@@ -598,7 +608,7 @@ export default class FetchService extends Service {
      *
      * @return {Promise}
      */
-    download(path, query = {}, options = {}) {
+    download (path, query = {}, options = {}) {
         const headers = Object.assign(this.getHeaders(), options.headers ?? {});
         const method = options.method ?? 'GET';
         const credentials = options.credentials ?? this.credentials;
@@ -619,7 +629,7 @@ export default class FetchService extends Service {
 
         return new Promise((resolve, reject) => {
             return fetch(`${baseUrl}/${path}${params}`, fetchOptions)
-                .then((response) => {
+                .then(response => {
                     options.fileName = this.getFilenameFromResponse(response, options.fileName);
                     options.mimeType = this.getMimeTypeFromResponse(response, options.mimeType);
 
@@ -629,15 +639,15 @@ export default class FetchService extends Service {
 
                     return response;
                 })
-                .then((response) => response.blob())
-                .then((blob) => resolve(download(blob, options.fileName, options.mimeType)))
-                .catch((error) => {
+                .then(response => response.blob())
+                .then(blob => resolve(download(blob, options.fileName, options.mimeType)))
+                .catch(error => {
                     reject(error);
                 });
         });
     }
 
-    getFilenameFromResponse(response, defaultFilename = null) {
+    getFilenameFromResponse (response, defaultFilename = null) {
         const contentDisposition = response.headers.get('content-disposition');
         let fileName = defaultFilename;
 
@@ -655,7 +665,7 @@ export default class FetchService extends Service {
         return fileName;
     }
 
-    getMimeTypeFromResponse(response, defaultMimeType = null) {
+    getMimeTypeFromResponse (response, defaultMimeType = null) {
         const contentType = response.headers.get('content-type');
         let mimeType = defaultMimeType;
 
@@ -670,10 +680,10 @@ export default class FetchService extends Service {
         return mimeType;
     }
 
-    fetchOrderConfigurations(params = {}) {
+    fetchOrderConfigurations (params = {}) {
         return new Promise((resolve, reject) => {
             this.request('fleet-ops/order-configs/get-installed', params)
-                .then((configs) => {
+                .then(configs => {
                     const serialized = [];
 
                     for (let i = 0; i < configs.length; i++) {
@@ -686,7 +696,7 @@ export default class FetchService extends Service {
 
                     resolve(serialized);
                 })
-                .catch((error) => {
+                .catch(error => {
                     reject(error);
                 });
         });

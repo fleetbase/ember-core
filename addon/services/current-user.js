@@ -33,31 +33,31 @@ export default class CurrentUserService extends Service.extend(Evented) {
     @alias('user.company_uuid') companyId;
     @alias('user.company_name') companyName;
 
-    @computed('id') get optionsPrefix() {
+    @computed('id') get optionsPrefix () {
         return `${this.id}:`;
     }
 
-    get latitude() {
+    get latitude () {
         return this.whois('latitude');
     }
 
-    get longitude() {
+    get longitude () {
         return this.whois('longitude');
     }
 
-    get currency() {
+    get currency () {
         return this.whois('currency.code');
     }
 
-    get city() {
+    get city () {
         return this.whois('city');
     }
 
-    get country() {
+    get country () {
         return this.whois('country_code');
     }
 
-    async load() {
+    async load () {
         if (this.session.isAuthenticated) {
             const user = await this.store.findRecord('user', 'me');
             this.set('user', user);
@@ -75,7 +75,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
         return null;
     }
 
-    async promiseUser(options = {}) {
+    async promiseUser (options = {}) {
         const NoUserAuthenticatedError = new Error('Failed to authenticate user.');
         if (!this.session.isAuthenticated) {
             throw NoUserAuthenticatedError;
@@ -87,8 +87,6 @@ export default class CurrentUserService extends Service.extend(Evented) {
             // Set current user
             this.set('user', user);
             this.trigger('user.loaded', user);
-
-            console.log(user);
 
             // Set permissions
             this.permissions = this.getUserPermissions(user);
@@ -121,13 +119,13 @@ export default class CurrentUserService extends Service.extend(Evented) {
         }
     }
 
-    async loadPreferences() {
+    async loadPreferences () {
         await this.loadLocale();
         await this.loadWhois();
         await this.loadOrganizations();
     }
 
-    async loadLocale() {
+    async loadLocale () {
         try {
             const { locale } = await this.fetch.get('users/locale');
             this.setLocale(locale);
@@ -138,7 +136,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
         }
     }
 
-    async loadOrganizations() {
+    async loadOrganizations () {
         try {
             const organizations = await this.fetch.get('auth/organizations', {}, { normalizeToEmberData: true, normalizeModelType: 'company' });
             this.setOption('organizations', organizations);
@@ -150,7 +148,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
         }
     }
 
-    async loadWhois() {
+    async loadWhois () {
         this.fetch.shouldResetCache();
 
         try {
@@ -171,12 +169,12 @@ export default class CurrentUserService extends Service.extend(Evented) {
         }
     }
 
-    getCompany() {
+    getCompany () {
         this.company = this.store.peekRecord('company', this.user.company_uuid);
         return this.company;
     }
 
-    getUserPermissions(user) {
+    getUserPermissions (user) {
         const permissions = [];
 
         // get direct applied permissions
@@ -213,11 +211,11 @@ export default class CurrentUserService extends Service.extend(Evented) {
         return permissions;
     }
 
-    whois(key) {
+    whois (key) {
         return this.getWhoisProperty(key);
     }
 
-    setLocale(locale) {
+    setLocale (locale) {
         this.setOption('locale', locale);
         this.intl.setLocale(locale);
         this.locale = locale;
@@ -225,7 +223,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
         return this;
     }
 
-    setOption(key, value) {
+    setOption (key, value) {
         key = `${this.optionsPrefix}${dasherize(key)}`;
 
         this.options.set(key, value);
@@ -233,14 +231,14 @@ export default class CurrentUserService extends Service.extend(Evented) {
         return this;
     }
 
-    getOption(key, defaultValue = null) {
+    getOption (key, defaultValue = null) {
         key = `${this.optionsPrefix}${dasherize(key)}`;
 
         const value = this.options.get(key);
         return value !== undefined ? value : defaultValue;
     }
 
-    getWhoisProperty(prop) {
+    getWhoisProperty (prop) {
         const whois = this.getOption('whois');
 
         if (!whois || typeof whois !== 'object') {
@@ -250,11 +248,11 @@ export default class CurrentUserService extends Service.extend(Evented) {
         return get(whois, prop);
     }
 
-    hasOption(key) {
+    hasOption (key) {
         return this.getOption(key) !== undefined;
     }
 
-    filledOption(key) {
+    filledOption (key) {
         return !isBlank(this.getOption(key));
     }
 }

@@ -777,9 +777,11 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     registerMenuPanel(registryName, title, items = [], options = {}) {
         const internalRegistryName = this.createInternalRegistryName(registryName);
+        const intl = this._getOption(options, 'intl', null);
         const open = this._getOption(options, 'open', true);
         const slug = this._getOption(options, 'slug', dasherize(title));
         const menuPanel = {
+            intl,
             title,
             open,
             items: items.map(({ title, route, ...options }) => {
@@ -1321,6 +1323,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Object} A new menu item object
      */
     _createMenuItem(title, route, options = {}) {
+        const intl = this._getOption(options, 'intl', null);
         const priority = this._getOption(options, 'priority', 9);
         const icon = this._getOption(options, 'icon', 'circle-dot');
         const items = this._getOption(options, 'items');
@@ -1360,6 +1363,7 @@ export default class UniverseService extends Service.extend(Evented) {
         // @todo: create menu item class
         const menuItem = {
             id,
+            intl,
             title,
             text: title,
             route,
