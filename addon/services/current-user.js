@@ -88,14 +88,26 @@ export default class CurrentUserService extends Service.extend(Evented) {
             this.set('user', user);
             this.trigger('user.loaded', user);
 
+            console.log(user);
+
             // Set permissions
             this.permissions = this.getUserPermissions(user);
 
             // Set environment from user option
             this.theme.setEnvironment();
 
-            // Load user preferces
-            await this.loadPreferences();
+            // Set locale
+            if (user.locale) {
+                this.setLocale(user.locale);
+            } else {
+                await this.loadLocale();
+            }
+
+            // Load user whois data
+            await this.loadWhois();
+
+            // Load user organizations
+            await this.loadOrganizations();
 
             // Optional callback
             if (typeof options?.onUserResolved === 'function') {
@@ -118,9 +130,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
     async loadLocale() {
         try {
             const { locale } = await this.fetch.get('users/locale');
-            this.setOption('locale', locale);
-            this.intl.setLocale(locale);
-            this.locale = locale;
+            this.setLocale(locale);
 
             return locale;
         } catch (error) {
@@ -205,6 +215,14 @@ export default class CurrentUserService extends Service.extend(Evented) {
 
     whois(key) {
         return this.getWhoisProperty(key);
+    }
+
+    setLocale(locale) {
+        this.setOption('locale', locale);
+        this.intl.setLocale(locale);
+        this.locale = locale;
+
+        return this;
     }
 
     setOption(key, value) {

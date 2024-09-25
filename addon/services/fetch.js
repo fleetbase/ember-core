@@ -360,6 +360,7 @@ export default class FetchService extends Service {
         const pathKeyVersion = new Date().toISOString();
 
         const request = () => {
+            delete options.fromCache;
             return this.get(path, query, options).then((response) => {
                 // cache the response
                 this.localCache.set(pathKey, response);
