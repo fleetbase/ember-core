@@ -42,6 +42,7 @@ export default class UniverseService extends Service.extend(Evented) {
         widgets: A([]),
     };
     @tracked hooks = {};
+    @tracked bootCallbacks = A([]);
 
     /**
      * Computed property that returns all administrative menu items.
@@ -1734,7 +1735,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {ApplicationInstance|null} owner - The Ember ApplicationInstance that owns the engines.
      * @return {void}
      */
-    bootEngines(owner = null) {
+    async bootEngines(owner = null) {
         const booted = [];
         const pending = [];
         const additionalCoreExtensions = config.APP.extensions ?? [];
@@ -1748,7 +1749,7 @@ export default class UniverseService extends Service.extend(Evented) {
         this.applicationInstance = owner;
 
         const tryBootEngine = (extension) => {
-            this.loadEngine(extension.name).then((engineInstance) => {
+            return this.loadEngine(extension.name).then((engineInstance) => {
                 if (engineInstance.base && engineInstance.base.setupExtension) {
                     if (this.bootedExtensions.includes(extension.name)) {
                         return;
@@ -1803,11 +1804,13 @@ export default class UniverseService extends Service.extend(Evented) {
             pending.push(...stillPending);
         };
 
-        return loadInstalledExtensions(additionalCoreExtensions).then((extensions) => {
-            extensions.forEach((extension) => {
-                tryBootEngine(extension);
-            });
+        return loadInstalledExtensions(additionalCoreExtensions).then(async (extensions) => {
+            for (let i = 0; i < extensions.length; i++) {
+                const extension = extensions[i];
+                await tryBootEngine(extension);
+            }
 
+            this.runBootCallbacks(owner);
             this.enginesBooted = true;
         });
     }
@@ -1838,7 +1841,7 @@ export default class UniverseService extends Service.extend(Evented) {
         this.applicationInstance = owner;
 
         const tryBootEngine = (extension) => {
-            this.loadEngine(extension.name).then((engineInstance) => {
+            return this.loadEngine(extension.name).then((engineInstance) => {
                 if (engineInstance.base && engineInstance.base.setupExtension) {
                     const engineDependencies = getWithDefault(engineInstance.base, 'engineDependencies', []);
 
@@ -1887,11 +1890,13 @@ export default class UniverseService extends Service.extend(Evented) {
             pending.push(...stillPending);
         };
 
-        return loadExtensions().then((extensions) => {
-            extensions.forEach((extension) => {
-                tryBootEngine(extension);
-            });
+        return loadExtensions().then(async (extensions) => {
+            for (let i = 0; i < extensions.length; i++) {
+                const extension = extensions[i];
+                await tryBootEngine(extension);
+            }
 
+            this.runBootCallbacks(owner);
             this.enginesBooted = true;
         });
     }
@@ -1905,6 +1910,50 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     didBootEngine(name) {
         return this.bootedExtensions.includes(name);
+    }
+
+    /**
+     * Registers a callback function to be executed after the engine boot process completes.
+     *
+     * This method ensures that the `bootCallbacks` array is initialized. It then adds the provided
+     * callback to this array. The callbacks registered will be invoked in sequence after the engine
+     * has finished booting, using the `runBootCallbacks` method.
+     *
+     * @param {Function} callback - The function to execute after the engine boots.
+     *   The callback should accept two arguments:
+     *   - `{Object} universe` - The universe context or environment.
+     *   - `{Object} appInstance` - The application instance.
+     */
+    afterBoot(callback) {
+        if (!isArray(this.bootCallbacks)) {
+            this.bootCallbacks = [];
+        }
+
+        this.bootCallbacks.pushObject(callback);
+    }
+
+    /**
+     * Executes all registered engine boot callbacks in the order they were added.
+     *
+     * This method iterates over the `bootCallbacks` array and calls each callback function,
+     * passing in the `universe` and `appInstance` parameters. After all callbacks have been
+     * executed, it optionally calls a completion function `onComplete`.
+     *
+     * @param {Object} appInstance - The application instance to pass to each callback.
+     * @param {Function} [onComplete] - Optional. A function to call after all boot callbacks have been executed.
+     *   It does not receive any arguments.
+     */
+    runBootCallbacks(appInstance, onComplete = null) {
+        for (let i = 0; i < this.bootCallbacks.length; i++) {
+            const callback = this.bootCallbacks[i];
+            if (typeof callback === 'function') {
+                callback(this, appInstance);
+            }
+        }
+
+        if (typeof onComplete === 'function') {
+            onComplete();
+        }
     }
 
     /**
