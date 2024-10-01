@@ -19,6 +19,7 @@ import config from 'ember-get-config';
 export default class UniverseService extends Service.extend(Evented) {
     @service router;
     @service intl;
+    @service urlSearchParams;
     @tracked applicationInstance;
     @tracked enginesBooted = false;
     @tracked bootedExtensions = A([]);
@@ -42,6 +43,7 @@ export default class UniverseService extends Service.extend(Evented) {
         widgets: A([]),
     };
     @tracked hooks = {};
+    @tracked bootCallbacks = A([]);
 
     /**
      * Computed property that returns all administrative menu items.
@@ -133,6 +135,17 @@ export default class UniverseService extends Service.extend(Evented) {
         }
 
         return this.router.transitionTo(route, ...args);
+    }
+
+    /**
+     * Sets the application instance.
+     *
+     * @param {ApplicationInstance} - The application instance object.
+     * @return {void}
+     */
+    setApplicationInstance(instance) {
+        window.Fleetbase = instance;
+        this.applicationInstance = instance;
     }
 
     /**
@@ -259,6 +272,43 @@ export default class UniverseService extends Service.extend(Evented) {
         }
 
         return this.router.transitionTo(route, slug);
+    }
+
+    /**
+     * Redirects to a virtual route if a corresponding menu item exists based on the current URL slug.
+     *
+     * This asynchronous function checks whether a virtual route exists by extracting the slug from the current
+     * window's pathname and looking up a matching menu item in a specified registry. If a matching menu item
+     * is found, it initiates a transition to the given route associated with that menu item and returns the
+     * transition promise.
+     *
+     * @async
+     *
+     * @param {Object} transition - The current transition object from the router.
+     *   Used to retrieve additional information required for the menu item lookup.
+     * @param {string} registryName - The name of the registry to search for the menu item.
+     *   This registry should contain menu items mapped by their slugs.
+     * @param {string} route - The name of the route to transition to if the menu item is found.
+     *   This is typically the route associated with displaying the menu item's content.
+     *
+     * @returns {Promise|undefined} - Returns a promise that resolves when the route transition completes
+     *   if a matching menu item is found. If no matching menu item is found, the function returns undefined.
+     *
+     */
+    async virtualRouteRedirect(transition, registryName, route, options = {}) {
+        const view = this.getViewFromTransition(transition);
+        const slug = window.location.pathname.replace('/', '');
+        const queryParams = this.urlSearchParams.all();
+        const menuItem = await this.lookupMenuItemFromRegistry(registryName, slug, view);
+        if (menuItem && transition.from === null) {
+            return this.transitionMenuItem(route, menuItem, { queryParams }).then((transition) => {
+                if (options && options.restoreQueryParams === true) {
+                    this.urlSearchParams.setParamsToCurrentUrl(queryParams);
+                }
+
+                return transition;
+            });
+        }
     }
 
     /**
@@ -777,9 +827,11 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     registerMenuPanel(registryName, title, items = [], options = {}) {
         const internalRegistryName = this.createInternalRegistryName(registryName);
+        const intl = this._getOption(options, 'intl', null);
         const open = this._getOption(options, 'open', true);
         const slug = this._getOption(options, 'slug', dasherize(title));
         const menuPanel = {
+            intl,
             title,
             open,
             items: items.map(({ title, route, ...options }) => {
@@ -1321,6 +1373,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Object} A new menu item object
      */
     _createMenuItem(title, route, options = {}) {
+        const intl = this._getOption(options, 'intl', null);
         const priority = this._getOption(options, 'priority', 9);
         const icon = this._getOption(options, 'icon', 'circle-dot');
         const items = this._getOption(options, 'items');
@@ -1360,6 +1413,7 @@ export default class UniverseService extends Service.extend(Evented) {
         // @todo: create menu item class
         const menuItem = {
             id,
+            intl,
             title,
             text: title,
             route,
@@ -1390,6 +1444,14 @@ export default class UniverseService extends Service.extend(Evented) {
             disabled,
             isLoading,
         };
+
+        // make the menu item and universe object a default param of the onClick handler
+        if (typeof onClick === 'function') {
+            const universe = this;
+            menuItem.onClick = function () {
+                return onClick(menuItem, universe);
+            };
+        }
 
         return menuItem;
     }
@@ -1730,7 +1792,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {ApplicationInstance|null} owner - The Ember ApplicationInstance that owns the engines.
      * @return {void}
      */
-    bootEngines(owner = null) {
+    async bootEngines(owner = null) {
         const booted = [];
         const pending = [];
         const additionalCoreExtensions = config.APP.extensions ?? [];
@@ -1741,10 +1803,10 @@ export default class UniverseService extends Service.extend(Evented) {
         }
 
         // Set application instance
-        this.applicationInstance = owner;
+        this.setApplicationInstance(owner);
 
         const tryBootEngine = (extension) => {
-            this.loadEngine(extension.name).then((engineInstance) => {
+            return this.loadEngine(extension.name).then((engineInstance) => {
                 if (engineInstance.base && engineInstance.base.setupExtension) {
                     if (this.bootedExtensions.includes(extension.name)) {
                         return;
@@ -1799,11 +1861,13 @@ export default class UniverseService extends Service.extend(Evented) {
             pending.push(...stillPending);
         };
 
-        return loadInstalledExtensions(additionalCoreExtensions).then((extensions) => {
-            extensions.forEach((extension) => {
-                tryBootEngine(extension);
-            });
+        return loadInstalledExtensions(additionalCoreExtensions).then(async (extensions) => {
+            for (let i = 0; i < extensions.length; i++) {
+                const extension = extensions[i];
+                await tryBootEngine(extension);
+            }
 
+            this.runBootCallbacks(owner);
             this.enginesBooted = true;
         });
     }
@@ -1831,10 +1895,10 @@ export default class UniverseService extends Service.extend(Evented) {
         }
 
         // Set application instance
-        this.applicationInstance = owner;
+        this.setApplicationInstance(owner);
 
         const tryBootEngine = (extension) => {
-            this.loadEngine(extension.name).then((engineInstance) => {
+            return this.loadEngine(extension.name).then((engineInstance) => {
                 if (engineInstance.base && engineInstance.base.setupExtension) {
                     const engineDependencies = getWithDefault(engineInstance.base, 'engineDependencies', []);
 
@@ -1883,11 +1947,13 @@ export default class UniverseService extends Service.extend(Evented) {
             pending.push(...stillPending);
         };
 
-        return loadExtensions().then((extensions) => {
-            extensions.forEach((extension) => {
-                tryBootEngine(extension);
-            });
+        return loadExtensions().then(async (extensions) => {
+            for (let i = 0; i < extensions.length; i++) {
+                const extension = extensions[i];
+                await tryBootEngine(extension);
+            }
 
+            this.runBootCallbacks(owner);
             this.enginesBooted = true;
         });
     }
@@ -1901,6 +1967,50 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     didBootEngine(name) {
         return this.bootedExtensions.includes(name);
+    }
+
+    /**
+     * Registers a callback function to be executed after the engine boot process completes.
+     *
+     * This method ensures that the `bootCallbacks` array is initialized. It then adds the provided
+     * callback to this array. The callbacks registered will be invoked in sequence after the engine
+     * has finished booting, using the `runBootCallbacks` method.
+     *
+     * @param {Function} callback - The function to execute after the engine boots.
+     *   The callback should accept two arguments:
+     *   - `{Object} universe` - The universe context or environment.
+     *   - `{Object} appInstance` - The application instance.
+     */
+    afterBoot(callback) {
+        if (!isArray(this.bootCallbacks)) {
+            this.bootCallbacks = [];
+        }
+
+        this.bootCallbacks.pushObject(callback);
+    }
+
+    /**
+     * Executes all registered engine boot callbacks in the order they were added.
+     *
+     * This method iterates over the `bootCallbacks` array and calls each callback function,
+     * passing in the `universe` and `appInstance` parameters. After all callbacks have been
+     * executed, it optionally calls a completion function `onComplete`.
+     *
+     * @param {Object} appInstance - The application instance to pass to each callback.
+     * @param {Function} [onComplete] - Optional. A function to call after all boot callbacks have been executed.
+     *   It does not receive any arguments.
+     */
+    runBootCallbacks(appInstance, onComplete = null) {
+        for (let i = 0; i < this.bootCallbacks.length; i++) {
+            const callback = this.bootCallbacks[i];
+            if (typeof callback === 'function') {
+                callback(this, appInstance);
+            }
+        }
+
+        if (typeof onComplete === 'function') {
+            onComplete();
+        }
     }
 
     /**

@@ -360,6 +360,7 @@ export default class FetchService extends Service {
         const pathKeyVersion = new Date().toISOString();
 
         const request = () => {
+            delete options.fromCache;
             return this.get(path, query, options).then((response) => {
                 // cache the response
                 this.localCache.set(pathKey, response);
@@ -392,7 +393,7 @@ export default class FetchService extends Service {
                 // if the version is older than 3 days clear it
                 if (!version || shouldExpire || options.clearData === true) {
                     this.flushRequestCache(path);
-                    return request();
+                    return request().then(resolve);
                 }
 
                 if (options.normalizeToEmberData) {
@@ -408,6 +409,11 @@ export default class FetchService extends Service {
         return request();
     }
 
+    /**
+     * Flushes the local cache for a specific path by setting its value and version to undefined.
+     *
+     * @param {string} path - The path for which the cache should be flushed.
+     */
     flushRequestCache(path) {
         const pathKey = dasherize(path);
 
@@ -415,6 +421,11 @@ export default class FetchService extends Service {
         this.localCache.set(`${pathKey}-version`, undefined);
     }
 
+    /**
+     * Determines whether the cache should be reset by comparing the current version
+     * of the console with the cached version. If they differ, the cache is cleared
+     * and the new version is saved.
+     */
     shouldResetCache() {
         const consoleVersion = this.localCache.get('console-version');
 
