@@ -19,6 +19,7 @@ import config from 'ember-get-config';
 export default class UniverseService extends Service.extend(Evented) {
     @service router;
     @service intl;
+    @service urlSearchParams;
     @tracked applicationInstance;
     @tracked enginesBooted = false;
     @tracked bootedExtensions = A([]);
@@ -134,6 +135,17 @@ export default class UniverseService extends Service.extend(Evented) {
         }
 
         return this.router.transitionTo(route, ...args);
+    }
+
+    /**
+     * Sets the application instance.
+     *
+     * @param {ApplicationInstance} - The application instance object.
+     * @return {void}
+     */
+    setApplicationInstance(instance) {
+        window.Fleetbase = instance;
+        this.applicationInstance = instance;
     }
 
     /**
@@ -260,6 +272,43 @@ export default class UniverseService extends Service.extend(Evented) {
         }
 
         return this.router.transitionTo(route, slug);
+    }
+
+    /**
+     * Redirects to a virtual route if a corresponding menu item exists based on the current URL slug.
+     *
+     * This asynchronous function checks whether a virtual route exists by extracting the slug from the current
+     * window's pathname and looking up a matching menu item in a specified registry. If a matching menu item
+     * is found, it initiates a transition to the given route associated with that menu item and returns the
+     * transition promise.
+     *
+     * @async
+     *
+     * @param {Object} transition - The current transition object from the router.
+     *   Used to retrieve additional information required for the menu item lookup.
+     * @param {string} registryName - The name of the registry to search for the menu item.
+     *   This registry should contain menu items mapped by their slugs.
+     * @param {string} route - The name of the route to transition to if the menu item is found.
+     *   This is typically the route associated with displaying the menu item's content.
+     *
+     * @returns {Promise|undefined} - Returns a promise that resolves when the route transition completes
+     *   if a matching menu item is found. If no matching menu item is found, the function returns undefined.
+     *
+     */
+    async virtualRouteRedirect(transition, registryName, route, options = {}) {
+        const view = this.getViewFromTransition(transition);
+        const slug = window.location.pathname.replace('/', '');
+        const queryParams = this.urlSearchParams.all();
+        const menuItem = await this.lookupMenuItemFromRegistry(registryName, slug, view);
+        if (menuItem && transition.from === null) {
+            return this.transitionMenuItem(route, menuItem, { queryParams }).then((transition) => {
+                if (options && options.restoreQueryParams === true) {
+                    this.urlSearchParams.setParamsToCurrentUrl(queryParams);
+                }
+
+                return transition;
+            });
+        }
     }
 
     /**
@@ -1396,6 +1445,14 @@ export default class UniverseService extends Service.extend(Evented) {
             isLoading,
         };
 
+        // make the menu item and universe object a default param of the onClick handler
+        if (typeof onClick === 'function') {
+            const universe = this;
+            menuItem.onClick = function () {
+                return onClick(menuItem, universe);
+            };
+        }
+
         return menuItem;
     }
 
@@ -1746,7 +1803,7 @@ export default class UniverseService extends Service.extend(Evented) {
         }
 
         // Set application instance
-        this.applicationInstance = owner;
+        this.setApplicationInstance(owner);
 
         const tryBootEngine = (extension) => {
             return this.loadEngine(extension.name).then((engineInstance) => {
@@ -1838,7 +1895,7 @@ export default class UniverseService extends Service.extend(Evented) {
         }
 
         // Set application instance
-        this.applicationInstance = owner;
+        this.setApplicationInstance(owner);
 
         const tryBootEngine = (extension) => {
             return this.loadEngine(extension.name).then((engineInstance) => {

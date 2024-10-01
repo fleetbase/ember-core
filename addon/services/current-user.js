@@ -32,6 +32,8 @@ export default class CurrentUserService extends Service.extend(Evented) {
     @alias('user.is_admin') isAdmin;
     @alias('user.company_uuid') companyId;
     @alias('user.company_name') companyName;
+    @alias('user.role_name') roleName;
+    @alias('user.role') role;
 
     @computed('id') get optionsPrefix() {
         return `${this.id}:`;

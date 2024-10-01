@@ -1,10 +1,11 @@
 import { getOwner } from '@ember/application';
 import { isArray } from '@ember/array';
+import Service from '@ember/service';
 import isObject from './is-object';
 
 function findService(owner, target, serviceName) {
     let service = target[serviceName];
-    if (!service) {
+    if (!(service instanceof Service)) {
         service = owner.lookup(`service:${serviceName}`);
     }
 
@@ -33,8 +34,12 @@ function automaticServiceResolution(service, target, owner) {
     }
 }
 
+function _getOwner(target) {
+    return window.Fleetbase ?? getOwner(target);
+}
+
 export default function injectEngineService(target, engineName, serviceName, options = {}) {
-    const owner = getOwner(target);
+    const owner = _getOwner(target);
     const universe = owner.lookup('service:universe');
     const service = universe.getServiceFromEngine(engineName, serviceName);
     const key = options.key || null;
