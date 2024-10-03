@@ -1775,7 +1775,7 @@ export default class UniverseService extends Service.extend(Evented) {
                     clearInterval(intervalId);
                     reject(new Error('Timeout: Universe was unable to boot engines'));
                 },
-                5000
+                1000 * 40
             );
         });
     }
@@ -1867,8 +1867,9 @@ export default class UniverseService extends Service.extend(Evented) {
                 await tryBootEngine(extension);
             }
 
-            this.runBootCallbacks(owner);
-            this.enginesBooted = true;
+            this.runBootCallbacks(owner, () => {
+                this.enginesBooted = true;
+            });
         });
     }
 
@@ -1953,8 +1954,9 @@ export default class UniverseService extends Service.extend(Evented) {
                 await tryBootEngine(extension);
             }
 
-            this.runBootCallbacks(owner);
-            this.enginesBooted = true;
+            this.runBootCallbacks(owner, () => {
+                this.enginesBooted = true;
+            });
         });
     }
 
@@ -2004,7 +2006,11 @@ export default class UniverseService extends Service.extend(Evented) {
         for (let i = 0; i < this.bootCallbacks.length; i++) {
             const callback = this.bootCallbacks[i];
             if (typeof callback === 'function') {
-                callback(this, appInstance);
+                try {
+                    callback(this, appInstance);
+                } catch (error) {
+                    debug(`Engine Boot Callback Error: ${error.message}`);
+                }
             }
         }
 
