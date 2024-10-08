@@ -44,6 +44,7 @@ export default class UniverseService extends Service.extend(Evented) {
     };
     @tracked hooks = {};
     @tracked bootCallbacks = A([]);
+    @tracked initialLocation = { ...window.location };
 
     /**
      * Computed property that returns all administrative menu items.
@@ -135,6 +136,16 @@ export default class UniverseService extends Service.extend(Evented) {
         }
 
         return this.router.transitionTo(route, ...args);
+    }
+
+    /**
+     * Initialize the universe service.
+     *
+     * @memberof UniverseService
+     */
+    initialize() {
+        this.initialLocation = { ...window.location };
+        this.trigger('init', this);
     }
 
     /**
@@ -1803,6 +1814,7 @@ export default class UniverseService extends Service.extend(Evented) {
         }
 
         // Set application instance
+        this.initialize();
         this.setApplicationInstance(owner);
 
         const tryBootEngine = (extension) => {
@@ -1861,6 +1873,9 @@ export default class UniverseService extends Service.extend(Evented) {
             pending.push(...stillPending);
         };
 
+        // Run pre-boots if any
+        await this.preboot();
+
         return loadInstalledExtensions(additionalCoreExtensions).then(async (extensions) => {
             for (let i = 0; i < extensions.length; i++) {
                 const extension = extensions[i];
@@ -1874,90 +1889,20 @@ export default class UniverseService extends Service.extend(Evented) {
     }
 
     /**
-     * Boots all installed engines, ensuring dependencies are resolved.
+     * Run engine preboots from all indexed engines.
      *
-     * This method loads all installed extensions and then attempts to boot each engine.
-     * For each extension, it loads the engine and, if the engine has a `setupExtension`
-     * method in its base, it calls this method to complete the setup. This function ensures
-     * that dependencies are resolved before booting the engines. If some dependencies are
-     * never booted, an error is logged.
-     *
-     * @method legacyBootEngines
-     * @param {ApplicationInstance|null} owner - The Ember ApplicationInstance that owns the engines.
-     * @return {void}
+     * @param {ApplicationInstance} owner
+     * @memberof UniverseService
      */
-    legacyBootEngines(owner = null) {
-        const booted = [];
-        const pending = [];
-
-        // If no owner provided use the owner of this service
-        if (owner === null) {
-            owner = getOwner(this);
-        }
-
-        // Set application instance
-        this.setApplicationInstance(owner);
-
-        const tryBootEngine = (extension) => {
-            return this.loadEngine(extension.name).then((engineInstance) => {
-                if (engineInstance.base && engineInstance.base.setupExtension) {
-                    const engineDependencies = getWithDefault(engineInstance.base, 'engineDependencies', []);
-
-                    // Check if all dependency engines are booted
-                    const allDependenciesBooted = engineDependencies.every((dep) => booted.includes(dep));
-
-                    if (!allDependenciesBooted) {
-                        pending.push({ extension, engineInstance });
-                        return;
-                    }
-
-                    engineInstance.base.setupExtension(owner, engineInstance, this);
-                    booted.push(extension.name);
-                    this.bootedExtensions.pushObject(extension.name);
-                    this.trigger('extension.booted', extension);
-                    debug(`Booted : ${extension.name}`);
-
-                    // Try booting pending engines again
-                    tryBootPendingEngines();
-                }
-            });
-        };
-
-        const tryBootPendingEngines = () => {
-            const stillPending = [];
-
-            pending.forEach(({ extension, engineInstance }) => {
-                const engineDependencies = getWithDefault(engineInstance.base, 'engineDependencies', []);
-                const allDependenciesBooted = engineDependencies.every((dep) => booted.includes(dep));
-
-                if (allDependenciesBooted) {
-                    engineInstance.base.setupExtension(owner, engineInstance, this);
-                    booted.push(extension.name);
-                    this.bootedExtensions.pushObject(extension.name);
-                    this.trigger('extension.booted', extension);
-                    debug(`Booted : ${extension.name}`);
-                } else {
-                    stillPending.push({ extension, engineInstance });
-                }
-            });
-
-            // If no progress was made, log an error in debug/development mode
-            assert('Some engines have unmet dependencies and cannot be booted:', pending.length === stillPending.length);
-
-            pending.length = 0;
-            pending.push(...stillPending);
-        };
-
-        return loadExtensions().then(async (extensions) => {
-            for (let i = 0; i < extensions.length; i++) {
-                const extension = extensions[i];
-                await tryBootEngine(extension);
+    async preboot(owner) {
+        const extensions = await loadExtensions();
+        for (let i = 0; i < extensions.length; i++) {
+            const extension = extensions[i];
+            const instance = await this.loadEngine(extension.name);
+            if (instance.base && typeof instance.base.preboot === 'function') {
+                instance.base.preboot(owner, instance, this);
             }
-
-            this.runBootCallbacks(owner, () => {
-                this.enginesBooted = true;
-            });
-        });
+        }
     }
 
     /**
