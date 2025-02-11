@@ -1,12 +1,14 @@
 import Service from '@ember/service';
+import Evented from '@ember/object/evented';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { computed } from '@ember/object';
 import { dasherize } from '@ember/string';
 import { isArray } from '@ember/array';
 import { getOwner } from '@ember/application';
+import { debug } from '@ember/debug';
 
-export default class ThemeService extends Service {
+export default class ThemeService extends Service.extend(Evented) {
     /**
      * Lookup the correct router for the engine and or console.
      *
@@ -201,10 +203,12 @@ export default class ThemeService extends Service {
      * @void
      */
     setTheme(theme = 'light') {
+        debug(`Theme was changed to: ${theme}`);
         document.body.classList.remove(`${this.currentTheme}-theme`);
         document.body.classList.add(`${theme}-theme`);
         this.currentUser.setOption('theme', theme);
         this.activeTheme = theme;
+        this.trigger('theme.changed', theme);
     }
 
     /**
