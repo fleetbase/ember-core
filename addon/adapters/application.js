@@ -13,7 +13,7 @@ import getUserOptions from '../utils/get-user-options';
 import config from 'ember-get-config';
 
 if (isBlank(config.API.host)) {
-    config.API.host = `${window.location.protocol}//${window.location.hostname}:8000`;
+    config.API.host = `${window.location.protocol}//${window.location.hostname}`;
 }
 const DEFAULT_ERROR_MESSAGE = 'Oops! Something went wrong. Please try again or contact support if the issue persists.';
 export default class ApplicationAdapter extends RESTAdapter {

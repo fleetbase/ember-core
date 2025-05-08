@@ -19,7 +19,7 @@ import isEmptyObject from '../utils/is-empty-object';
 import fetch from 'fetch';
 
 if (isBlank(config.API.host)) {
-    config.API.host = `${window.location.protocol}//${window.location.hostname}:8000`;
+    config.API.host = `${window.location.protocol}//${window.location.hostname}`;
 }
 
 export default class FetchService extends Service {
