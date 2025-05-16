@@ -54,38 +54,38 @@ export default class CrudService extends Service {
      */
     @action delete(model, options = {}) {
         const modelName = getModelName(model, get(options, 'modelName'), { humanize: true, capitalizeWords: true });
+        const successNotification = options.successNotification || `${model.name ? modelName + " '" + model.name + "'" : "'" + modelName + "'"} has been deleted.`;
 
         this.modalsManager.confirm({
             title: `Are you sure to delete this ${modelName}?`,
             args: ['model'],
             model,
-            confirm: (modal) => {
-                if (typeof options.onConfirm === 'function') {
-                    options.onConfirm(model);
+            confirm: async (modal) => {
+                if (typeof options.onTrigger === 'function') {
+                    options.onTrigger(model);
                 }
 
                 modal.startLoading();
 
-                return model
-                    .destroyRecord()
-                    .then((model) => {
-                        this.notifications.success(options.successNotification || `${model.name ? modelName + " '" + model.name + "'" : "'" + modelName + "'"} has been deleted.`);
-                        if (typeof options.onSuccess === 'function') {
-                            options.onSuccess(model);
-                        }
-                    })
-                    .catch((error) => {
-                        this.notifications.serverError(error);
+                try {
+                    const response = await model.destroyRecord();
+                    this.notifications.success(successNotification);
+                    if (typeof options.onSuccess === 'function') {
+                        options.onSuccess(model);
+                    }
 
-                        if (typeof options.onError === 'function') {
-                            options.onError(error, model);
-                        }
-                    })
-                    .finally(() => {
-                        if (typeof options.callback === 'function') {
-                            options.callback(model);
-                        }
-                    });
+                    return response;
+                } catch (error) {
+                    this.notifications.serverError(error);
+
+                    if (typeof options.onError === 'function') {
+                        options.onError(error, model);
+                    }
+                } finally {
+                    if (typeof options.callback === 'function') {
+                        options.callback(model);
+                    }
+                }
             },
             ...options,
         });
@@ -135,10 +135,21 @@ export default class CrudService extends Service {
         const modelName = getModelName(firstModel, get(options, 'modelName'), { humanize: true, capitalizeWords: true });
         const count = selected.length;
         const actionMethod = (typeof options.actionMethod === 'string' ? options.actionMethod : `POST`).toLowerCase();
-        const fetchParams = getWithDefault(options, 'fetchParams', {});
-        const fetchOptions = getWithDefault(options, 'fetchOptions', {});
+        const modalTemplate = getWithDefault(options, 'template', 'modals/bulk-action-model');
+        const successMessage = options.successNotification ?? `${count} ${pluralize(count, modelName)} were updated successfully.`;
 
-        this.modalsManager.show('modals/bulk-action-model', {
+        if (typeof options.resolveModelName === 'function') {
+            selected = selected.map((model) => {
+                const resolvedModelName = options.resolveModelName(model);
+                if (typeof resolvedModelName === 'string') {
+                    model.set('list_resolved_name', resolvedModelName);
+                }
+
+                return model;
+            });
+        }
+
+        this.modalsManager.show(modalTemplate, {
             title: `Bulk ${verb} ${pluralize(modelName)}`,
             acceptButtonText: humanize(verb),
             args: ['selected'],
@@ -151,42 +162,49 @@ export default class CrudService extends Service {
                 selected.removeObject(model);
                 this.modalsManager.setOption('selected', selected);
             },
-            confirm: (modal) => {
+            confirm: async (modal) => {
                 const selected = modal.getOption('selected');
+                const fetchParams = modal.getOption('fetchParams', {});
+                const fetchOptions = modal.getOption('fetchOptions', {});
+                const callback = modal.getOption('callback');
 
-                if (typeof options.onConfirm === 'function') {
-                    options.onConfirm(selected);
+                if (typeof options.withSelected === 'function') {
+                    options.withSelected(selected);
                 }
 
                 modal.startLoading();
 
-                return this.fetch[actionMethod](
-                    options.actionPath,
-                    {
-                        ids: selected.map((model) => model.id),
-                        ...fetchParams,
-                    },
-                    fetchOptions
-                )
-                    .then((response) => {
-                        this.notifications.success(response.message ?? options.successNotification ?? `${count} ${pluralize(modelName, count)} were updated successfully.`);
+                try {
+                    const response = await this.fetch.request(
+                        options.actionPath,
+                        actionMethod,
+                        {
+                            body: JSON.stringify({
+                                ids: selected.map((model) => model.id),
+                                ...fetchParams,
+                            }),
+                        },
+                        fetchOptions
+                    );
 
-                        if (typeof options.onSuccess === 'function') {
-                            options.onSuccess(selected);
-                        }
-                    })
-                    .catch((error) => {
-                        this.notifications.serverError(error);
+                    this.notifications.success(response.message ?? successMessage);
+                    if (typeof options.onSuccess === 'function') {
+                        options.onSuccess(selected);
+                    }
 
-                        if (typeof options.onError === 'function') {
-                            options.onError(error, selected);
-                        }
-                    })
-                    .finally(() => {
-                        if (typeof options.callback === 'function') {
-                            options.callback(selected);
-                        }
-                    });
+                    return response;
+                } catch (error) {
+                    console.error(error.message, error);
+                    this.notifications.serverError(error);
+
+                    if (typeof options.onError === 'function') {
+                        options.onError(error, selected);
+                    }
+                } finally {
+                    if (typeof callback === 'function') {
+                        callback(selected);
+                    }
+                }
             },
             ...options,
         });

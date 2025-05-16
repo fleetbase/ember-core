@@ -1,5 +1,6 @@
-import loadExtensions from '../utils/load-extensions';
-import fleetbaseApiFetch from '../utils/fleetbase-api-fetch';
+import loadExtensions from './load-extensions';
+import fleetbaseApiFetch from './fleetbase-api-fetch';
+import isAuthenticated from './is-authenticated';
 
 export default async function loadInstalledExtensions(additionalCoreEngines = []) {
     const CORE_ENGINES = [
@@ -11,7 +12,12 @@ export default async function loadInstalledExtensions(additionalCoreEngines = []
         ...additionalCoreEngines,
     ];
     const INDEXED_ENGINES = await loadExtensions();
-    const INSTALLED_ENGINES = await fleetbaseApiFetch('get', 'engines', {}, { namespace: '~registry/v1', fallbackResponse: [] });
+    // const INSTALLED_ENGINES = await fleetbaseApiFetch('get', 'engines', {}, { namespace: '~registry/v1', fallbackResponse: [] });
+
+    let INSTALLED_ENGINES = [];
+    if (isAuthenticated()) {
+        INSTALLED_ENGINES = await fleetbaseApiFetch('GET', 'engines', {}, { namespace: '~registry/v1', fallbackResponse: [] });
+    }
 
     const isInstalledEngine = (engineName) => {
         return CORE_ENGINES.includes(engineName) || INSTALLED_ENGINES.find((pkg) => pkg.name === engineName);

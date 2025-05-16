@@ -7,6 +7,7 @@ import { computed, get } from '@ember/object';
 import { isBlank } from '@ember/utils';
 import { alias } from '@ember/object/computed';
 import { storageFor } from 'ember-local-storage';
+import { debug } from '@ember/debug';
 
 export default class CurrentUserService extends Service.extend(Evented) {
     @service session;
@@ -17,6 +18,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
     @service intl;
 
     @tracked user = { id: 'anon' };
+    @tracked userSnapshot = { id: 'anon' };
     @tracked company = {};
     @tracked permissions = [];
     @tracked organizations = [];
@@ -24,16 +26,16 @@ export default class CurrentUserService extends Service.extend(Evented) {
     @tracked locale = 'en-us';
 
     @storageFor('user-options') options;
-    @alias('user.id') id;
-    @alias('user.name') name;
-    @alias('user.phone') phone;
-    @alias('user.email') email;
-    @alias('user.avatar_url') avatarUrl;
-    @alias('user.is_admin') isAdmin;
-    @alias('user.company_uuid') companyId;
-    @alias('user.company_name') companyName;
-    @alias('user.role_name') roleName;
-    @alias('user.role') role;
+    @alias('userSnapshot.id') id;
+    @alias('userSnapshot.name') name;
+    @alias('userSnapshot.phone') phone;
+    @alias('userSnapshot.email') email;
+    @alias('userSnapshot.avatar_url') avatarUrl;
+    @alias('userSnapshot.is_admin') isAdmin;
+    @alias('userSnapshot.company_uuid') companyId;
+    @alias('userSnapshot.company_name') companyName;
+    @alias('userSnapshot.role_name') roleName;
+    @alias('userSnapshot.role') role;
 
     @computed('id') get optionsPrefix() {
         return `${this.id}:`;
@@ -62,7 +64,10 @@ export default class CurrentUserService extends Service.extend(Evented) {
     async load() {
         if (this.session.isAuthenticated) {
             const user = await this.store.findRecord('user', 'me');
+            const snapshot = await this.getUserSnapshot(user);
+
             this.set('user', user);
+            this.set('userSnapshot', snapshot);
             this.trigger('user.loaded', user);
 
             // Set permissions
@@ -85,9 +90,11 @@ export default class CurrentUserService extends Service.extend(Evented) {
 
         try {
             const user = await this.store.queryRecord('user', { me: true });
+            const snapshot = await this.getUserSnapshot(user);
 
             // Set current user
             this.set('user', user);
+            this.set('userSnapshot', snapshot);
             this.trigger('user.loaded', user);
 
             // Set permissions
@@ -116,7 +123,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
 
             return user;
         } catch (error) {
-            console.log(error.message);
+            debug(`Error loading current user : ${error.message}`);
             throw error;
         }
     }
@@ -256,5 +263,21 @@ export default class CurrentUserService extends Service.extend(Evented) {
 
     filledOption(key) {
         return !isBlank(this.getOption(key));
+    }
+
+    async getUserSnapshot(user) {
+        const role = await user.get('role');
+        const snapshot = user.serialize({ includeId: true });
+
+        return {
+            ...snapshot,
+            id: snapshot.uuid,
+            company_name: user.get('company_name'),
+            role_name: user.get('role_name'),
+            role: {
+                ...role.serialize({ includeId: true }),
+                id: role.get('id'),
+            },
+        };
     }
 }
