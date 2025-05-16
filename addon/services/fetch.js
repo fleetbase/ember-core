@@ -612,7 +612,7 @@ export default class FetchService extends Service {
         const headers = Object.assign(this.getHeaders(), options.headers ?? {});
         const method = options.method ?? 'GET';
         const credentials = options.credentials ?? this.credentials;
-        const baseUrl = `${options.host || this.host}/${options.namespace || this.namespace}`;
+        const baseUrl = options.externalRequest === true ? '' : `${options.host ?? this.host}/${options.namespace || this.namespace}`;
         const isReadOnlyRequest = ['GET', 'HEAD'].includes(method.toUpperCase());
         const params = isReadOnlyRequest && !isEmptyObject(query) ? `?${new URLSearchParams(query).toString()}` : '';
         const body = !isReadOnlyRequest ? JSON.stringify(query) : {};
@@ -628,7 +628,7 @@ export default class FetchService extends Service {
         }
 
         return new Promise((resolve, reject) => {
-            return fetch(`${baseUrl}/${path}${params}`, fetchOptions)
+            return fetch(`${baseUrl ? baseUrl + '/' : ''}${path}${params}`, fetchOptions)
                 .then((response) => {
                     options.fileName = this.getFilenameFromResponse(response, options.fileName);
                     options.mimeType = this.getMimeTypeFromResponse(response, options.mimeType);

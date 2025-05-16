@@ -170,7 +170,6 @@ export default class FiltersService extends Service {
 
                     queryParams[qp] = get(controller, qp);
                 }
-
                 return queryParams;
             }
         }
