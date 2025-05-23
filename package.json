@@ -1,6 +1,6 @@
 {
     "name": "@fleetbase/ember-core",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "description": "Provides all the core services, decorators and utilities for building a Fleetbase extension for the Console.",
     "keywords": [
         "fleetbase-core",
@@ -42,8 +42,7 @@
         "ember-cli-babel": "^8.2.0",
         "ember-cli-htmlbars": "^6.3.0",
         "ember-cli-notifications": "^9.0.0",
-        "ember-concurrency": "^3.1.1",
-        "ember-concurrency-decorators": "^2.0.3",
+        "ember-concurrency": "^4.0.4",
         "ember-decorators": "^6.1.1",
         "ember-get-config": "^2.1.1",
         "ember-inflector": "^4.0.2",
