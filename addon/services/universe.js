@@ -1867,7 +1867,7 @@ export default class UniverseService extends Service.extend(Evented) {
             });
 
             // If no progress was made, log an error in debug/development mode
-            assert(`Some engines have unmet dependencies and cannot be booted:`, stillPending.length === 0 && pending.length === 0);
+            assert(`Some engines have unmet dependencies and cannot be booted:`, pending.length === 0 || pending.length > stillPending.length);
 
             pending.length = 0;
             pending.push(...stillPending);
