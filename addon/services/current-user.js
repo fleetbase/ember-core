@@ -280,4 +280,18 @@ export default class CurrentUserService extends Service.extend(Evented) {
             },
         };
     }
+
+    getCompanyOption(key, defaultValue = null) {
+        const company = this.store.peekRecord('company', this.companyId);
+        if (company) {
+            const value = get(company, `options.${key}`);
+            if (value === undefined) {
+                return defaultValue;
+            }
+
+            return value;
+        }
+
+        return defaultValue;
+    }
 }

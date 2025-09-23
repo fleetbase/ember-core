@@ -8,6 +8,8 @@ const services = [
     'app-cache',
     'url-search-params',
     'modals-manager',
+    'resource-context-panel',
+    'custom-fields-registry',
     'loader',
     'filters',
     'crud',
