@@ -69,7 +69,7 @@ export default class ResourceActionService extends Service {
     initialize(modelName, options = {}) {
         this.modelName = modelName;
         this.modelNamePath = options.modelNamePath ?? 'name';
-        this.defaultAttributes = options.defaultAttributes ?? {};
+        this.defaultAttributes = { ...this.defaultAttributes, ...(options.defaultAttributes ?? {}) };
         this.permissionPrefix = options.permissionPrefix ?? 'fleet-ops';
         this.mountPrefix = options.mountPrefix ?? `console.${this.permissionPrefix}`;
 
