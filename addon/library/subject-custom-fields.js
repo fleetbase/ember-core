@@ -10,10 +10,12 @@ export default class SubjectCustomFields {
     @tracked groups = [];
     @tracked fields = [];
     @tracked values = Object.create(null);
+    @tracked options = {};
 
-    constructor({ owner, subject }) {
+    constructor({ owner, subject, options = {} }) {
         setOwner(this, getOwner(owner));
         this.subject = subject;
+        this.options = options;
     }
 
     get customFieldGroups() {
@@ -97,17 +99,18 @@ export default class SubjectCustomFields {
      * @returns {Promise<{groups: any[], fields: any[]} | any[]>}
      */
     async load(options = {}) {
-        const { group = false } = options;
+        const { group = false, groupedFor = 'custom_field_group', fieldFor = null } = { ...options, ...(this.options?.loadOptions ?? {}) };
         const subjectId = this.subject.id;
 
         const groups = await this.store.query('category', {
             owner_uuid: subjectId,
-            for: 'custom_field_group',
+            for: groupedFor,
         });
 
-        const fields = await this.store.query('custom-field', {
-            subject_uuid: subjectId,
-        });
+        // If `fieldFor` is provided then we are fetching custom fields for resource and not an instance of something
+        // this means custom fields can be tied to individual resource instances OR tied to the schema of a resource kind
+        const fieldsQp = fieldFor ? { for: fieldFor } : { subject_uuid: subjectId };
+        const fields = await this.store.query('custom-field', fieldsQp);
 
         // retain on instance for getGroups/getFields()
         this.groups = groups.toArray();
@@ -143,7 +146,7 @@ export default class SubjectCustomFields {
      * }}
      */
     validateRequired(options = {}) {
-        const { includeUngrouped = true, stopEarly = false, customMessage } = options;
+        const { includeUngrouped = true, stopEarly = false, customMessage } = { ...options, ...(this.options?.validationOptions ?? {}) };
 
         const groupsById = new Map((this.groups ?? []).map((g) => [g.id, g]));
         const missing = [];
@@ -198,7 +201,7 @@ export default class SubjectCustomFields {
      * @returns {Promise<{created: Model[], updated: Model[], deleted: Model[], errors: any[]}>}
      */
     async saveTo(subject, options = {}) {
-        const { validate = true, deleteMissing = false, persist = false, reloadExisting = false, adapterOptions } = options;
+        const { validate = true, deleteMissing = false, persist = false, reloadExisting = false, adapterOptions } = { ...options, ...(this.options?.saveOptions ?? {}) };
 
         // 1) Validate requireds
         if (validate) {
@@ -306,30 +309,30 @@ export default class SubjectCustomFields {
         const groups = this.getGroups();
         const fields = this.getFields();
 
-        // Map groups by id and ensure each has a customFields array (reactively set)
+        // Map groups by id and RESET their customFields arrays every call
         const byId = new Map();
         for (let i = 0; i < groups.length; i++) {
             const g = groups[i];
-            // ensure property exists; use set? to be safe on Ember Data models
-            g.set?.('customFields', g.customFields ?? []);
-            // also reassign to a new array so Glimmer picks up changes
-            if (g.customFields.length) {
-                g.set?.('customFields', [...g.customFields]);
+            // always start fresh
+            if (g.set) {
+                g.set('customFields', []);
+            } else {
+                g.customFields = [];
             }
             byId.set(g.id, g);
         }
 
-        // Distribute fields into their group; reassign for reactivity
+        // Distribute fields into their group exactly once
         for (let i = 0; i < fields.length; i++) {
             const cf = fields[i];
             const g = byId.get(cf.category_uuid);
             if (g) {
+                // push into the fresh array
                 const next = (g.customFields ?? []).concat(cf);
-                g.set?.('customFields', next);
+                g.set?.('customFields', next) ?? (g.customFields = next);
             }
         }
 
-        // Return the array of *group records*, each with .customFields attached
         return Array.from(byId.values());
     }
 
