@@ -26,7 +26,7 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
         edit: (customField) => {
             return this.resourceContextPanel.open({
                 content: 'custom-field/form',
-                title: `Edit: ${customField.name}`,
+                title: `Edit: ${customField.label}`,
                 panelContentClass: 'py-2 px-4',
                 customField,
             });
