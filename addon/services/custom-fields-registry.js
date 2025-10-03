@@ -3,12 +3,15 @@ import SubjectCustomFields from '../library/subject-custom-fields';
 import { inject as service } from '@ember/service';
 import { debug } from '@ember/debug';
 import { task } from 'ember-concurrency';
+import getModelName from '../utils/get-model-name';
+import isObject from '../utils/is-object';
 
 export default class CustomFieldsRegistryService extends ResourceActionService {
     @service store;
     @service resourceContextPanel;
     @service modalsManager;
     #cache = new WeakMap();
+    modelNamePath = 'label';
 
     panel = {
         create: (attributes = {}) => {
@@ -30,7 +33,7 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
                 panelContentClass: 'py-2 px-4',
                 customField,
             });
-        }
+        },
     };
 
     modal = {
@@ -55,7 +58,7 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
                 confirm: (modal) => this.modalTask.perform(modal, 'saveTask', customField, { refresh: true, ...saveOptions }),
                 ...options,
             });
-        }
+        },
     };
 
     @task *loadSubjectCustomFields(subject, options = {}) {
@@ -73,13 +76,44 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
      * Get (or create) a SubjectCustomFields manager for this subject
      */
     forSubject(subject, options = {}) {
-        if (!subject) throw new Error('custom-fields-registry: subject is required');
-        let manager = this.#cache.get(subject);
+        if (!subject || !isObject(subject)) {
+            throw new Error('custom-fields-registry: subject must be an object');
+        }
+
+        let scopes = this.#cache.get(subject);
+        if (!scopes) {
+            scopes = new Map();
+            this.#cache.set(subject, scopes);
+        }
+
+        const key = this.#scopeKey(subject, options);
+        let manager = scopes.get(key);
+
         if (!manager) {
             manager = new SubjectCustomFields({ owner: this, subject, options });
-            this.#cache.set(subject, manager);
+            scopes.set(key, manager);
+        } else {
+            // keep them fresh if caller passes new ones
+            manager.subject = subject;
+            manager.options = { ...(manager.options || {}), ...(options || {}) };
         }
+
         return manager;
+    }
+
+    #scopeKey(subject, options = {}) {
+        const lo = options.loadOptions || options;
+        const groupedFor = lo.groupedFor ?? 'custom_field_group';
+        const fieldFor = lo.fieldFor ?? `subject:${getModelName(subject)}`;
+        return `${groupedFor}::${fieldFor}`;
+    }
+
+    getSubjectCacheKey(subject, options) {
+        const lo = options.loadOptions || options;
+        const groupedFor = lo.groupedFor || 'custom_field_group';
+        const fieldFor = lo.fieldFor || `subject:${getModelName(subject)}`;
+
+        return subject?.id ?? `${groupedFor}:${fieldFor}`;
     }
 
     // Optional proxy methods if you prefer service ergonomics:
@@ -94,6 +128,7 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
     get(subject, customFieldId) {
         return this.forSubject(subject).get(customFieldId);
     }
+
     getProperties(subject) {
         return this.forSubject(subject).getProperties();
     }

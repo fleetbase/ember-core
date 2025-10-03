@@ -101,7 +101,6 @@ export default class ResourceActionService extends Service {
      * Convenience method to bulk delete records.
      */
     @action bulkDelete(records, options = {}) {
-        console.log(this.tableContext);
         return this.crud.bulkDelete(this.tableContext.getSelectedRows(), {
             modelNamePath: this.modelNamePath,
             acceptButtonText: this.intl.t('common.bulk-delete-resource', { resource: pluralize(titleize(this.modelName)) }),

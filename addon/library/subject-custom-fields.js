@@ -3,6 +3,8 @@ import { inject as service } from '@ember/service';
 import { setOwner, getOwner } from '@ember/application';
 import { action } from '@ember/object';
 import { isArray } from '@ember/array';
+import { sameIds } from '../utils/array-utils';
+import { scheduleOnce } from '@ember/runloop';
 
 export default class SubjectCustomFields {
     @service store;
@@ -56,6 +58,30 @@ export default class SubjectCustomFields {
             ...this.values,
             [fieldId]: { value, value_type: vt ?? null },
         };
+    }
+
+    @action writeFieldValue(resource, value, customField) {
+        this.setFieldValue(value, customField);
+
+        const fieldId = typeof customField === 'string' ? customField : customField?.id;
+        const valueType = typeof customField === 'string' ? null : customField?.valueType ?? customField?.value_type ?? null;
+        if (!fieldId || !resource) return;
+
+        let rec = this.#getLocalValueRecord(resource, fieldId);
+        const nextVal = value ?? '';
+        const nextType = valueType ?? null;
+
+        if (!rec) {
+            rec = this.#createLocalValueRecord(fieldId, nextVal, nextType, resource);
+
+            this.#addToHasManyOnce(resource, rec);
+            return;
+        }
+
+        if (rec.value !== nextVal) rec.value = nextVal;
+        if (rec.value_type !== nextType) rec.value_type = nextType;
+
+        this.#addToHasManyOnce(resource, rec);
     }
 
     @action setProperties(entries = []) {
@@ -203,7 +229,7 @@ export default class SubjectCustomFields {
     async saveTo(subject, options = {}) {
         const { validate = true, deleteMissing = false, persist = false, reloadExisting = false, adapterOptions } = { ...options, ...(this.options?.saveOptions ?? {}) };
 
-        // 1) Validate requireds
+        // Validate requireds
         if (validate) {
             const vr = this.validateRequired({ stopEarly: true });
             if (!vr.isValid) {
@@ -249,8 +275,8 @@ export default class SubjectCustomFields {
             if (current) {
                 // update if changed
                 let changed = false;
-                if (current.value !== String(value ?? '')) {
-                    current.value = String(value ?? '');
+                if (current.value !== (value ?? '')) {
+                    current.value = value ?? '';
                     changed = true;
                 }
                 if (current.value_type !== (value_type ?? null)) {
@@ -262,7 +288,7 @@ export default class SubjectCustomFields {
                 // create
                 const record = this.store.createRecord('custom-field-value', {
                     custom_field_uuid: fieldId,
-                    value: String(value ?? ''),
+                    value: value ?? '',
                     value_type: value_type ?? null,
                 });
 
@@ -304,36 +330,58 @@ export default class SubjectCustomFields {
      * Groups with .customFields attached
      * Returns a *new* array of groups to avoid accidental in-place mutation.
      */
-    // Replace getGroupedFields() with this version
     getGroupedFields() {
-        const groups = this.getGroups();
-        const fields = this.getFields();
+        const groups = this.getGroups(); // array of Category models
+        const fields = this.getFields(); // array of CustomField models
 
-        // Map groups by id and RESET their customFields arrays every call
-        const byId = new Map();
-        for (let i = 0; i < groups.length; i++) {
-            const g = groups[i];
-            // always start fresh
-            if (g.set) {
-                g.set('customFields', []);
-            } else {
-                g.customFields = [];
-            }
-            byId.set(g.id, g);
-        }
-
-        // Distribute fields into their group exactly once
+        // Build groupId -> fields[] map
+        const byGroupId = new Map();
         for (let i = 0; i < fields.length; i++) {
             const cf = fields[i];
-            const g = byId.get(cf.category_uuid);
-            if (g) {
-                // push into the fresh array
-                const next = (g.customFields ?? []).concat(cf);
-                g.set?.('customFields', next) ?? (g.customFields = next);
+            const gid = cf.category_uuid || null;
+            if (!byGroupId.has(gid)) byGroupId.set(gid, []);
+            byGroupId.get(gid).push(cf);
+        }
+
+        // Don’t mutate now (we’re likely in a render). If a category needs an update,
+        // schedule the write for afterRender.
+        // Choose your unique key for comparison: 'id' or 'custom_field_uuid'
+        const key = 'id'; // change to 'custom_field_uuid' if that’s your canonical id
+
+        let needsAnyUpdate = false;
+        const planned = [];
+
+        for (let i = 0; i < groups.length; i++) {
+            const g = groups[i];
+            const computed = byGroupId.get(g.id) || [];
+
+            const prev = g.customFields; // <- no coercion
+            const needsInit = !Array.isArray(prev); // undefined / non-array
+            const changed = !needsInit && !sameIds(prev, computed, key, false);
+
+            if (needsInit || changed) {
+                planned.push({ g, next: computed }); // initialize or update
+                needsAnyUpdate = true;
             }
         }
 
-        return Array.from(byId.values());
+        if (needsAnyUpdate) {
+            scheduleOnce('afterRender', null, () => {
+                for (let i = 0; i < planned.length; i++) {
+                    const { g, next } = planned[i];
+                    const current = g.customFields; // no coercion
+                    const needsInit = !Array.isArray(current);
+                    const changed = !needsInit && !sameIds(current, next, key, false);
+
+                    if (needsInit || changed) {
+                        g.customFields = next; // tracked; safe after render
+                    }
+                }
+            });
+        }
+
+        // Return the same structure (categories), consumers keep using g.customFields
+        return groups;
     }
 
     getGroupedEntries() {
@@ -380,5 +428,35 @@ export default class SubjectCustomFields {
                 // fallback: any non-nullish, non-empty string
                 return value != null && value !== '';
         }
+    }
+
+    /** Find an existing in-memory CFV record for this resource+field (no fetch). */
+    #getLocalValueRecord(resource, fieldId) {
+        const many = resource.get('custom_field_values');
+
+        if (!many) return null;
+        return many.find((r) => r.custom_field_uuid === fieldId) || null;
+    }
+
+    /** Ensure relationship contains rec exactly once. */
+    #addToHasManyOnce(resource, rec) {
+        const many = resource.get('custom_field_values');
+
+        if (!many) return;
+
+        if (!many.includes(rec)) {
+            many.pushObject(rec);
+        }
+    }
+
+    /** Create a *new, unsaved* CFV record. */
+    #createLocalValueRecord(fieldId, value, valueType, resource) {
+        return this.store.createRecord('custom-field-value', {
+            company_uuid: resource.company_uuid,
+            custom_field_uuid: fieldId,
+            subject_uuid: resource.id,
+            value: value,
+            value_type: valueType ?? null,
+        });
     }
 }
