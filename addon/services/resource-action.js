@@ -1,7 +1,7 @@
-import Service from '@ember/service';
-import { inject as service } from '@ember/service';
+import Service, { inject as service, inject } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
+import { action, get } from '@ember/object';
+import { alias } from '@ember/object/computed';
 import { debug } from '@ember/debug';
 import { getOwner } from '@ember/application';
 import { task, timeout } from 'ember-concurrency';
@@ -9,6 +9,7 @@ import { pluralize } from 'ember-inflector';
 import titleize from 'ember-cli-string-helpers/utils/titleize';
 import getModelName from '../utils/get-model-name';
 
+export { service, inject };
 /**
  * Base ResourceActionService that provides common CRUD operations and utilities
  * for all model-specific action services in FleetOps.
@@ -27,12 +28,21 @@ export default class ResourceActionService extends Service {
     @service abilities;
     @service tableContext;
     @service resourceContextPanel;
-    // @service hostRouter;
 
-    /** lookup application router */
-    get hostRouter() {
-        return getOwner(this).lookup('router:main');
+    /**
+     * Getter for router, attempt to use hostRouter if from engine
+     * fallback to application router service, and last fallback to internal router
+     *
+     * @readonly
+     * @memberof ResourceActionService
+     */
+    get router() {
+        const owner = getOwner(this);
+        return owner.lookup('service:host-router') ?? owner.lookup('service:router') ?? owner.lookup('router:main');
     }
+
+    /** Alias the router for engines consuming */
+    @alias('router') hostRouter;
 
     /**
      * The model name this service operates on.
@@ -68,7 +78,7 @@ export default class ResourceActionService extends Service {
      */
     initialize(modelName, options = {}) {
         this.modelName = modelName;
-        this.modelNamePath = options.modelNamePath ?? 'name';
+        this.modelNamePath = options.modelNamePath ?? this.modelNamePath;
         this.defaultAttributes = { ...this.defaultAttributes, ...(options.defaultAttributes ?? {}) };
         this.permissionPrefix = options.permissionPrefix ?? 'fleet-ops';
         this.mountPrefix = options.mountPrefix ?? `console.${this.permissionPrefix}`;
@@ -77,24 +87,50 @@ export default class ResourceActionService extends Service {
     }
 
     /**
+     * Tiny helper to get the record name
+     */
+    getRecordName(record) {
+        return get(record, this.modelNamePath) ?? get(record, 'name') ?? get(record, 'display_name') ?? get(record, 'public_id') ?? getModelName(record);
+    }
+
+    /**
      * Convenience method to create a record.
      */
-    @action create(attributes = {}) {
-        return this.createTask.perform(attributes);
+    @action create(attributes = {}, options = {}) {
+        return this.createTask.perform(attributes, options);
     }
 
     /**
      * Convenience method to update a record.
      */
-    @action update(record) {
-        return this.updateTask.perform(record);
+    @action update(record, options = {}) {
+        return this.updateTask.perform(record, options);
     }
 
     /**
      * Convenience method to delete a record.
      */
-    @action delete(record, options = {}) {
-        return this.deleteTask.perform(record, options);
+    @action delete(record, options = {}, deleteOptions = {}) {
+        const taskOptions = { ...deleteOptions, ...(options.taskOptions ?? {}) };
+        this.modalsManager.confirm({
+            title: `Delete ${titleize(this.modelName)} (${this.getRecordName(record)})?`,
+            body: 'This action cannot be undone. Once deleted, the record will be permanently removed.',
+            acceptButtonText: 'Confirm Delete',
+            acceptButtonType: 'danger',
+            acceptButtonIcon: 'trash',
+            confirm: async (modal) => {
+                modal.startLoading();
+
+                try {
+                    await this.deleteTask.perform(record, taskOptions);
+                    modal.done();
+                } catch (error) {
+                    this.notifications.serverError(error);
+                    modal.stopLoading();
+                }
+            },
+            ...options,
+        });
     }
 
     /**
@@ -105,9 +141,10 @@ export default class ResourceActionService extends Service {
             modelNamePath: this.modelNamePath,
             acceptButtonText: this.intl.t('common.bulk-delete-resource', { resource: pluralize(titleize(this.modelName)) }),
             onSuccess: async () => {
-                await this.hostRouter.refresh();
+                await this.router.refresh();
                 this.tableContext.untoggleSelectAll();
             },
+            ...options,
         });
     }
 
@@ -125,7 +162,7 @@ export default class ResourceActionService extends Service {
     @action import(options = {}) {
         return this.crud.import(this.modelName, {
             onImportCompleted: () => {
-                this.hostRouter.refresh();
+                this.router.refresh();
             },
             onImportTemplate: () => {
                 window.open(this.#getImportTemplate());
@@ -145,21 +182,21 @@ export default class ResourceActionService extends Service {
      * Refreshes the current route.
      */
     @action refresh() {
-        return this.hostRouter.refresh();
+        return this.router.refresh();
     }
 
     /**
      * Transitions to a specific route.
      */
     @action transitionTo(routeName, ...args) {
-        return this.hostRouter.transitionTo(`${this.mountPrefix}.${routeName}`, ...args);
+        return this.router.transitionTo(`${this.mountPrefix}.${routeName}`, ...args);
     }
 
     /**
      * Creates a new record with the given attributes.
      * Uses ember-concurrency for async handling.
      */
-    @task *createTask(attributes = {}, opts = {}) {
+    @task *createTask(attributes = {}, options = {}) {
         try {
             const mergedAttributes = { ...this.defaultAttributes, ...attributes };
             const record = this.store.createRecord(this.modelName, mergedAttributes);
@@ -168,16 +205,16 @@ export default class ResourceActionService extends Service {
 
             this.notifications.success(
                 this.intl.t('common.created-successfully', {
-                    resource: record[this.modelNamePath] ?? getModelName(record),
+                    resource: this.getRecordName(record),
                 })
             );
 
-            if (opts.refresh) {
+            if (options.refresh) {
                 this.refresh();
             }
 
-            if (typeof opts.callback === 'function') {
-                opts.callback(record);
+            if (typeof options.callback === 'function') {
+                options.callback(record);
             }
 
             return record;
@@ -191,22 +228,22 @@ export default class ResourceActionService extends Service {
      * Updates an existing record.
      * Uses ember-concurrency for async handling.
      */
-    @task *updateTask(record, opts = {}) {
+    @task *updateTask(record, options = {}) {
         try {
             yield record.save();
 
             this.notifications.success(
                 this.intl.t('common.updated-successfully', {
-                    resource: record[this.modelNamePath] ?? getModelName(record),
+                    resource: this.getRecordName(record),
                 })
             );
 
-            if (opts.refresh) {
+            if (options.refresh) {
                 this.refresh();
             }
 
-            if (typeof opts.callback === 'function') {
-                opts.callback(record);
+            if (typeof options.callback === 'function') {
+                options.callback(record);
             }
 
             return record;
@@ -220,7 +257,7 @@ export default class ResourceActionService extends Service {
      * Updates an existing record.
      * Uses ember-concurrency for async handling.
      */
-    @task *saveTask(record, opts = {}) {
+    @task *saveTask(record, options = {}) {
         const isNew = record?.isNew;
 
         try {
@@ -228,17 +265,17 @@ export default class ResourceActionService extends Service {
 
             this.notifications.success(
                 this.intl.t('common.saved-successfully', {
-                    resource: record[this.modelNamePath] ?? getModelName(record),
+                    resource: this.getRecordName(record),
                     action: isNew ? 'created' : 'updated',
                 })
             );
 
-            if (opts.refresh) {
+            if (options.refresh) {
                 this.refresh();
             }
 
-            if (typeof opts.callback === 'function') {
-                opts.callback(record);
+            if (typeof options.callback === 'function') {
+                options.callback(record);
             }
 
             return record;
@@ -269,22 +306,22 @@ export default class ResourceActionService extends Service {
      * Deletes a record with confirmation dialog.
      * Uses ember-concurrency for async handling.
      */
-    @task *deleteTask(record, opts = {}) {
+    @task *deleteTask(record, options = {}) {
         try {
             yield record.destroyRecord();
 
             this.notifications.success(
                 this.intl.t('common.deleted-successfully', {
-                    resource: record[this.modelNamePath] ?? getModelName(record),
+                    resource: this.getRecordName(record),
                 })
             );
 
-            if (opts.refresh) {
+            if (options.refresh) {
                 this.refresh();
             }
 
-            if (typeof opts.callback === 'function') {
-                opts.callback(record);
+            if (typeof options.callback === 'function') {
+                options.callback(record);
             }
 
             return record;
@@ -299,9 +336,7 @@ export default class ResourceActionService extends Service {
      * Uses ember-concurrency for async handling with restartable behavior.
      */
     @task({ restartable: true }) *searchTask(query, options = {}) {
-        if (!query) {
-            return [];
-        }
+        if (!query) return [];
 
         // Debounce search requests
         yield timeout(options.debounceMs || 250);

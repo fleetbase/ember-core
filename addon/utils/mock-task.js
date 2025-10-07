@@ -6,7 +6,7 @@ export default class MockTask {
         this.isRunning = true;
         this.fn(...arguments);
         this.isRunning = false;
-    }
+    };
 
     constructor(fn) {
         this.fn = fn;

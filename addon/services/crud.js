@@ -6,9 +6,9 @@ import { dasherize } from '@ember/string';
 import { later } from '@ember/runloop';
 import { pluralize } from 'ember-inflector';
 import { format as formatDate } from 'date-fns';
+import smartHumanize from '@fleetbase/ember-ui/utils/smart-humanize';
 import getModelName from '../utils/get-model-name';
 import getWithDefault from '../utils/get-with-default';
-import humanize from '../utils/humanize';
 import first from '../utils/first';
 
 export default class CrudService extends Service {
@@ -150,8 +150,8 @@ export default class CrudService extends Service {
         }
 
         this.modalsManager.show(modalTemplate, {
-            title: `Bulk ${verb} ${pluralize(modelName)}`,
-            acceptButtonText: humanize(verb),
+            title: `Bulk ${verb} ${pluralize(smartHumanize(modelName))}`,
+            acceptButtonText: smartHumanize(verb),
             args: ['selected'],
             modelNamePath: 'name',
             verb,
@@ -224,7 +224,7 @@ export default class CrudService extends Service {
         const exportParams = options.params ?? {};
 
         this.modalsManager.show('modals/export-form', {
-            title: `Export ${pluralize(modelName)}`,
+            title: `Export ${pluralize(smartHumanize(modelName))}`,
             acceptButtonText: 'Download',
             modalClass: 'modal-sm',
             format: 'xlsx',
@@ -291,7 +291,7 @@ export default class CrudService extends Service {
         };
 
         this.modalsManager.show('modals/import-form', {
-            title: `Import ${pluralize(modelName)} with spreadsheets`,
+            title: `Import ${pluralize(smartHumanize(modelName))} with spreadsheets`,
             acceptButtonText: 'Start Import',
             acceptButtonScheme: 'magic',
             acceptButtonIcon: 'upload',
