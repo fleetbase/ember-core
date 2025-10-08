@@ -16,6 +16,8 @@ const services = [
     'notifications',
     'hostRouter',
     'fileQueue',
+    'sidebar',
+    'dashboard',
     'universe',
     'intl',
     'abilities',

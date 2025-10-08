@@ -15,6 +15,8 @@ const hostServices = [
     'crud',
     'notifications',
     'fileQueue',
+    'sidebar',
+    'dashboard',
     'universe',
     'intl',
     'abilities',
