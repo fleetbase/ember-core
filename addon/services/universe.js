@@ -1239,7 +1239,7 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     _createDashboardWidget(widget) {
         // Extract properties from the widget object
-        let { widgetId, name, description, icon, component, grid_options, options } = widget;
+        let { widgetId, name, description, icon, engine, component, grid_options, options } = widget;
 
         // If component is a definition register to host application
         if (typeof component === 'function') {
@@ -1248,6 +1248,9 @@ export default class UniverseService extends Service.extend(Evented) {
 
             if (owner) {
                 owner.register(`component:${widgetId}`, component);
+                if (engine) {
+                    engine.register(`component:${widgetId}`, component);
+                }
 
                 // Update component name
                 component = widgetId;
