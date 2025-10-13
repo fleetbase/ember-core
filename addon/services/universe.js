@@ -9,6 +9,7 @@ import { later } from '@ember/runloop';
 import { dasherize, camelize } from '@ember/string';
 import { pluralize } from 'ember-inflector';
 import { getOwner } from '@ember/application';
+import { ensureSafeComponent } from '@embroider/util';
 import { assert, debug, warn } from '@ember/debug';
 import RSVP from 'rsvp';
 import loadInstalledExtensions from '../utils/load-installed-extensions';
@@ -1099,15 +1100,15 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {string} [type='widgets'] - The type of widgets to register (e.g., 'widgets', 'defaultWidgets').
      * @returns {void}
      */
-    registerWidgets(dashboardName, widgets = [], type = 'widgets') {
+    registerWidgets(dashboardName, widgets = [], type = 'widgets', options = {}) {
         const internalDashboardRegistryName = this.createInternalDashboardName(dashboardName);
         if (isArray(widgets)) {
-            widgets.forEach((w) => this.registerWidgets(dashboardName, w, type));
+            widgets.forEach((w) => this.registerWidgets(dashboardName, w, type, options));
             return;
         }
 
         const typeKey = pluralize(type);
-        const newWidget = this._createDashboardWidget(widgets);
+        const newWidget = this._createDashboardWidget(widgets, options);
         const widgetRegistry = this.getWidgetRegistry(dashboardName, type);
         if (this.widgetRegistryHasWidget(widgetRegistry, newWidget)) {
             return;
@@ -1147,8 +1148,8 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Array} [widgets=[]] - An array of widget objects to register.
      * @returns {void}
      */
-    registerDashboardWidgets(widgets = []) {
-        this.registerWidgets('dashboard', widgets);
+    registerDashboardWidgets(widgets = [], options = {}) {
+        this.registerWidgets('dashboard', widgets, 'widgets', options);
     }
 
     /**
@@ -1157,8 +1158,8 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Array} [widgets=[]] - An array of default widget objects to register.
      * @returns {void}
      */
-    registerDefaultDashboardWidgets(widgets = []) {
-        this.registerWidgets('dashboard', widgets, 'defaultWidgets');
+    registerDefaultDashboardWidgets(widgets = [], options = {}) {
+        this.registerWidgets('dashboard', widgets, 'defaultWidgets', options);
     }
 
     /**
@@ -1168,8 +1169,8 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Array} [widgets=[]] - An array of default widget objects to register.
      * @returns {void}
      */
-    registerDefaultWidgets(dashboardName, widgets = []) {
-        this.registerWidgets(dashboardName, widgets, 'defaultWidgets');
+    registerDefaultWidgets(dashboardName, widgets = [], options = {}) {
+        this.registerWidgets(dashboardName, widgets, 'defaultWidgets', options);
     }
 
     /**
@@ -1237,38 +1238,36 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Object} [widget.options] - Additional options for the widget.
      * @returns {Object} - The newly created widget object.
      */
-    _createDashboardWidget(widget) {
-        // Extract properties from the widget object
-        let { widgetId, name, description, icon, engine, component, grid_options, options } = widget;
+    _createDashboardWidget(widget, registrationOptions = {}) {
+        let { widgetId, name, description, icon, component, grid_options, options } = widget;
 
-        // If component is a definition register to host application
+        // If a class is provided, (optionally) register it under a stable id
         if (typeof component === 'function') {
             const owner = getOwner(this);
-            widgetId = component.widgetId || widgetId || this._createUniqueWidgetHashFromDefinition(component);
+            const id = dasherize(component.widgetId || widgetId || this._createUniqueWidgetHashFromDefinition(component));
 
             if (owner) {
-                owner.register(`component:${widgetId}`, component);
-                if (engine) {
-                    engine.register(`component:${widgetId}`, component);
+                owner.register(`component:${id}`, component);
+
+                // Register in engine instance if dashboard will be resolved from an engine
+                if (registrationOptions?.engine?.register) {
+                    registrationOptions.engine.register(`component:${id}`, component);
                 }
 
-                // Update component name
-                component = widgetId;
+                component = component;
+                widgetId = id;
             }
         }
 
-        // Create a new widget object with the extracted properties
-        const newWidget = {
+        return {
             widgetId,
             name,
             description,
             icon,
-            component,
+            component, // string OR class — template will resolve
             grid_options,
             options,
         };
-
-        return newWidget;
     }
 
     /**
@@ -1430,6 +1429,7 @@ export default class UniverseService extends Service.extend(Evented) {
             intl,
             title,
             text: title,
+            label: title,
             route,
             icon,
             priority,

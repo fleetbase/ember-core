@@ -20,6 +20,7 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
                 content: 'custom-field/form',
                 title: 'Create a new custom field',
                 panelContentClass: 'py-2 px-4',
+                useDefaultSaveTask: true,
                 saveOptions: {
                     callback: this.refresh,
                 },
@@ -31,6 +32,7 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
                 content: 'custom-field/form',
                 title: `Edit: ${customField.label}`,
                 panelContentClass: 'py-2 px-4',
+                useDefaultSaveTask: true,
                 customField,
             });
         },

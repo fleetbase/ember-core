@@ -10,6 +10,7 @@ const services = [
     'modals-manager',
     'resource-context-panel',
     'custom-fields-registry',
+    'table-context',
     'loader',
     'filters',
     'crud',

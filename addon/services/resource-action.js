@@ -2,6 +2,7 @@ import Service, { inject as service, inject } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action, get } from '@ember/object';
 import { alias } from '@ember/object/computed';
+import { isArray } from '@ember/array';
 import { debug } from '@ember/debug';
 import { getOwner } from '@ember/application';
 import { task, timeout } from 'ember-concurrency';
@@ -113,9 +114,9 @@ export default class ResourceActionService extends Service {
     @action delete(record, options = {}, deleteOptions = {}) {
         const taskOptions = { ...deleteOptions, ...(options.taskOptions ?? {}) };
         this.modalsManager.confirm({
-            title: `Delete ${titleize(this.modelName)} (${this.getRecordName(record)})?`,
-            body: 'This action cannot be undone. Once deleted, the record will be permanently removed.',
-            acceptButtonText: 'Confirm Delete',
+            title: this.intl.t('common.delete-resource-named', { resource: titleize(this.modelName), resourceName: this.getRecordName(record) }) + '?',
+            body: this.intl.t('common.delete-resource-prompt'),
+            acceptButtonText: this.intl.t('common.confirm-delete'),
             acceptButtonType: 'danger',
             acceptButtonIcon: 'trash',
             confirm: async (modal) => {
@@ -134,10 +135,36 @@ export default class ResourceActionService extends Service {
     }
 
     /**
+     * Convenient "continue without saving" prompt that handles rollback and redirect.
+     *
+     * @param {*} model
+     * @param {*} [options={}]
+     * @return {*}
+     * @memberof ResourceActionService
+     */
+    @action confirmContinueWithUnsavedChanges(model, options = {}) {
+        return this.modalsManager.confirm({
+            title: this.intl.t('common.continue-without-saving'),
+            body: this.intl.t('common.continue-without-saving-prompt', { resource: titleize(this.modelName) }),
+            acceptButtonText: this.intl.t('common.continue'),
+            confirm: async () => {
+                model.rollbackAttributes();
+                if (options.redirectTo) {
+                    await this.hostRouter.transitionTo(options.redirectTo, model);
+                }
+            },
+            ...options,
+        });
+    }
+
+    /**
      * Convenience method to bulk delete records.
      */
-    @action bulkDelete(records, options = {}) {
-        return this.crud.bulkDelete(this.tableContext.getSelectedRows(), {
+    @action bulkDelete(selected = [], options = {}) {
+        selected = [...(isArray(selected) ? selected : []), ...this.tableContext.getSelectedRows()];
+        if (!selected) return;
+
+        return this.crud.bulkDelete(selected, {
             modelNamePath: this.modelNamePath,
             acceptButtonText: this.intl.t('common.bulk-delete-resource', { resource: pluralize(titleize(this.modelName)) }),
             onSuccess: async () => {
@@ -151,8 +178,10 @@ export default class ResourceActionService extends Service {
     /**
      * Convenience method to export records.
      */
-    @action export(options = {}) {
-        const selections = this.tableContext.getSelectedIds();
+    @action export(selections = [], options = {}) {
+        selections = [...(isArray(selections) ? selections : []), ...this.tableContext.getSelectedIds()];
+        if (!selections) return;
+
         return this.crud.export(this.modelName, { params: { selections }, ...options });
     }
 
@@ -204,8 +233,9 @@ export default class ResourceActionService extends Service {
             yield record.save();
 
             this.notifications.success(
-                this.intl.t('common.created-successfully', {
-                    resource: this.getRecordName(record),
+                this.intl.t('common.resource-created-success-name', {
+                    resource: titleize(this.modelName),
+                    resourceName: this.getRecordName(record),
                 })
             );
 
@@ -233,8 +263,9 @@ export default class ResourceActionService extends Service {
             yield record.save();
 
             this.notifications.success(
-                this.intl.t('common.updated-successfully', {
-                    resource: this.getRecordName(record),
+                this.intl.t('common.resource-updated-success', {
+                    resource: titleize(this.modelName),
+                    resourceName: this.getRecordName(record),
                 })
             );
 
@@ -264,8 +295,9 @@ export default class ResourceActionService extends Service {
             yield record.save();
 
             this.notifications.success(
-                this.intl.t('common.saved-successfully', {
-                    resource: this.getRecordName(record),
+                this.intl.t('common.resource-action-success', {
+                    resource: titleize(this.modelName),
+                    resourceName: this.getRecordName(record),
                     action: isNew ? 'created' : 'updated',
                 })
             );
@@ -311,8 +343,9 @@ export default class ResourceActionService extends Service {
             yield record.destroyRecord();
 
             this.notifications.success(
-                this.intl.t('common.deleted-successfully', {
-                    resource: this.getRecordName(record),
+                this.intl.t('common.resource-deleted', {
+                    resource: titleize(this.modelName),
+                    resourceName: this.getRecordName(record),
                 })
             );
 
