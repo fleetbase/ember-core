@@ -9,7 +9,6 @@ import { later } from '@ember/runloop';
 import { dasherize, camelize } from '@ember/string';
 import { pluralize } from 'ember-inflector';
 import { getOwner } from '@ember/application';
-import { ensureSafeComponent } from '@embroider/util';
 import { assert, debug, warn } from '@ember/debug';
 import RSVP from 'rsvp';
 import loadInstalledExtensions from '../utils/load-installed-extensions';
@@ -1254,7 +1253,7 @@ export default class UniverseService extends Service.extend(Evented) {
                     registrationOptions.engine.register(`component:${id}`, component);
                 }
 
-                component = component;
+                // component = component;
                 widgetId = id;
             }
         }

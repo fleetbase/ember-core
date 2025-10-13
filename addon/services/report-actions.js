@@ -1,6 +1,4 @@
 import ResourceActionService from './resource-action';
-import { inject as service } from '@ember/service';
-import { action } from '@ember/object';
 
 export default class ReportActionsService extends ResourceActionService {
     constructor() {

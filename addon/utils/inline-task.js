@@ -65,7 +65,9 @@ export class InlineTask {
                     if (this._onError) {
                         try {
                             this._onError(e);
-                        } catch {} // don’t rethrow from onError
+                        } catch {
+                            // eslint-disable-next-line no-console
+                        }
                     }
                 }
                 throw e;
