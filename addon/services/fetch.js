@@ -16,6 +16,7 @@ import getMimeType from '../utils/get-mime-type';
 import download from '../utils/download';
 import getUserOptions from '../utils/get-user-options';
 import isEmptyObject from '../utils/is-empty-object';
+import isObject from '../utils/is-object';
 import fetch from 'fetch';
 
 if (isBlank(config.API.host)) {
@@ -311,11 +312,16 @@ export default class FetchService extends Service {
                         return reject(new Error(response.json.errors ? response.json.errors.firstObject : response.statusText));
                     }
 
-                    if (response.json.error && typeof response.json.error) {
+                    if (response.json.error && typeof response.json.error === 'string') {
                         return reject(new Error(response.json.error));
                     }
 
-                    if (response.json.message && typeof response.json.message) {
+                    // error objects
+                    if (response.json.error && isObject(response.json.error)) {
+                        return reject(response.json.error);
+                    }
+
+                    if (response.json.message && typeof response.json.message === 'string') {
                         return reject(new Error(response.json.message));
                     }
 

@@ -183,6 +183,15 @@ export default class CurrentUserService extends Service.extend(Evented) {
         return this.company;
     }
 
+    async loadCompany() {
+        const company = this.store.peekRecord('company', this.user.company_uuid);
+        if (company) {
+            return company;
+        }
+
+        return this.store.findRecord('company', this.user.company_uuid);
+    }
+
     getUserPermissions(user) {
         const permissions = [];
 
@@ -279,5 +288,19 @@ export default class CurrentUserService extends Service.extend(Evented) {
                 id: role.get('id'),
             },
         };
+    }
+
+    getCompanyOption(key, defaultValue = null) {
+        const company = this.store.peekRecord('company', this.companyId);
+        if (company) {
+            const value = get(company, `options.${key}`);
+            if (value === undefined) {
+                return defaultValue;
+            }
+
+            return value;
+        }
+
+        return defaultValue;
     }
 }
