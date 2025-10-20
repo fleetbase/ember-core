@@ -15,6 +15,7 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
 
     panel = {
         create: (attributes = {}, options = {}, saveOptions = {}) => {
+            saveOptions = { ...(options?.saveOptions ?? {}), ...saveOptions };
             const customField = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'custom-field/form',
@@ -30,6 +31,7 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
             });
         },
         edit: (customField, options = {}, saveOptions = {}) => {
+            saveOptions = { ...(options?.saveOptions ?? {}), ...saveOptions };
             return this.resourceContextPanel.open({
                 content: 'custom-field/form',
                 title: `Edit: ${customField.label}`,
@@ -44,6 +46,7 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
 
     modal = {
         create: (attributes = {}, options = {}, saveOptions = {}) => {
+            saveOptions = { ...(options?.saveOptions ?? {}), ...saveOptions };
             const customField = this.createNewInstance(attributes);
             return this.modalsManager.show('modals/resource', {
                 resource: customField,
@@ -55,6 +58,7 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
             });
         },
         edit: (customField, options = {}, saveOptions = {}) => {
+            saveOptions = { ...(options?.saveOptions ?? {}), ...saveOptions };
             return this.modalsManager.show('modals/resource', {
                 resource: customField,
                 title: `Edit custom field: ${customField.label}`,
