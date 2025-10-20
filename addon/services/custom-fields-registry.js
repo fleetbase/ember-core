@@ -23,10 +23,10 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
                 useDefaultSaveTask: true,
                 saveOptions: {
                     callback: this.refresh,
-                    ...saveOptions
+                    ...saveOptions,
                 },
                 customField,
-                ...options
+                ...options,
             });
         },
         edit: (customField, options = {}, saveOptions = {}) => {
@@ -37,7 +37,7 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
                 useDefaultSaveTask: true,
                 customField,
                 saveOptions,
-                ...options
+                ...options,
             });
         },
     };
