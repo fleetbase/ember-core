@@ -14,7 +14,7 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
     modelNamePath = 'label';
 
     panel = {
-        create: (attributes = {}) => {
+        create: (attributes = {}, options = {}, saveOptions = {}) => {
             const customField = this.createNewInstance(attributes);
             return this.resourceContextPanel.open({
                 content: 'custom-field/form',
@@ -23,17 +23,21 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
                 useDefaultSaveTask: true,
                 saveOptions: {
                     callback: this.refresh,
+                    ...saveOptions
                 },
                 customField,
+                ...options
             });
         },
-        edit: (customField) => {
+        edit: (customField, options = {}, saveOptions = {}) => {
             return this.resourceContextPanel.open({
                 content: 'custom-field/form',
                 title: `Edit: ${customField.label}`,
                 panelContentClass: 'py-2 px-4',
                 useDefaultSaveTask: true,
                 customField,
+                saveOptions,
+                ...options
             });
         },
     };
