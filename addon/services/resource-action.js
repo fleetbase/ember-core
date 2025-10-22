@@ -64,6 +64,21 @@ export default class ResourceActionService extends Service {
     @tracked defaultAttributes = {};
 
     /**
+     * Global additional options for bulk delete action.
+     */
+    @tracked bulkDeleteOptions = {};
+
+    /**
+     * Global additional options for import action.
+     */
+    @tracked importOptions = {};
+
+    /**
+     * Global additional options for export action.
+     */
+    @tracked exportOptions = {};
+
+    /**
      * Permission prefix for this resource.
      * Should be overridden in child services.
      */
@@ -164,6 +179,8 @@ export default class ResourceActionService extends Service {
         selected = [...(isArray(selected) ? selected : []), ...this.tableContext.getSelectedRows()];
         if (!selected) return;
 
+        options = { ...options, ...(this.bulkDeleteOptions ?? {}) };
+
         return this.crud.bulkDelete(selected, {
             modelNamePath: this.modelNamePath,
             acceptButtonText: this.intl.t('common.bulk-delete-resource', { resource: pluralize(titleize(this.modelName)) }),
@@ -182,6 +199,8 @@ export default class ResourceActionService extends Service {
         selections = [...(isArray(selections) ? selections : []), ...this.tableContext.getSelectedIds()];
         if (!selections) return;
 
+        options = { ...options, ...(this.exportOptions ?? {}) };
+
         return this.crud.export(this.modelName, { params: { selections }, ...options });
     }
 
@@ -189,6 +208,8 @@ export default class ResourceActionService extends Service {
      * Convenience method to import records.
      */
     @action import(options = {}) {
+        options = { ...options, ...(this.importOptions ?? {}) };
+
         return this.crud.import(this.modelName, {
             onImportCompleted: () => {
                 this.router.refresh();
