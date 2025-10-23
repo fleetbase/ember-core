@@ -548,15 +548,13 @@ export default class FetchService extends Service {
      *
      * @void
      */
-    @(task(function* (file, params = {}, callback, errorCallback) {
+    @task({ enqueue: true, maxConcurrency: 3 }) *uploadFile(file, params = {}, callback, errorCallback) {
         const { queue } = file;
         const headers = this.getHeaders();
 
         // make sure this task runs once for this file in correct state
         // this can occur when the task is called twice when upload button exists inside upload dropzone
-        if (['queued', 'failed', 'timed_out', 'aborted'].indexOf(file.state) === -1) {
-            return;
-        }
+        if (['queued', 'failed', 'timed_out', 'aborted'].indexOf(file.state) === -1) return;
 
         // remove Content-Type header
         delete headers['Content-Type'];
@@ -600,10 +598,7 @@ export default class FetchService extends Service {
                 errorCallback(error);
             }
         }
-    })
-        .maxConcurrency(3)
-        .enqueue())
-    uploadFile;
+    }
 
     /**
      * Downloads blob of the request path to user

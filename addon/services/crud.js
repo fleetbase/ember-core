@@ -12,37 +12,10 @@ import getWithDefault from '../utils/get-with-default';
 import first from '../utils/first';
 
 export default class CrudService extends Service {
-    /**
-     * Inject the `fetch` service
-     *
-     * @var {Service}
-     */
     @service fetch;
-
-    /**
-     * Inject the `modalsManager` service
-     *
-     * @var {Service}
-     */
     @service modalsManager;
-
-    /**
-     * Inject the `notifications` service
-     *
-     * @var {Service}
-     */
     @service notifications;
-
-    /**
-     * Inject the `store` service
-     *
-     * @var {Service}
-     */
     @service store;
-
-    /**
-     * @service currentUser
-     */
     @service currentUser;
 
     /**
@@ -54,7 +27,7 @@ export default class CrudService extends Service {
      */
     @action delete(model, options = {}) {
         const modelName = getModelName(model, get(options, 'modelName'), { humanize: true, capitalizeWords: true });
-        const successNotification = options.successNotification || `${model.name ? modelName + " '" + model.name + "'" : "'" + modelName + "'"} has been deleted.`;
+        const successNotification = options?.successNotification || `${model.name ? modelName + " '" + model.name + "'" : "'" + modelName + "'"} has been deleted.`;
 
         this.modalsManager.confirm({
             title: `Are you sure to delete this ${modelName}?`,
@@ -136,7 +109,7 @@ export default class CrudService extends Service {
         const count = selected.length;
         const actionMethod = (typeof options.actionMethod === 'string' ? options.actionMethod : `POST`).toLowerCase();
         const modalTemplate = getWithDefault(options, 'template', 'modals/bulk-action-model');
-        const successMessage = options.successNotification ?? `${count} ${pluralize(count, modelName)} were updated successfully.`;
+        const successMessage = options?.successNotification ?? `${count} ${pluralize(count, modelName)} were updated successfully.`;
 
         if (typeof options.resolveModelName === 'function') {
             selected = selected.map((model) => {
@@ -221,7 +194,9 @@ export default class CrudService extends Service {
 
         // set the model uri endpoint
         const modelEndpoint = dasherize(pluralize(modelName));
-        const exportParams = options.params ?? {};
+        const exportParams = options?.params ?? {};
+        const fetchOptions = options?.fetchOptions ?? {};
+        const exportEndpoint = options?.exportEndpoint ?? options?.actionPath ?? `${modelEndpoint}/export`;
 
         this.modalsManager.show('modals/export-form', {
             title: `Export ${pluralize(smartHumanize(modelName))}`,
@@ -237,7 +212,7 @@ export default class CrudService extends Service {
                 modal.startLoading();
                 return this.fetch
                     .download(
-                        `${modelEndpoint}/export`,
+                        exportEndpoint,
                         {
                             format,
                             ...exportParams,
@@ -245,6 +220,7 @@ export default class CrudService extends Service {
                         {
                             method: 'POST',
                             fileName: `${modelEndpoint}-${formatDate(new Date(), 'yyyy-MM-dd-HH:mm')}.${format}`,
+                            ...fetchOptions,
                         }
                     )
                     .then(() => {
@@ -278,6 +254,8 @@ export default class CrudService extends Service {
 
         // set the model uri endpoint
         const modelEndpoint = dasherize(pluralize(modelName));
+        const fetchOptions = options?.fetchOptions ?? {};
+        const importEndpoint = options?.importEndpoint ?? options?.actionPath ?? `${modelEndpoint}/import`;
 
         // function to check if queue is empty
         const checkQueue = () => {
@@ -358,7 +336,7 @@ export default class CrudService extends Service {
                 const files = uploadedFiles.map((file) => file.id);
 
                 try {
-                    const response = await this.fetch.post(`${modelEndpoint}/import`, { files });
+                    const response = await this.fetch.post(importEndpoint, { files }, fetchOptions);
                     if (typeof options.onImportCompleted === 'function') {
                         options.onImportCompleted(response, files);
                     }
