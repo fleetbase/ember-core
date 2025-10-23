@@ -79,6 +79,21 @@ export default class ResourceActionService extends Service {
     @tracked exportOptions = {};
 
     /**
+     * The import template path.
+     */
+    @tracked importTemplatePath = 'import-templates';
+
+    /**
+     * The import template name.
+     */
+    @tracked importTemplateName = null;
+
+    /**
+     * The base URL for static assets.
+     */
+    @tracked baseAssetUrl = null;
+
+    /**
      * Permission prefix for this resource.
      * Should be overridden in child services.
      */
@@ -486,7 +501,9 @@ export default class ResourceActionService extends Service {
             .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
             .join('_');
         const baseAssetUrl = this.baseAssetUrl ?? 'https://flb-assets.s3.ap-southeast-1.amazonaws.com';
+        const importTemplatePath = this.importTemplatePath ?? 'import-templates';
+        const importTemplateName = this.importTemplateName ?? `Fleetbase_${templateModelName}_Import_Template.xlsx`;
 
-        return `${baseAssetUrl}/import-templates/Fleetbase_${templateModelName}_Import_Template.xlsx`;
+        return `${baseAssetUrl}/${importTemplatePath}/${importTemplateName}`;
     }
 }

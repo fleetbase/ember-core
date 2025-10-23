@@ -222,6 +222,8 @@ export default class CrudService extends Service {
         // set the model uri endpoint
         const modelEndpoint = dasherize(pluralize(modelName));
         const exportParams = options.params ?? {};
+        const fetchOptions = options.fetchOptions ?? {};
+        const exportEndpoint = options.exportEndpoint ?? `${modelEndpoint}/export`;
 
         this.modalsManager.show('modals/export-form', {
             title: `Export ${pluralize(smartHumanize(modelName))}`,
@@ -237,7 +239,7 @@ export default class CrudService extends Service {
                 modal.startLoading();
                 return this.fetch
                     .download(
-                        `${modelEndpoint}/export`,
+                        exportEndpoint,
                         {
                             format,
                             ...exportParams,
@@ -245,6 +247,7 @@ export default class CrudService extends Service {
                         {
                             method: 'POST',
                             fileName: `${modelEndpoint}-${formatDate(new Date(), 'yyyy-MM-dd-HH:mm')}.${format}`,
+                            ...fetchOptions,
                         }
                     )
                     .then(() => {
@@ -278,6 +281,8 @@ export default class CrudService extends Service {
 
         // set the model uri endpoint
         const modelEndpoint = dasherize(pluralize(modelName));
+        const fetchOptions = options?.fetchOptions ?? {};
+        const importEndpoint = options?.importEndpoint ?? `${modelEndpoint}/import`;
 
         // function to check if queue is empty
         const checkQueue = () => {
@@ -358,7 +363,7 @@ export default class CrudService extends Service {
                 const files = uploadedFiles.map((file) => file.id);
 
                 try {
-                    const response = await this.fetch.post(`${modelEndpoint}/import`, { files });
+                    const response = await this.fetch.post(importEndpoint, { files }, fetchOptions);
                     if (typeof options.onImportCompleted === 'function') {
                         options.onImportCompleted(response, files);
                     }
