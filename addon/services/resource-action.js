@@ -79,6 +79,11 @@ export default class ResourceActionService extends Service {
     @tracked exportOptions = {};
 
     /**
+     * Global fetch options which applies to all fetch methods.
+     */
+    @tracked fetchOptions = {};
+
+    /**
      * The import template path.
      */
     @tracked importTemplatePath = 'import-templates';
@@ -198,6 +203,10 @@ export default class ResourceActionService extends Service {
         if (!selected) return;
 
         options = { ...options, ...(this.bulkDeleteOptions ?? {}) };
+        // if no direct fetchOptions use global fetch options if applicable
+        if (!options.fetchOptions) {
+            options.fetchOptions = this.fetchOptions ?? {};
+        }
 
         return this.crud.bulkDelete(selected, {
             modelNamePath: this.modelNamePath,
@@ -218,6 +227,10 @@ export default class ResourceActionService extends Service {
         if (!selections) return;
 
         options = { ...options, ...(this.exportOptions ?? {}) };
+        // if no direct fetchOptions use global fetch options if applicable
+        if (!options.fetchOptions) {
+            options.fetchOptions = this.fetchOptions ?? {};
+        }
 
         return this.crud.export(this.modelName, { params: { selections }, ...options });
     }
@@ -227,6 +240,10 @@ export default class ResourceActionService extends Service {
      */
     @action import(options = {}) {
         options = { ...options, ...(this.importOptions ?? {}) };
+        // if no direct fetchOptions use global fetch options if applicable
+        if (!options.fetchOptions) {
+            options.fetchOptions = this.fetchOptions ?? {};
+        }
 
         return this.crud.import(this.modelName, {
             onImportCompleted: () => {
