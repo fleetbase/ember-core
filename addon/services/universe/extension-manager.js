@@ -19,6 +19,17 @@ export default class ExtensionManagerService extends Service {
     @tracked loadingPromises = new Map();
     @tracked isBooting = true;
     @tracked bootPromise = null;
+    @tracked extensionsLoadedPromise = null;
+    @tracked extensionsLoadedResolver = null;
+    @tracked extensionsLoaded = false;
+
+    constructor() {
+        super(...arguments);
+        // Create a promise that resolves when extensions are loaded
+        this.extensionsLoadedPromise = new Promise((resolve) => {
+            this.extensionsLoadedResolver = resolve;
+        });
+    }
 
     /**
      * Ensure an engine is loaded
@@ -189,6 +200,36 @@ export default class ExtensionManagerService extends Service {
     }
 
     /**
+     * Mark extensions as loaded
+     * Called by load-extensions initializer after extensions are loaded from API
+     * 
+     * @method finishLoadingExtensions
+     */
+    finishLoadingExtensions() {
+        this.extensionsLoaded = true;
+        
+        // Resolve the extensions loaded promise
+        if (this.extensionsLoadedResolver) {
+            this.extensionsLoadedResolver();
+            this.extensionsLoadedResolver = null;
+        }
+    }
+
+    /**
+     * Wait for extensions to be loaded from API
+     * Returns immediately if already loaded
+     * 
+     * @method waitForExtensionsLoaded
+     * @returns {Promise} Promise that resolves when extensions are loaded
+     */
+    waitForExtensionsLoaded() {
+        if (this.extensionsLoaded) {
+            return Promise.resolve();
+        }
+        return this.extensionsLoadedPromise;
+    }
+
+    /**
      * Mark the boot process as complete
      * Called by the Universe service after all extensions are initialized
      * 
@@ -236,6 +277,83 @@ export default class ExtensionManagerService extends Service {
     }
 
     /**
+     * Load extensions from API and populate application
+     * Encapsulates the extension loading logic
+     * 
+     * @method loadExtensions
+     * @param {Application} application The Ember application instance
+     * @returns {Promise<Array>} Array of loaded extension names
+     */
+    async loadExtensions(application) {
+        const loadExtensionsUtil = require('@fleetbase/ember-core/utils/load-extensions').default;
+        const mapEngines = require('@fleetbase/ember-core/utils/map-engines').default;
+
+        console.log('[ExtensionManager] Loading extensions from API...');
+        
+        try {
+            const extensions = await loadExtensionsUtil();
+            application.extensions = extensions;
+            application.engines = mapEngines(extensions);
+            console.log('[ExtensionManager] Loaded extensions:', extensions);
+            
+            // Mark extensions as loaded
+            this.finishLoadingExtensions();
+            
+            return extensions;
+        } catch (error) {
+            console.error('[ExtensionManager] Failed to load extensions:', error);
+            // Set empty arrays on error
+            application.extensions = [];
+            application.engines = {};
+            // Still mark as loaded to prevent hanging
+            this.finishLoadingExtensions();
+            throw error;
+        }
+    }
+
+    /**
+     * Setup extensions by loading and executing their extension.js files
+     * 
+     * @method setupExtensions
+     * @param {ApplicationInstance} appInstance The application instance
+     * @param {Service} universe The universe service
+     * @returns {Promise<void>}
+     */
+    async setupExtensions(appInstance, universe) {
+        const application = appInstance.application;
+
+        console.log('[ExtensionManager] Waiting for extensions to load...');
+        
+        // Wait for extensions to be loaded from API
+        await this.waitForExtensionsLoaded();
+        
+        console.log('[ExtensionManager] Extensions loaded, setting up...');
+
+        // Get the list of enabled extensions
+        const extensions = application.extensions || [];
+        console.log('[ExtensionManager] Setting up extensions:', extensions);
+
+        // Load and execute extension.js from each enabled extension
+        for (const extensionName of extensions) {
+            try {
+                // Dynamically require the extension.js file
+                const setupExtension = require(`${extensionName}/extension`).default;
+
+                if (typeof setupExtension === 'function') {
+                    console.log(`[ExtensionManager] Running setup for ${extensionName}`);
+                    // Execute the extension setup function
+                    setupExtension(appInstance, universe);
+                }
+            } catch (error) {
+                // Silently fail if extension.js doesn't exist
+                console.warn(`[ExtensionManager] Could not load extension.js for ${extensionName}:`, error.message);
+            }
+        }
+
+        console.log('[ExtensionManager] All extensions setup complete');
+    }
+
+    /**
      * Get loading statistics
      * 
      * @method getStats
@@ -244,6 +362,7 @@ export default class ExtensionManagerService extends Service {
     getStats() {
         return {
             isBooting: this.isBooting,
+            extensionsLoaded: this.extensionsLoaded,
             loadedCount: this.loadedEngines.size,
             loadingCount: this.loadingPromises.size,
             registeredCount: this.registeredExtensions.length,
