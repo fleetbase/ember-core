@@ -41,10 +41,10 @@ export default class MenuPanel extends BaseContract {
      * @param {Array} items Optional array of menu items (only used if first param is string)
      */
     constructor(titleOrDefinition, items = []) {
-        // Initialize properties BEFORE calling super to avoid validation errors
-        let initialOptions = {};
+        // Call super FIRST (JavaScript requirement)
+        super(isObject(titleOrDefinition) && titleOrDefinition.title ? titleOrDefinition : { title: titleOrDefinition });
         
-        // Handle full definition object as first-class
+        // THEN set properties
         if (isObject(titleOrDefinition) && titleOrDefinition.title) {
             const definition = titleOrDefinition;
             
@@ -53,8 +53,6 @@ export default class MenuPanel extends BaseContract {
             this.slug = definition.slug || dasherize(this.title);
             this.icon = definition.icon || null;
             this.priority = definition.priority !== undefined ? definition.priority : 9;
-            
-            initialOptions = { ...definition };
         } else {
             // Handle string title (chaining pattern)
             this.title = titleOrDefinition;
@@ -62,12 +60,19 @@ export default class MenuPanel extends BaseContract {
             this.slug = dasherize(titleOrDefinition);
             this.icon = null;
             this.priority = 9;
-            
-            initialOptions = { title: this.title };
         }
         
-        // Now call super with all properties set
-        super(initialOptions);
+        // Call setup() to trigger validation after properties are set
+        this.setup();
+    }
+
+    /**
+     * Setup method - validates after properties are set
+     * 
+     * @method setup
+     */
+    setup() {
+        super.setup();  // Calls validate()
     }
 
     /**

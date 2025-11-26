@@ -50,14 +50,13 @@ export default class Widget extends BaseContract {
      * @param {String|Object} idOrDefinition Unique widget identifier or full definition object
      */
     constructor(idOrDefinition) {
-        // Initialize properties BEFORE calling super to avoid validation errors
-        let initialOptions = {};
+        // Call super FIRST (JavaScript requirement)
+        super(isObject(idOrDefinition) ? idOrDefinition : { id: idOrDefinition });
         
-        // Handle full definition object as first-class
+        // THEN set properties
         if (isObject(idOrDefinition)) {
             const definition = idOrDefinition;
             
-            // Set all properties
             this.id = definition.id;
             this.name = definition.name || null;
             this.description = definition.description || null;
@@ -77,21 +76,9 @@ export default class Widget extends BaseContract {
                 this.component = definition.component || null;
             }
             
-            // Build initial options with all properties
-            initialOptions = {
-                id: this.id,
-                name: this.name,
-                description: this.description,
-                icon: this.icon,
-                component: this.component,
-                grid_options: this.grid_options,
-                options: this.options,
-                category: this.category
-            };
-            
             // Store default flag if present
             if (definition.default) {
-                initialOptions.default = true;
+                this._options.default = true;
             }
         } else {
             // Handle string id (chaining pattern)
@@ -103,12 +90,19 @@ export default class Widget extends BaseContract {
             this.grid_options = {};
             this.options = {};
             this.category = 'default';
-            
-            initialOptions = { id: this.id };
         }
         
-        // Now call super with all properties set
-        super(initialOptions);
+        // Call setup() to trigger validation after properties are set
+        this.setup();
+    }
+
+    /**
+     * Setup method - validates after properties are set
+     * 
+     * @method setup
+     */
+    setup() {
+        super.setup();  // Calls validate()
     }
 
     /**

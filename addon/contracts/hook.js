@@ -50,10 +50,15 @@ export default class Hook extends BaseContract {
      * @param {Function} handlerOrOptions Handler function or options object (only used if first param is string)
      */
     constructor(nameOrDefinition, handlerOrOptions = null) {
-        // Initialize properties BEFORE calling super to avoid validation errors
-        let initialOptions = {};
+        // Prepare options for super
+        const options = typeof handlerOrOptions === 'function'
+            ? { handler: handlerOrOptions }
+            : (handlerOrOptions || {});
         
-        // Handle full definition object as first-class
+        // Call super FIRST (JavaScript requirement)
+        super(isObject(nameOrDefinition) && nameOrDefinition.name ? nameOrDefinition : { name: nameOrDefinition, ...options });
+        
+        // THEN set properties
         if (isObject(nameOrDefinition) && nameOrDefinition.name) {
             const definition = nameOrDefinition;
             
@@ -63,26 +68,26 @@ export default class Hook extends BaseContract {
             this.runOnce = definition.once || false;
             this.id = definition.id || guidFor(this);
             this.enabled = definition.enabled !== undefined ? definition.enabled : true;
-            
-            initialOptions = { ...definition };
         } else {
-            // Handle string name with optional handler (chaining pattern)
-            const options = typeof handlerOrOptions === 'function'
-                ? { handler: handlerOrOptions }
-                : (handlerOrOptions || {});
-
             this.name = nameOrDefinition;
             this.handler = options.handler || null;
             this.priority = options.priority || 0;
             this.runOnce = options.once || false;
             this.id = options.id || guidFor(this);
             this.enabled = options.enabled !== undefined ? options.enabled : true;
-            
-            initialOptions = { name: this.name, ...options };
         }
         
-        // Now call super with all properties set
-        super(initialOptions);
+        // Call setup() to trigger validation after properties are set
+        this.setup();
+    }
+
+    /**
+     * Setup method - validates after properties are set
+     * 
+     * @method setup
+     */
+    setup() {
+        super.setup();  // Calls validate()
     }
 
     /**

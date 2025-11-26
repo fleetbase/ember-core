@@ -4,6 +4,10 @@ import { tracked } from '@glimmer/tracking';
  * Base class for all extension contracts
  * Provides common functionality for validation, serialization, and option management
  * 
+ * Uses a two-phase construction pattern:
+ * 1. Constructor - Sets up initial state
+ * 2. setup() - Called after construction for validation and post-init logic
+ * 
  * @class BaseContract
  */
 export default class BaseContract {
@@ -11,6 +15,16 @@ export default class BaseContract {
 
     constructor(options = {}) {
         this._options = { ...options };
+        // Don't validate here - let subclasses set properties first
+    }
+
+    /**
+     * Setup method called after construction
+     * Subclasses should call super.setup() to trigger validation
+     * 
+     * @method setup
+     */
+    setup() {
         this.validate();
     }
 

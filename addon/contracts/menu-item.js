@@ -45,10 +45,10 @@ export default class MenuItem extends BaseContract {
      * @param {String} route Optional route name (only used if first param is string)
      */
     constructor(titleOrDefinition, route = null) {
-        // Initialize properties BEFORE calling super to avoid validation errors
-        let initialOptions = {};
+        // Call super FIRST (JavaScript requirement)
+        super(isObject(titleOrDefinition) ? titleOrDefinition : { title: titleOrDefinition, route });
         
-        // Handle full definition object as first-class
+        // THEN set properties
         if (isObject(titleOrDefinition)) {
             const definition = titleOrDefinition;
             
@@ -67,8 +67,6 @@ export default class MenuItem extends BaseContract {
             this.onClick = definition.onClick || null;
             this.componentParams = definition.componentParams || null;
             this.renderComponentInPlace = definition.renderComponentInPlace || false;
-            
-            initialOptions = { ...definition };
         } else {
             // Handle string title with optional route (chaining pattern)
             this.title = titleOrDefinition;
@@ -86,12 +84,19 @@ export default class MenuItem extends BaseContract {
             this.onClick = null;
             this.componentParams = null;
             this.renderComponentInPlace = false;
-            
-            initialOptions = { title: this.title, route: this.route };
         }
         
-        // Now call super with all properties set
-        super(initialOptions);
+        // Call setup() to trigger validation after properties are set
+        this.setup();
+    }
+
+    /**
+     * Setup method - validates after properties are set
+     * 
+     * @method setup
+     */
+    setup() {
+        super.setup();  // Calls validate()
     }
 
     /**
