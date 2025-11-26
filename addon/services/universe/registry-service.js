@@ -151,10 +151,16 @@ export default class RegistryService extends Service {
         // Also maintain in our registry for iteration
         const registry = this.createRegistry(registryName);
         
+        // Store the registration key with the value for filtering
+        // This allows filtering by key prefix (e.g., 'default#dashboard#')
+        if (typeof value === 'object' && value !== null) {
+            value._registryKey = key;
+        }
+        
         // Check if already exists and update, otherwise add
         const existing = registry.find(item => {
             if (typeof item === 'object' && item !== null) {
-                return item.slug === key || item.widgetId === key || item.id === key;
+                return item._registryKey === key || item.slug === key || item.widgetId === key || item.id === key;
             }
             return false;
         });

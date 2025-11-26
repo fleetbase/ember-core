@@ -117,15 +117,12 @@ export default class WidgetService extends Service {
             const normalized = this.#normalizeWidget(widget);
             console.log('[WidgetService] Normalized widget:', normalized);
             
-            // Mark this widget as a default widget for this dashboard
-            normalized._defaultDashboard = dashboardName;
-            normalized._isDefault = true;
-            
-            console.log('[WidgetService] Registering default widget:', normalized);
-            
-            // Register to widgets registry
-            // The registry service will add it to the array if it doesn't exist
+            // Register to default widgets registry for this dashboard
+            // Format: widget:default#dashboardName#widgetId
+            // The registry service will store the key as _registryKey on the widget
             this.registryService.register('widget', `default#${dashboardName}#${normalized.id}`, normalized);
+            
+            console.log('[WidgetService] Registered with key:', `default#${dashboardName}#${normalized.id}`);
         });
         
         console.log('[WidgetService] Registration complete. Checking registry...');
@@ -146,13 +143,20 @@ export default class WidgetService extends Service {
             return [];
         }
         
-        // Get all widgets registered to this dashboard
+        // Get all widgets from registry (this is an array)
         const registry = this.registryService.getRegistry('widget');
+        
+        // Filter widgets by registration key prefix
+        // This includes both default widgets (default#dashboard#id) and regular widgets (dashboard#id)
         const prefix = `${dashboardName}#`;
         
-        return Object.keys(registry)
-            .filter(key => key.startsWith(prefix))
-            .map(key => registry[key]);
+        return registry.filter(widget => {
+            if (!widget || typeof widget !== 'object') return false;
+            
+            // Match widgets registered for this dashboard
+            // Matches: 'dashboard#widget-id' or 'default#dashboard#widget-id'
+            return widget._registryKey && widget._registryKey.includes(prefix);
+        });
     }
 
     /**
@@ -171,17 +175,22 @@ export default class WidgetService extends Service {
             return [];
         }
         
-        // Get all widgets from registry (this is an array, not a key-value object)
+        // Get all widgets from registry (this is an array)
         const registry = this.registryService.getRegistry('widget');
         console.log('[WidgetService] Full widget registry array:', registry);
         
-        // Filter widgets that have the _defaultDashboard property matching our dashboard
+        // Filter widgets by registration key prefix
+        const prefix = `default#${dashboardName}#`;
+        console.log('[WidgetService] Looking for widgets with key prefix:', prefix);
+        
         const defaultWidgets = registry.filter(widget => {
             if (!widget || typeof widget !== 'object') return false;
             
-            // Check if this widget is marked as default for this dashboard
-            // We need to track this during registration
-            return widget._defaultDashboard === dashboardName;
+            // Check if the registration key starts with our prefix
+            const hasMatchingKey = widget._registryKey && widget._registryKey.startsWith(prefix);
+            console.log('[WidgetService] Widget:', widget.id, 'Key:', widget._registryKey, 'Matches:', hasMatchingKey);
+            
+            return hasMatchingKey;
         });
         
         console.log('[WidgetService] Filtered default widgets:', defaultWidgets);
