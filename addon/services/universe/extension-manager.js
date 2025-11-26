@@ -372,6 +372,9 @@ export default class ExtensionManagerService extends Service {
         }
 
         console.log('[ExtensionManager] All extensions setup complete');
+        
+        // Execute boot callbacks and mark boot as complete
+        await universe.executeBootCallbacks();
     }
 
     /**
