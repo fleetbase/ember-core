@@ -11,6 +11,7 @@ import ExtensionComponent from './extension-component';
  * @extends BaseContract
  * 
  * @example
+ * // With chaining
  * new Widget('fleet-ops-metrics')
  *   .withName('Fleet-Ops Metrics')
  *   .withDescription('Key metrics from Fleet-Ops')
@@ -18,25 +19,57 @@ import ExtensionComponent from './extension-component';
  *   .withComponent(new ExtensionComponent('@fleetbase/fleetops-engine', 'components/widget/metrics'))
  *   .withGridOptions({ w: 12, h: 12, minW: 8, minH: 12 })
  *   .asDefault()
+ * 
+ * @example
+ * // Full definition object (first-class)
+ * new Widget({
+ *   widgetId: 'fleet-ops-metrics',
+ *   name: 'Fleet-Ops Metrics',
+ *   description: 'Key metrics from Fleet-Ops',
+ *   icon: 'truck',
+ *   component: { engine: '@fleetbase/fleetops-engine', path: 'components/widget/metrics' },
+ *   grid_options: { w: 12, h: 12, minW: 8, minH: 12 },
+ *   default: true
+ * })
  */
 export default class Widget extends BaseContract {
     /**
      * Create a new Widget
      * 
      * @constructor
-     * @param {String} widgetId Unique widget identifier
+     * @param {String|Object} widgetIdOrDefinition Unique widget identifier or full definition object
      */
-    constructor(widgetId) {
-        super({ widgetId });
-        
-        this.widgetId = widgetId;
-        this.name = null;
-        this.description = null;
-        this.icon = null;
-        this.component = null;
-        this.grid_options = {};
-        this.options = {};
-        this.category = 'default';
+    constructor(widgetIdOrDefinition) {
+        // Handle full definition object as first-class
+        if (typeof widgetIdOrDefinition === 'object' && widgetIdOrDefinition !== null) {
+            const definition = widgetIdOrDefinition;
+            super(definition);
+            
+            this.widgetId = definition.widgetId;
+            this.name = definition.name || null;
+            this.description = definition.description || null;
+            this.icon = definition.icon || null;
+            this.component = definition.component || null;
+            this.grid_options = definition.grid_options || {};
+            this.options = definition.options || {};
+            this.category = definition.category || 'default';
+            
+            if (definition.default) {
+                this._options.default = true;
+            }
+        } else {
+            // Handle string widgetId (chaining pattern)
+            super({ widgetId: widgetIdOrDefinition });
+            
+            this.widgetId = widgetIdOrDefinition;
+            this.name = null;
+            this.description = null;
+            this.icon = null;
+            this.component = null;
+            this.grid_options = {};
+            this.options = {};
+            this.category = 'default';
+        }
     }
 
     /**

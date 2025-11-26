@@ -10,11 +10,25 @@ import { guidFor } from '@ember/object/internals';
  * @extends BaseContract
  * 
  * @example
- * // Simple hook
+ * // Simple hook with chaining
  * new Hook('application:before-model', (session, router) => {
  *   if (session.isCustomer) {
  *     router.transitionTo('customer-portal');
  *   }
+ * })
+ * 
+ * @example
+ * // Full definition object (first-class)
+ * new Hook({
+ *   name: 'application:before-model',
+ *   handler: (session, router) => {
+ *     if (session.isCustomer) {
+ *       router.transitionTo('customer-portal');
+ *     }
+ *   },
+ *   priority: 10,
+ *   once: false,
+ *   id: 'customer-redirect'
  * })
  * 
  * @example
@@ -31,22 +45,36 @@ export default class Hook extends BaseContract {
      * Create a new Hook
      * 
      * @constructor
-     * @param {String} name Hook name (e.g., 'application:before-model')
-     * @param {Function|Object} handlerOrOptions Handler function or options object
+     * @param {String|Object} nameOrDefinition Hook name or full definition object
+     * @param {Function} handlerOrOptions Handler function or options object (only used if first param is string)
      */
-    constructor(name, handlerOrOptions = null) {
-        const options = typeof handlerOrOptions === 'function'
-            ? { handler: handlerOrOptions }
-            : (handlerOrOptions || {});
+    constructor(nameOrDefinition, handlerOrOptions = null) {
+        // Handle full definition object as first-class
+        if (typeof nameOrDefinition === 'object' && nameOrDefinition !== null && nameOrDefinition.name) {
+            const definition = nameOrDefinition;
+            super(definition);
+            
+            this.name = definition.name;
+            this.handler = definition.handler || null;
+            this.priority = definition.priority !== undefined ? definition.priority : 0;
+            this.runOnce = definition.once || false;
+            this.id = definition.id || guidFor(this);
+            this.enabled = definition.enabled !== undefined ? definition.enabled : true;
+        } else {
+            // Handle string name with optional handler (chaining pattern)
+            const options = typeof handlerOrOptions === 'function'
+                ? { handler: handlerOrOptions }
+                : (handlerOrOptions || {});
 
-        super(options);
+            super(options);
 
-        this.name = name;
-        this.handler = options.handler || null;
-        this.priority = options.priority || 0;
-        this.runOnce = options.once || false;
-        this.id = options.id || guidFor(this);
-        this.enabled = options.enabled !== undefined ? options.enabled : true;
+            this.name = nameOrDefinition;
+            this.handler = options.handler || null;
+            this.priority = options.priority || 0;
+            this.runOnce = options.once || false;
+            this.id = options.id || guidFor(this);
+            this.enabled = options.enabled !== undefined ? options.enabled : true;
+        }
     }
 
     /**

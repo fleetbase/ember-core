@@ -11,28 +11,55 @@ import { dasherize } from '@ember/string';
  * @extends BaseContract
  * 
  * @example
+ * // With chaining
  * new MenuPanel('Fleet-Ops Config')
  *   .withSlug('fleet-ops')
  *   .withIcon('truck')
  *   .addItem(new MenuItem('Navigator App').withIcon('location-arrow'))
  *   .addItem(new MenuItem('Avatar Management').withIcon('images'))
+ * 
+ * @example
+ * // Full definition object (first-class)
+ * new MenuPanel({
+ *   title: 'Fleet-Ops Config',
+ *   slug: 'fleet-ops',
+ *   icon: 'truck',
+ *   priority: 5,
+ *   items: [
+ *     { title: 'Navigator App', icon: 'location-arrow' },
+ *     { title: 'Avatar Management', icon: 'images' }
+ *   ]
+ * })
  */
 export default class MenuPanel extends BaseContract {
     /**
      * Create a new MenuPanel
      * 
      * @constructor
-     * @param {String} title The panel title
-     * @param {Array} items Optional array of menu items
+     * @param {String|Object} titleOrDefinition The panel title or full definition object
+     * @param {Array} items Optional array of menu items (only used if first param is string)
      */
-    constructor(title, items = []) {
-        super({ title });
-        
-        this.title = title;
-        this.items = items;
-        this.slug = dasherize(title);
-        this.icon = null;
-        this.priority = 9;
+    constructor(titleOrDefinition, items = []) {
+        // Handle full definition object as first-class
+        if (typeof titleOrDefinition === 'object' && titleOrDefinition !== null && titleOrDefinition.title) {
+            const definition = titleOrDefinition;
+            super(definition);
+            
+            this.title = definition.title;
+            this.items = definition.items || [];
+            this.slug = definition.slug || dasherize(this.title);
+            this.icon = definition.icon || null;
+            this.priority = definition.priority !== undefined ? definition.priority : 9;
+        } else {
+            // Handle string title (chaining pattern)
+            super({ title: titleOrDefinition });
+            
+            this.title = titleOrDefinition;
+            this.items = items;
+            this.slug = dasherize(titleOrDefinition);
+            this.icon = null;
+            this.priority = 9;
+        }
     }
 
     /**

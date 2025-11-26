@@ -2,12 +2,22 @@ import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { A, isArray } from '@ember/array';
 import { getOwner } from '@ember/application';
+import { dasherize } from '@ember/string';
 
 /**
  * RegistryService
  * 
  * Manages all registries in the application using Ember's container system.
  * Provides O(1) lookup performance and follows Ember conventions.
+ * 
+ * Registry names use a custom separator syntax to support hierarchical namespaces
+ * while remaining compatible with Ember's container naming requirements (type:name format).
+ * 
+ * Examples:
+ * - 'menu-item' registry with key 'header--fleet-ops' → 'menu-item:header--fleet-ops'
+ * - 'component--vehicle--details' → 'registry:component--vehicle--details'
+ * 
+ * We use '--' (double dash) as our separator for multi-level namespaces within the name part.
  * 
  * @class RegistryService
  * @extends Service
@@ -42,6 +52,37 @@ export default class RegistryService extends Service {
     }
 
     /**
+     * Normalize a key to be Ember container-safe
+     * Replaces colons with double dashes to avoid conflicts with Ember's type:name format
+     * 
+     * @private
+     * @method _normalizeKey
+     * @param {String} key The key to normalize
+     * @returns {String} Normalized key
+     */
+    _normalizeKey(key) {
+        // Replace colons with double dashes to avoid Ember container conflicts
+        // Also dasherize to ensure valid naming
+        return dasherize(String(key).replace(/:/g, '--'));
+    }
+
+    /**
+     * Build a valid Ember container name
+     * Format: type:name where type is the registry name and name is the normalized key
+     * 
+     * @private
+     * @method _buildContainerName
+     * @param {String} registryName Registry name (becomes the type)
+     * @param {String} key Item key (becomes the name)
+     * @returns {String} Valid Ember container name
+     */
+    _buildContainerName(registryName, key) {
+        const normalizedRegistry = dasherize(registryName);
+        const normalizedKey = this._normalizeKey(key);
+        return `${normalizedRegistry}:${normalizedKey}`;
+    }
+
+    /**
      * Register an item to a registry
      * 
      * @method register
@@ -51,7 +92,7 @@ export default class RegistryService extends Service {
      */
     register(registryName, key, value) {
         const owner = getOwner(this);
-        const fullName = `${registryName}:${key}`;
+        const fullName = this._buildContainerName(registryName, key);
 
         // Register in Ember's container for O(1) lookup
         if (owner && owner.register) {
@@ -87,10 +128,13 @@ export default class RegistryService extends Service {
      */
     lookup(registryName, key) {
         const owner = getOwner(this);
-        const fullName = `${registryName}:${key}`;
+        const fullName = this._buildContainerName(registryName, key);
 
         if (owner && owner.lookup) {
-            return owner.lookup(fullName);
+            const result = owner.lookup(fullName);
+            if (result !== undefined) {
+                return result;
+            }
         }
 
         // Fallback to registry search
@@ -138,7 +182,7 @@ export default class RegistryService extends Service {
      */
     unregister(registryName, key) {
         const owner = getOwner(this);
-        const fullName = `${registryName}:${key}`;
+        const fullName = this._buildContainerName(registryName, key);
 
         if (owner && owner.unregister) {
             owner.unregister(fullName);

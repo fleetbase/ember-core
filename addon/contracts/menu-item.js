@@ -12,10 +12,20 @@ import { dasherize } from '@ember/string';
  * @extends BaseContract
  * 
  * @example
- * // Simple menu item
+ * // Simple menu item with chaining
  * new MenuItem('Fleet-Ops', 'console.fleet-ops')
  *   .withIcon('route')
  *   .withPriority(0)
+ * 
+ * @example
+ * // Full definition object (first-class)
+ * new MenuItem({
+ *   title: 'Fleet-Ops',
+ *   route: 'console.fleet-ops',
+ *   icon: 'route',
+ *   priority: 0,
+ *   component: { engine: '@fleetbase/fleetops-engine', path: 'components/admin/navigator-app' }
+ * })
  * 
  * @example
  * // Menu item with component
@@ -30,24 +40,47 @@ export default class MenuItem extends BaseContract {
      * Create a new MenuItem
      * 
      * @constructor
-     * @param {String} title The menu item title
-     * @param {String} route Optional route name
+     * @param {String|Object} titleOrDefinition The menu item title or full definition object
+     * @param {String} route Optional route name (only used if first param is string)
      */
-    constructor(title, route = null) {
-        super({ title, route });
-        
-        this.title = title;
-        this.route = route;
-        this.icon = 'circle-dot';
-        this.priority = 9;
-        this.component = null;
-        this.slug = dasherize(title);
-        this.index = 0;
-        this.section = null;
-        this.queryParams = {};
-        this.routeParams = [];
-        this.type = 'default';
-        this.wrapperClass = null;
+    constructor(titleOrDefinition, route = null) {
+        // Handle full definition object as first-class
+        if (typeof titleOrDefinition === 'object' && titleOrDefinition !== null) {
+            const definition = titleOrDefinition;
+            super(definition);
+            
+            this.title = definition.title;
+            this.route = definition.route || null;
+            this.icon = definition.icon || 'circle-dot';
+            this.priority = definition.priority !== undefined ? definition.priority : 9;
+            this.component = definition.component || null;
+            this.slug = definition.slug || dasherize(this.title);
+            this.index = definition.index !== undefined ? definition.index : 0;
+            this.section = definition.section || null;
+            this.queryParams = definition.queryParams || {};
+            this.routeParams = definition.routeParams || [];
+            this.type = definition.type || 'default';
+            this.wrapperClass = definition.wrapperClass || null;
+            this.onClick = definition.onClick || null;
+            this.componentParams = definition.componentParams || null;
+            this.renderComponentInPlace = definition.renderComponentInPlace || false;
+        } else {
+            // Handle string title with optional route (chaining pattern)
+            super({ title: titleOrDefinition, route });
+            
+            this.title = titleOrDefinition;
+            this.route = route;
+            this.icon = 'circle-dot';
+            this.priority = 9;
+            this.component = null;
+            this.slug = dasherize(titleOrDefinition);
+            this.index = 0;
+            this.section = null;
+            this.queryParams = {};
+            this.routeParams = [];
+            this.type = 'default';
+            this.wrapperClass = null;
+        }
     }
 
     /**
