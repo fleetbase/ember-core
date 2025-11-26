@@ -1,6 +1,7 @@
 import BaseContract from './base-contract';
 import MenuItem from './menu-item';
 import { dasherize } from '@ember/string';
+import isObject from '../utils/is-object';
 
 /**
  * Represents a menu panel containing multiple menu items
@@ -40,26 +41,33 @@ export default class MenuPanel extends BaseContract {
      * @param {Array} items Optional array of menu items (only used if first param is string)
      */
     constructor(titleOrDefinition, items = []) {
+        // Initialize properties BEFORE calling super to avoid validation errors
+        let initialOptions = {};
+        
         // Handle full definition object as first-class
-        if (typeof titleOrDefinition === 'object' && titleOrDefinition !== null && titleOrDefinition.title) {
+        if (isObject(titleOrDefinition) && titleOrDefinition.title) {
             const definition = titleOrDefinition;
-            super(definition);
             
             this.title = definition.title;
             this.items = definition.items || [];
             this.slug = definition.slug || dasherize(this.title);
             this.icon = definition.icon || null;
             this.priority = definition.priority !== undefined ? definition.priority : 9;
+            
+            initialOptions = { ...definition };
         } else {
             // Handle string title (chaining pattern)
-            super({ title: titleOrDefinition });
-            
             this.title = titleOrDefinition;
             this.items = items;
             this.slug = dasherize(titleOrDefinition);
             this.icon = null;
             this.priority = 9;
+            
+            initialOptions = { title: this.title };
         }
+        
+        // Now call super with all properties set
+        super(initialOptions);
     }
 
     /**

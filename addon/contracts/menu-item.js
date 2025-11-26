@@ -1,6 +1,7 @@
 import BaseContract from './base-contract';
 import ExtensionComponent from './extension-component';
 import { dasherize } from '@ember/string';
+import isObject from '../utils/is-object';
 
 /**
  * Represents a menu item in the application
@@ -44,10 +45,12 @@ export default class MenuItem extends BaseContract {
      * @param {String} route Optional route name (only used if first param is string)
      */
     constructor(titleOrDefinition, route = null) {
+        // Initialize properties BEFORE calling super to avoid validation errors
+        let initialOptions = {};
+        
         // Handle full definition object as first-class
-        if (typeof titleOrDefinition === 'object' && titleOrDefinition !== null) {
+        if (isObject(titleOrDefinition)) {
             const definition = titleOrDefinition;
-            super(definition);
             
             this.title = definition.title;
             this.route = definition.route || null;
@@ -64,10 +67,10 @@ export default class MenuItem extends BaseContract {
             this.onClick = definition.onClick || null;
             this.componentParams = definition.componentParams || null;
             this.renderComponentInPlace = definition.renderComponentInPlace || false;
+            
+            initialOptions = { ...definition };
         } else {
             // Handle string title with optional route (chaining pattern)
-            super({ title: titleOrDefinition, route });
-            
             this.title = titleOrDefinition;
             this.route = route;
             this.icon = 'circle-dot';
@@ -80,7 +83,15 @@ export default class MenuItem extends BaseContract {
             this.routeParams = [];
             this.type = 'default';
             this.wrapperClass = null;
+            this.onClick = null;
+            this.componentParams = null;
+            this.renderComponentInPlace = false;
+            
+            initialOptions = { title: this.title, route: this.route };
         }
+        
+        // Now call super with all properties set
+        super(initialOptions);
     }
 
     /**

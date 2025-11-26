@@ -1,5 +1,6 @@
 import BaseContract from './base-contract';
 import ExtensionComponent from './extension-component';
+import isObject from '../utils/is-object';
 
 /**
  * Represents a dashboard widget
@@ -49,11 +50,14 @@ export default class Widget extends BaseContract {
      * @param {String|Object} idOrDefinition Unique widget identifier or full definition object
      */
     constructor(idOrDefinition) {
+        // Initialize properties BEFORE calling super to avoid validation errors
+        let initialOptions = {};
+        
         // Handle full definition object as first-class
-        if (typeof idOrDefinition === 'object' && idOrDefinition !== null) {
+        if (isObject(idOrDefinition)) {
             const definition = idOrDefinition;
-            super(definition);
             
+            // Set all properties
             this.id = definition.id;
             this.name = definition.name || null;
             this.description = definition.description || null;
@@ -65,7 +69,7 @@ export default class Widget extends BaseContract {
             // Handle component - support both string and ExtensionComponent
             if (definition.component instanceof ExtensionComponent) {
                 this.component = definition.component.toObject();
-            } else if (typeof definition.component === 'object' && definition.component !== null) {
+            } else if (isObject(definition.component)) {
                 // Plain object component definition
                 this.component = definition.component;
             } else {
@@ -73,14 +77,24 @@ export default class Widget extends BaseContract {
                 this.component = definition.component || null;
             }
             
-            // Store default flag
+            // Build initial options with all properties
+            initialOptions = {
+                id: this.id,
+                name: this.name,
+                description: this.description,
+                icon: this.icon,
+                component: this.component,
+                grid_options: this.grid_options,
+                options: this.options,
+                category: this.category
+            };
+            
+            // Store default flag if present
             if (definition.default) {
-                this._options.default = true;
+                initialOptions.default = true;
             }
         } else {
             // Handle string id (chaining pattern)
-            super({ id: idOrDefinition });
-            
             this.id = idOrDefinition;
             this.name = null;
             this.description = null;
@@ -89,7 +103,12 @@ export default class Widget extends BaseContract {
             this.grid_options = {};
             this.options = {};
             this.category = 'default';
+            
+            initialOptions = { id: this.id };
         }
+        
+        // Now call super with all properties set
+        super(initialOptions);
     }
 
     /**

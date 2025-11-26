@@ -1,5 +1,6 @@
 import BaseContract from './base-contract';
 import { guidFor } from '@ember/object/internals';
+import isObject from '../utils/is-object';
 
 /**
  * Represents a lifecycle or application hook
@@ -49,10 +50,12 @@ export default class Hook extends BaseContract {
      * @param {Function} handlerOrOptions Handler function or options object (only used if first param is string)
      */
     constructor(nameOrDefinition, handlerOrOptions = null) {
+        // Initialize properties BEFORE calling super to avoid validation errors
+        let initialOptions = {};
+        
         // Handle full definition object as first-class
-        if (typeof nameOrDefinition === 'object' && nameOrDefinition !== null && nameOrDefinition.name) {
+        if (isObject(nameOrDefinition) && nameOrDefinition.name) {
             const definition = nameOrDefinition;
-            super(definition);
             
             this.name = definition.name;
             this.handler = definition.handler || null;
@@ -60,13 +63,13 @@ export default class Hook extends BaseContract {
             this.runOnce = definition.once || false;
             this.id = definition.id || guidFor(this);
             this.enabled = definition.enabled !== undefined ? definition.enabled : true;
+            
+            initialOptions = { ...definition };
         } else {
             // Handle string name with optional handler (chaining pattern)
             const options = typeof handlerOrOptions === 'function'
                 ? { handler: handlerOrOptions }
                 : (handlerOrOptions || {});
-
-            super(options);
 
             this.name = nameOrDefinition;
             this.handler = options.handler || null;
@@ -74,7 +77,12 @@ export default class Hook extends BaseContract {
             this.runOnce = options.once || false;
             this.id = options.id || guidFor(this);
             this.enabled = options.enabled !== undefined ? options.enabled : true;
+            
+            initialOptions = { name: this.name, ...options };
         }
+        
+        // Now call super with all properties set
+        super(initialOptions);
     }
 
     /**
