@@ -107,17 +107,25 @@ export default class WidgetService extends Service {
      * @param {Array<Widget>} widgets Array of widget instances or objects
      */
     registerDefaultWidgets(dashboardName, widgets) {
+        console.log('[WidgetService] registerDefaultWidgets called:', { dashboardName, widgets });
+        
         if (!isArray(widgets)) {
             widgets = [widgets];
         }
 
         widgets.forEach(widget => {
             const normalized = this.#normalizeWidget(widget);
+            console.log('[WidgetService] Normalized widget:', normalized);
+            console.log('[WidgetService] Registering with key:', `default#${dashboardName}#${normalized.id}`);
             
             // Register to default widgets registry for this dashboard
             // Format: widget:default#dashboardName#widgetId
             this.registryService.register('widget', `default#${dashboardName}#${normalized.id}`, normalized);
         });
+        
+        console.log('[WidgetService] Registration complete. Checking registry...');
+        const registry = this.registryService.getRegistry('widget');
+        console.log('[WidgetService] Widget registry after registration:', registry);
     }
 
     /**
@@ -151,17 +159,30 @@ export default class WidgetService extends Service {
      * @returns {Array} Default widgets for the dashboard
      */
     getDefaultWidgets(dashboardName) {
+        console.log('[WidgetService] getDefaultWidgets called for:', dashboardName);
+        
         if (!dashboardName) {
+            console.log('[WidgetService] No dashboardName provided, returning empty array');
             return [];
         }
         
         // Get all default widgets for this dashboard
         const registry = this.registryService.getRegistry('widget');
-        const prefix = `default#${dashboardName}#`;
+        console.log('[WidgetService] Full widget registry:', registry);
         
-        return Object.keys(registry)
-            .filter(key => key.startsWith(prefix))
-            .map(key => registry[key]);
+        const prefix = `default#${dashboardName}#`;
+        console.log('[WidgetService] Looking for keys with prefix:', prefix);
+        
+        const keys = Object.keys(registry);
+        console.log('[WidgetService] All registry keys:', keys);
+        
+        const matchingKeys = keys.filter(key => key.startsWith(prefix));
+        console.log('[WidgetService] Matching keys:', matchingKeys);
+        
+        const widgets = matchingKeys.map(key => registry[key]);
+        console.log('[WidgetService] Returning widgets:', widgets);
+        
+        return widgets;
     }
 
     /**
