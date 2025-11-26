@@ -116,10 +116,15 @@ export default class WidgetService extends Service {
         widgets.forEach(widget => {
             const normalized = this.#normalizeWidget(widget);
             console.log('[WidgetService] Normalized widget:', normalized);
-            console.log('[WidgetService] Registering with key:', `default#${dashboardName}#${normalized.id}`);
             
-            // Register to default widgets registry for this dashboard
-            // Format: widget:default#dashboardName#widgetId
+            // Mark this widget as a default widget for this dashboard
+            normalized._defaultDashboard = dashboardName;
+            normalized._isDefault = true;
+            
+            console.log('[WidgetService] Registering default widget:', normalized);
+            
+            // Register to widgets registry
+            // The registry service will add it to the array if it doesn't exist
             this.registryService.register('widget', `default#${dashboardName}#${normalized.id}`, normalized);
         });
         
@@ -166,23 +171,22 @@ export default class WidgetService extends Service {
             return [];
         }
         
-        // Get all default widgets for this dashboard
+        // Get all widgets from registry (this is an array, not a key-value object)
         const registry = this.registryService.getRegistry('widget');
-        console.log('[WidgetService] Full widget registry:', registry);
+        console.log('[WidgetService] Full widget registry array:', registry);
         
-        const prefix = `default#${dashboardName}#`;
-        console.log('[WidgetService] Looking for keys with prefix:', prefix);
+        // Filter widgets that have the _defaultDashboard property matching our dashboard
+        const defaultWidgets = registry.filter(widget => {
+            if (!widget || typeof widget !== 'object') return false;
+            
+            // Check if this widget is marked as default for this dashboard
+            // We need to track this during registration
+            return widget._defaultDashboard === dashboardName;
+        });
         
-        const keys = Object.keys(registry);
-        console.log('[WidgetService] All registry keys:', keys);
+        console.log('[WidgetService] Filtered default widgets:', defaultWidgets);
         
-        const matchingKeys = keys.filter(key => key.startsWith(prefix));
-        console.log('[WidgetService] Matching keys:', matchingKeys);
-        
-        const widgets = matchingKeys.map(key => registry[key]);
-        console.log('[WidgetService] Returning widgets:', widgets);
-        
-        return widgets;
+        return defaultWidgets;
     }
 
     /**
