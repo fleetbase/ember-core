@@ -14,10 +14,10 @@ import { dasherize } from '@ember/string';
  * while remaining compatible with Ember's container naming requirements (type:name format).
  * 
  * Examples:
- * - 'menu-item' registry with key 'header--fleet-ops' → 'menu-item:header--fleet-ops'
- * - 'component--vehicle--details' → 'registry:component--vehicle--details'
+ * - 'menu-item' registry with key 'header:fleet-ops' → 'menu-item:header#fleet-ops'
+ * - 'component:vehicle:details' → 'registry:component#vehicle#details'
  * 
- * We use '--' (double dash) as our separator for multi-level namespaces within the name part.
+ * We use '#' (hash) as our separator for multi-level namespaces within the name part.
  * 
  * @class RegistryService
  * @extends Service
@@ -53,7 +53,7 @@ export default class RegistryService extends Service {
 
     /**
      * Normalize a key to be Ember container-safe
-     * Replaces colons with double dashes to avoid conflicts with Ember's type:name format
+     * Replaces colons with hash to avoid conflicts with Ember's type:name format
      * 
      * @private
      * @method _normalizeKey
@@ -61,9 +61,9 @@ export default class RegistryService extends Service {
      * @returns {String} Normalized key
      */
     _normalizeKey(key) {
-        // Replace colons with double dashes to avoid Ember container conflicts
+        // Replace colons with hash to avoid Ember container conflicts
         // Also dasherize to ensure valid naming
-        return dasherize(String(key).replace(/:/g, '--'));
+        return dasherize(String(key).replace(/:/g, '#'));
     }
 
     /**
