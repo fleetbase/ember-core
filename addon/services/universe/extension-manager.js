@@ -17,6 +17,8 @@ export default class ExtensionManagerService extends Service {
     @tracked loadedEngines = new Map();
     @tracked registeredExtensions = A([]);
     @tracked loadingPromises = new Map();
+    @tracked isBooting = true;
+    @tracked bootPromise = null;
 
     /**
      * Ensure an engine is loaded
@@ -187,6 +189,53 @@ export default class ExtensionManagerService extends Service {
     }
 
     /**
+     * Mark the boot process as complete
+     * Called by the Universe service after all extensions are initialized
+     * 
+     * @method finishBoot
+     */
+    finishBoot() {
+        this.isBooting = false;
+        
+        // Resolve the boot promise if it exists
+        if (this.bootPromise) {
+            this.bootPromise.resolve();
+            this.bootPromise = null;
+        }
+    }
+
+    /**
+     * Wait for the boot process to complete
+     * Returns immediately if already booted
+     * 
+     * @method waitForBoot
+     * @returns {Promise} Promise that resolves when boot is complete
+     */
+    waitForBoot() {
+        // If not booting, return resolved promise
+        if (!this.isBooting) {
+            return Promise.resolve();
+        }
+
+        // If boot promise doesn't exist, create it
+        if (!this.bootPromise) {
+            let resolve, reject;
+            const promise = new Promise((res, rej) => {
+                resolve = res;
+                reject = rej;
+            });
+            
+            this.bootPromise = {
+                promise,
+                resolve,
+                reject
+            };
+        }
+
+        return this.bootPromise.promise;
+    }
+
+    /**
      * Get loading statistics
      * 
      * @method getStats
@@ -194,6 +243,7 @@ export default class ExtensionManagerService extends Service {
      */
     getStats() {
         return {
+            isBooting: this.isBooting,
             loadedCount: this.loadedEngines.size,
             loadingCount: this.loadingPromises.size,
             registeredCount: this.registeredExtensions.length,

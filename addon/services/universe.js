@@ -390,6 +390,9 @@ export default class UniverseService extends Service.extend(Evented) {
                 console.error('Error executing boot callback:', error);
             }
         }
+        
+        // Mark boot as complete
+        this.extensionManager.finishBoot();
     }
 
     // ============================================================================

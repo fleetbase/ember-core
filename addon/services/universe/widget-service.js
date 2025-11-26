@@ -126,6 +126,72 @@ export default class WidgetService extends Service {
     }
 
     /**
+     * Get widgets for a specific dashboard or category
+     * 
+     * @method getWidgets
+     * @param {String} category Optional category (e.g., 'dashboard')
+     * @returns {Array} Widgets for the category
+     */
+    getWidgets(category = null) {
+        if (!category) {
+            return this.widgets;
+        }
+        
+        // For 'dashboard' category, return all widgets
+        if (category === 'dashboard') {
+            return this.widgets;
+        }
+        
+        // Filter widgets by category
+        return this.widgets.filter(w => w.category === category);
+    }
+
+    /**
+     * Get registry for a specific dashboard
+     * Used by dashboard models to get their widget registry
+     * 
+     * @method getRegistry
+     * @param {String} dashboardId Dashboard ID
+     * @returns {Array} Widget registry for the dashboard
+     */
+    getRegistry(dashboardId) {
+        // Return the widget registry for this dashboard
+        // This is used by the Dashboard model's getRegistry method
+        return this.registryService.getRegistry(`widget#${dashboardId}`);
+    }
+
+    /**
+     * Register default widgets
+     * Alias for registerDefaultDashboardWidgets
+     * 
+     * @method registerDefaultWidgets
+     * @param {Array<Widget>} widgets Array of widget instances
+     */
+    registerDefaultWidgets(widgets) {
+        return this.registerDefaultDashboardWidgets(widgets);
+    }
+
+    /**
+     * Register widgets to a specific category
+     * 
+     * @method registerWidgets
+     * @param {String} category Category name
+     * @param {Array<Widget>} widgets Array of widget instances
+     */
+    registerWidgets(category, widgets) {
+        if (!isArray(widgets)) {
+            widgets = [widgets];
+        }
+
+        widgets.forEach(widget => {
+            const normalized = this._normalizeWidget(widget);
+            normalized.category = category;
+            this.widgets.pushObject(normalized);
+            this.registryService.register('widget', `${category}#${normalized.widgetId}`, normalized);
+        });
+    }
+
+    /**
      * Normalize a widget input to a plain object
      * 
      * @private
