@@ -3,6 +3,7 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { A, isArray } from '@ember/array';
 import Widget from '../../contracts/widget';
+import isObject from '../../utils/is-object';
 
 /**
  * WidgetService
@@ -188,6 +189,21 @@ export default class WidgetService extends Service {
     _normalizeWidget(input) {
         if (input instanceof Widget) {
             return input.toObject();
+        }
+
+        // Handle plain objects - ensure id property exists
+        if (isObject(input)) {
+            // Support both id and widgetId for backward compatibility
+            const id = input.id || input.widgetId;
+            
+            if (!id) {
+                console.warn('[WidgetService] Widget definition is missing id or widgetId:', input);
+            }
+            
+            return {
+                ...input,
+                id  // Ensure id property is set
+            };
         }
 
         return input;

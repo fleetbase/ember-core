@@ -57,7 +57,8 @@ export default class Widget extends BaseContract {
         if (isObject(idOrDefinition)) {
             const definition = idOrDefinition;
             
-            this.id = definition.id;
+            // Support both id and widgetId for backward compatibility
+            this.id = definition.id || definition.widgetId;
             this.name = definition.name || null;
             this.description = definition.description || null;
             this.icon = definition.icon || null;
