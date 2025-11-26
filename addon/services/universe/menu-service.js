@@ -23,6 +23,81 @@ export default class MenuService extends Service {
     @tracked userMenuItems = A([]);
 
     /**
+     * Normalize a menu item input to a plain object
+     * 
+     * @private
+     * @method #normalizeMenuItem
+     * @param {MenuItem|String|Object} input MenuItem instance, title, or object
+     * @param {String} route Optional route
+     * @param {Object} options Optional options
+     * @returns {Object} Normalized menu item object
+     */
+    #normalizeMenuItem(input, route = null, options = {}) {
+        if (input instanceof MenuItem) {
+            return input.toObject();
+        }
+
+        if (typeof input === 'object' && input !== null && !input.title) {
+            return input;
+        }
+
+        if (typeof input === 'string') {
+            const menuItem = new MenuItem(input, route);
+            
+            // Apply options
+            Object.keys(options).forEach(key => {
+                if (key === 'icon') menuItem.withIcon(options[key]);
+                else if (key === 'priority') menuItem.withPriority(options[key]);
+                else if (key === 'component') menuItem.withComponent(options[key]);
+                else if (key === 'slug') menuItem.withSlug(options[key]);
+                else if (key === 'section') menuItem.inSection(options[key]);
+                else if (key === 'index') menuItem.atIndex(options[key]);
+                else if (key === 'type') menuItem.withType(options[key]);
+                else if (key === 'wrapperClass') menuItem.withWrapperClass(options[key]);
+                else if (key === 'queryParams') menuItem.withQueryParams(options[key]);
+                else if (key === 'onClick') menuItem.onClick(options[key]);
+                else menuItem.setOption(key, options[key]);
+            });
+
+            return menuItem.toObject();
+        }
+
+        return input;
+    }
+
+    /**
+     * Normalize a menu panel input to a plain object
+     * 
+     * @private
+     * @method #normalizeMenuPanel
+     * @param {MenuPanel|String|Object} input MenuPanel instance, title, or object
+     * @param {Array} items Optional items
+     * @param {Object} options Optional options
+     * @returns {Object} Normalized menu panel object
+     */
+    #normalizeMenuPanel(input, items = [], options = {}) {
+        if (input instanceof MenuPanel) {
+            return input.toObject();
+        }
+
+        if (typeof input === 'object' && input !== null && !input.title) {
+            return input;
+        }
+
+        if (typeof input === 'string') {
+            const panel = new MenuPanel(input, items);
+            
+            if (options.slug) panel.withSlug(options.slug);
+            if (options.icon) panel.withIcon(options.icon);
+            if (options.priority) panel.withPriority(options.priority);
+
+            return panel.toObject();
+        }
+
+        return input;
+    }
+
+    /**
      * Register a header menu item
      * 
      * @method registerHeaderMenuItem
@@ -31,7 +106,7 @@ export default class MenuService extends Service {
      * @param {Object} options Optional options (if first param is string)
      */
     registerHeaderMenuItem(menuItemOrTitle, route = null, options = {}) {
-        const menuItem = this._normalizeMenuItem(menuItemOrTitle, route, options);
+        const menuItem = this.#normalizeMenuItem(menuItemOrTitle, route, options);
         
         this.headerMenuItems.pushObject(menuItem);
         this.headerMenuItems = this.headerMenuItems.sortBy('priority');
@@ -48,7 +123,7 @@ export default class MenuService extends Service {
      * @param {Object} options Optional options
      */
     registerOrganizationMenuItem(menuItemOrTitle, options = {}) {
-        const menuItem = this._normalizeMenuItem(
+        const menuItem = this.#normalizeMenuItem(
             menuItemOrTitle,
             options.route || 'console.virtual',
             options
@@ -71,7 +146,7 @@ export default class MenuService extends Service {
      * @param {Object} options Optional options
      */
     registerUserMenuItem(menuItemOrTitle, options = {}) {
-        const menuItem = this._normalizeMenuItem(
+        const menuItem = this.#normalizeMenuItem(
             menuItemOrTitle,
             options.route || 'console.virtual',
             options
@@ -95,7 +170,7 @@ export default class MenuService extends Service {
      * @param {Object} options Optional options (if first param is string)
      */
     registerAdminMenuPanel(panelOrTitle, items = [], options = {}) {
-        const panel = this._normalizeMenuPanel(panelOrTitle, items, options);
+        const panel = this.#normalizeMenuPanel(panelOrTitle, items, options);
         
         this.registryService.register('admin-panel', panel.slug, panel);
     }
@@ -108,7 +183,7 @@ export default class MenuService extends Service {
      * @param {Object} options Optional options
      */
     registerSettingsMenuItem(menuItemOrTitle, options = {}) {
-        const menuItem = this._normalizeMenuItem(
+        const menuItem = this.#normalizeMenuItem(
             menuItemOrTitle,
             options.route || 'console.settings.virtual',
             options
@@ -131,7 +206,7 @@ export default class MenuService extends Service {
         const route = isOptionsObject ? routeOrOptions.route : routeOrOptions;
         const opts = isOptionsObject ? routeOrOptions : options;
 
-        const menuItem = this._normalizeMenuItem(menuItemOrTitle, route, opts);
+        const menuItem = this.#normalizeMenuItem(menuItemOrTitle, route, opts);
         
         this.registryService.register(registryName, menuItem.slug || menuItem.title, menuItem);
     }
@@ -186,78 +261,5 @@ export default class MenuService extends Service {
         return this.registryService.getRegistry('settings-menu-item');
     }
 
-    /**
-     * Normalize a menu item input to a plain object
-     * 
-     * @private
-     * @method _normalizeMenuItem
-     * @param {MenuItem|String|Object} input MenuItem instance, title, or object
-     * @param {String} route Optional route
-     * @param {Object} options Optional options
-     * @returns {Object} Normalized menu item object
-     */
-    _normalizeMenuItem(input, route = null, options = {}) {
-        if (input instanceof MenuItem) {
-            return input.toObject();
-        }
 
-        if (typeof input === 'object' && input !== null && !input.title) {
-            return input;
-        }
-
-        if (typeof input === 'string') {
-            const menuItem = new MenuItem(input, route);
-            
-            // Apply options
-            Object.keys(options).forEach(key => {
-                if (key === 'icon') menuItem.withIcon(options[key]);
-                else if (key === 'priority') menuItem.withPriority(options[key]);
-                else if (key === 'component') menuItem.withComponent(options[key]);
-                else if (key === 'slug') menuItem.withSlug(options[key]);
-                else if (key === 'section') menuItem.inSection(options[key]);
-                else if (key === 'index') menuItem.atIndex(options[key]);
-                else if (key === 'type') menuItem.withType(options[key]);
-                else if (key === 'wrapperClass') menuItem.withWrapperClass(options[key]);
-                else if (key === 'queryParams') menuItem.withQueryParams(options[key]);
-                else if (key === 'onClick') menuItem.onClick(options[key]);
-                else menuItem.setOption(key, options[key]);
-            });
-
-            return menuItem.toObject();
-        }
-
-        return input;
-    }
-
-    /**
-     * Normalize a menu panel input to a plain object
-     * 
-     * @private
-     * @method _normalizeMenuPanel
-     * @param {MenuPanel|String|Object} input MenuPanel instance, title, or object
-     * @param {Array} items Optional items
-     * @param {Object} options Optional options
-     * @returns {Object} Normalized menu panel object
-     */
-    _normalizeMenuPanel(input, items = [], options = {}) {
-        if (input instanceof MenuPanel) {
-            return input.toObject();
-        }
-
-        if (typeof input === 'object' && input !== null && !input.title) {
-            return input;
-        }
-
-        if (typeof input === 'string') {
-            const panel = new MenuPanel(input, items);
-            
-            if (options.slug) panel.withSlug(options.slug);
-            if (options.icon) panel.withIcon(options.icon);
-            if (options.priority) panel.withPriority(options.priority);
-
-            return panel.toObject();
-        }
-
-        return input;
-    }
 }

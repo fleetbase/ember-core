@@ -15,6 +15,49 @@ export default class HookService extends Service {
     @tracked hooks = {};
 
     /**
+     * Find a specific hook
+     * 
+     * @private
+     * @method #findHook
+     * @param {String} hookName Hook name
+     * @param {String} hookId Hook ID
+     * @returns {Object|null} Hook or null
+     */
+    #findHook(hookName, hookId) {
+        const hookList = this.hooks[hookName] || [];
+        return hookList.find(h => h.id === hookId) || null;
+    }
+
+    /**
+     * Normalize a hook input to a plain object
+     * 
+     * @private
+     * @method #normalizeHook
+     * @param {Hook|String} input Hook instance or hook name
+     * @param {Function} handler Optional handler
+     * @param {Object} options Optional options
+     * @returns {Object} Normalized hook object
+     */
+    #normalizeHook(input, handler = null, options = {}) {
+        if (input instanceof Hook) {
+            return input.toObject();
+        }
+
+        if (typeof input === 'string') {
+            const hook = new Hook(input, handler);
+            
+            if (options.priority !== undefined) hook.withPriority(options.priority);
+            if (options.once) hook.once();
+            if (options.id) hook.withId(options.id);
+            if (options.enabled !== undefined) hook.setEnabled(options.enabled);
+
+            return hook.toObject();
+        }
+
+        return input;
+    }
+
+    /**
      * Register a hook
      * 
      * @method registerHook
@@ -23,7 +66,7 @@ export default class HookService extends Service {
      * @param {Object} options Optional options
      */
     registerHook(hookOrName, handler = null, options = {}) {
-        const hook = this._normalizeHook(hookOrName, handler, options);
+        const hook = this.#normalizeHook(hookOrName, handler, options);
 
         if (!this.hooks[hook.name]) {
             this.hooks[hook.name] = [];
@@ -159,7 +202,7 @@ export default class HookService extends Service {
      * @param {String} hookId Hook ID
      */
     enableHook(hookName, hookId) {
-        const hook = this._findHook(hookName, hookId);
+        const hook = this.#findHook(hookName, hookId);
         if (hook) {
             hook.enabled = true;
         }
@@ -173,52 +216,11 @@ export default class HookService extends Service {
      * @param {String} hookId Hook ID
      */
     disableHook(hookName, hookId) {
-        const hook = this._findHook(hookName, hookId);
+        const hook = this.#findHook(hookName, hookId);
         if (hook) {
             hook.enabled = false;
         }
     }
 
-    /**
-     * Find a specific hook
-     * 
-     * @private
-     * @method _findHook
-     * @param {String} hookName Hook name
-     * @param {String} hookId Hook ID
-     * @returns {Object|null} Hook or null
-     */
-    _findHook(hookName, hookId) {
-        const hookList = this.hooks[hookName] || [];
-        return hookList.find(h => h.id === hookId) || null;
-    }
 
-    /**
-     * Normalize a hook input to a plain object
-     * 
-     * @private
-     * @method _normalizeHook
-     * @param {Hook|String} input Hook instance or hook name
-     * @param {Function} handler Optional handler
-     * @param {Object} options Optional options
-     * @returns {Object} Normalized hook object
-     */
-    _normalizeHook(input, handler = null, options = {}) {
-        if (input instanceof Hook) {
-            return input.toObject();
-        }
-
-        if (typeof input === 'string') {
-            const hook = new Hook(input, handler);
-            
-            if (options.priority !== undefined) hook.withPriority(options.priority);
-            if (options.once) hook.once();
-            if (options.id) hook.withId(options.id);
-            if (options.enabled !== undefined) hook.setEnabled(options.enabled);
-
-            return hook.toObject();
-        }
-
-        return input;
-    }
 }

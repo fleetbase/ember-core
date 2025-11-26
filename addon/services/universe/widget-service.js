@@ -23,6 +23,37 @@ export default class WidgetService extends Service {
     @tracked dashboards = A([]);
 
     /**
+     * Normalize a widget input to a plain object
+     * 
+     * @private
+     * @method #normalizeWidget
+     * @param {Widget|Object} input Widget instance or object
+     * @returns {Object} Normalized widget object
+     */
+    #normalizeWidget(input) {
+        if (input instanceof Widget) {
+            return input.toObject();
+        }
+
+        // Handle plain objects - ensure id property exists
+        if (isObject(input)) {
+            // Support both id and widgetId for backward compatibility
+            const id = input.id || input.widgetId;
+            
+            if (!id) {
+                console.warn('[WidgetService] Widget definition is missing id or widgetId:', input);
+            }
+            
+            return {
+                ...input,
+                id  // Ensure id property is set
+            };
+        }
+
+        return input;
+    }
+
+    /**
      * Register a dashboard
      * 
      * @method registerDashboard
@@ -54,7 +85,7 @@ export default class WidgetService extends Service {
         }
 
         widgets.forEach(widget => {
-            const normalized = this._normalizeWidget(widget);
+            const normalized = this.#normalizeWidget(widget);
             
             // Register widget to dashboard-specific registry
             // Format: widget:dashboardName#widgetId
@@ -81,7 +112,7 @@ export default class WidgetService extends Service {
         }
 
         widgets.forEach(widget => {
-            const normalized = this._normalizeWidget(widget);
+            const normalized = this.#normalizeWidget(widget);
             
             // Register to default widgets registry for this dashboard
             // Format: widget:default#dashboardName#widgetId
@@ -178,36 +209,7 @@ export default class WidgetService extends Service {
         return this.getWidgets(dashboardId);
     }
 
-    /**
-     * Normalize a widget input to a plain object
-     * 
-     * @private
-     * @method _normalizeWidget
-     * @param {Widget|Object} input Widget instance or object
-     * @returns {Object} Normalized widget object
-     */
-    _normalizeWidget(input) {
-        if (input instanceof Widget) {
-            return input.toObject();
-        }
 
-        // Handle plain objects - ensure id property exists
-        if (isObject(input)) {
-            // Support both id and widgetId for backward compatibility
-            const id = input.id || input.widgetId;
-            
-            if (!id) {
-                console.warn('[WidgetService] Widget definition is missing id or widgetId:', input);
-            }
-            
-            return {
-                ...input,
-                id  // Ensure id property is set
-            };
-        }
-
-        return input;
-    }
 
     // ============================================================================
     // DEPRECATED METHODS (for backward compatibility)
