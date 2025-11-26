@@ -3,6 +3,8 @@ import { tracked } from '@glimmer/tracking';
 import { A } from '@ember/array';
 import { getOwner } from '@ember/application';
 import { assert } from '@ember/debug';
+import loadExtensions from '@fleetbase/ember-core/utils/load-extensions';
+import mapEngines from '@fleetbase/ember-core/utils/map-engines';
 
 /**
  * ExtensionManagerService
@@ -285,13 +287,10 @@ export default class ExtensionManagerService extends Service {
      * @returns {Promise<Array>} Array of loaded extension names
      */
     async loadExtensions(application) {
-        const loadExtensionsUtil = require('@fleetbase/ember-core/utils/load-extensions').default;
-        const mapEngines = require('@fleetbase/ember-core/utils/map-engines').default;
-
         console.log('[ExtensionManager] Loading extensions from API...');
         
         try {
-            const extensions = await loadExtensionsUtil();
+            const extensions = await loadExtensions();
             application.extensions = extensions;
             application.engines = mapEngines(extensions);
             console.log('[ExtensionManager] Loaded extensions:', extensions);
