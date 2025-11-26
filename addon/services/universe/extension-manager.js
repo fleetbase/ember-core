@@ -333,7 +333,10 @@ export default class ExtensionManagerService extends Service {
         console.log('[ExtensionManager] Setting up extensions:', extensions);
 
         // Load and execute extension.js from each enabled extension
-        for (const extensionName of extensions) {
+        for (const extension of extensions) {
+            // Extension is an object with name, version, etc. from package.json
+            const extensionName = extension.name || extension;
+            
             try {
                 // Dynamically require the extension.js file
                 const setupExtension = require(`${extensionName}/extension`).default;
