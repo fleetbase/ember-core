@@ -23,12 +23,21 @@ import ExtensionComponent from './extension-component';
  * @example
  * // Full definition object (first-class)
  * new Widget({
- *   widgetId: 'fleet-ops-metrics',
+ *   id: 'fleet-ops-metrics',
  *   name: 'Fleet-Ops Metrics',
  *   description: 'Key metrics from Fleet-Ops',
  *   icon: 'truck',
- *   component: { engine: '@fleetbase/fleetops-engine', path: 'components/widget/metrics' },
+ *   component: new ExtensionComponent('@fleetbase/fleetops-engine', 'components/widget/metrics'),
  *   grid_options: { w: 12, h: 12, minW: 8, minH: 12 },
+ *   default: true
+ * })
+ * 
+ * @example
+ * // Full definition with string component (local)
+ * new Widget({
+ *   id: 'welcome',
+ *   name: 'Welcome',
+ *   component: 'widget/welcome',
  *   default: true
  * })
  */
@@ -37,31 +46,42 @@ export default class Widget extends BaseContract {
      * Create a new Widget
      * 
      * @constructor
-     * @param {String|Object} widgetIdOrDefinition Unique widget identifier or full definition object
+     * @param {String|Object} idOrDefinition Unique widget identifier or full definition object
      */
-    constructor(widgetIdOrDefinition) {
+    constructor(idOrDefinition) {
         // Handle full definition object as first-class
-        if (typeof widgetIdOrDefinition === 'object' && widgetIdOrDefinition !== null) {
-            const definition = widgetIdOrDefinition;
+        if (typeof idOrDefinition === 'object' && idOrDefinition !== null) {
+            const definition = idOrDefinition;
             super(definition);
             
-            this.widgetId = definition.widgetId;
+            this.id = definition.id;
             this.name = definition.name || null;
             this.description = definition.description || null;
             this.icon = definition.icon || null;
-            this.component = definition.component || null;
             this.grid_options = definition.grid_options || {};
             this.options = definition.options || {};
             this.category = definition.category || 'default';
             
+            // Handle component - support both string and ExtensionComponent
+            if (definition.component instanceof ExtensionComponent) {
+                this.component = definition.component.toObject();
+            } else if (typeof definition.component === 'object' && definition.component !== null) {
+                // Plain object component definition
+                this.component = definition.component;
+            } else {
+                // String component path
+                this.component = definition.component || null;
+            }
+            
+            // Store default flag
             if (definition.default) {
                 this._options.default = true;
             }
         } else {
-            // Handle string widgetId (chaining pattern)
-            super({ widgetId: widgetIdOrDefinition });
+            // Handle string id (chaining pattern)
+            super({ id: idOrDefinition });
             
-            this.widgetId = widgetIdOrDefinition;
+            this.id = idOrDefinition;
             this.name = null;
             this.description = null;
             this.icon = null;
@@ -76,11 +96,11 @@ export default class Widget extends BaseContract {
      * Validate the widget
      * 
      * @method validate
-     * @throws {Error} If widgetId is missing
+     * @throws {Error} If id is missing
      */
     validate() {
-        if (!this.widgetId) {
-            throw new Error('Widget requires a widgetId');
+        if (!this.id) {
+            throw new Error('Widget requires an id');
         }
     }
 
@@ -125,9 +145,10 @@ export default class Widget extends BaseContract {
 
     /**
      * Set the widget component
+     * Supports both string paths and ExtensionComponent instances
      * 
      * @method withComponent
-     * @param {ExtensionComponent|Object} component Component definition
+     * @param {String|ExtensionComponent|Object} component Component definition
      * @returns {Widget} This instance for chaining
      */
     withComponent(component) {
@@ -192,6 +213,16 @@ export default class Widget extends BaseContract {
     }
 
     /**
+     * Check if this widget is marked as default
+     * 
+     * @method isDefault
+     * @returns {Boolean} True if widget is a default widget
+     */
+    isDefault() {
+        return this._options.default === true;
+    }
+
+    /**
      * Set the widget title
      * 
      * @method withTitle
@@ -231,7 +262,7 @@ export default class Widget extends BaseContract {
      */
     toObject() {
         return {
-            widgetId: this.widgetId,
+            id: this.id,
             name: this.name,
             description: this.description,
             icon: this.icon,
