@@ -87,16 +87,7 @@ export default class MenuItem extends BaseContract {
         }
         
         // Call setup() to trigger validation after properties are set
-        this.setup();
-    }
-
-    /**
-     * Setup method - validates after properties are set
-     * 
-     * @method setup
-     */
-    setup() {
-        super.setup();  // Calls validate()
+        super.setup();
     }
 
     /**
