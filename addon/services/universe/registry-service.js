@@ -10,20 +10,48 @@ import { dasherize } from '@ember/string';
  * Manages all registries in the application using Ember's container system.
  * Provides O(1) lookup performance and follows Ember conventions.
  * 
- * Registry names use a custom separator syntax to support hierarchical namespaces
- * while remaining compatible with Ember's container naming requirements (type:name format).
+ * This service handles two types of registrations:
+ * 
+ * 1. **Ember Native Types** (component, service, helper, modifier, etc.)
+ *    - Follows Ember's standard naming: `component:my-component`
+ *    - No modification to the key, preserves Ember conventions
+ *    - Enables cross-engine sharing of components/services
+ * 
+ * 2. **Custom Registries** (menu-item, widget, hook, etc.)
+ *    - Uses '#' separator for categorization: `menu-item:header#fleet-ops`
+ *    - Allows hierarchical organization within our custom types
  * 
  * Examples:
- * - 'menu-item' registry with key 'header:fleet-ops' → 'menu-item:header#fleet-ops'
- * - 'component:vehicle:details' → 'registry:component#vehicle#details'
- * 
- * We use '#' (hash) as our separator for multi-level namespaces within the name part.
+ * - Native: `component:vehicle-form` (unchanged)
+ * - Native: `service:universe` (unchanged)
+ * - Custom: `menu-item:header#fleet-ops` (hash for category)
+ * - Custom: `widget:dashboard#metrics` (hash for category)
  * 
  * @class RegistryService
  * @extends Service
  */
 export default class RegistryService extends Service {
     @tracked registries = new Map();
+
+    /**
+     * Ember native type names that should not be modified
+     * These follow Ember's standard container naming conventions
+     */
+    EMBER_NATIVE_TYPES = [
+        'component',
+        'service',
+        'helper',
+        'modifier',
+        'route',
+        'controller',
+        'template',
+        'model',
+        'adapter',
+        'serializer',
+        'transform',
+        'initializer',
+        'instance-initializer'
+    ];
 
     /**
      * Create a new registry
@@ -52,18 +80,39 @@ export default class RegistryService extends Service {
     }
 
     /**
+     * Check if a registry name is an Ember native type
+     * 
+     * @private
+     * @method _isEmberNativeType
+     * @param {String} registryName The registry name to check
+     * @returns {Boolean} True if it's an Ember native type
+     */
+    _isEmberNativeType(registryName) {
+        return this.EMBER_NATIVE_TYPES.includes(registryName);
+    }
+
+    /**
      * Normalize a key to be Ember container-safe
-     * Replaces colons with hash to avoid conflicts with Ember's type:name format
+     * 
+     * For Ember native types (component, service, etc.): preserves the key as-is (dasherized)
+     * For custom registries: replaces colons with hash for categorization
      * 
      * @private
      * @method _normalizeKey
+     * @param {String} registryName The registry name
      * @param {String} key The key to normalize
      * @returns {String} Normalized key
      */
-    _normalizeKey(key) {
-        // Replace colons with hash to avoid Ember container conflicts
-        // Also dasherize to ensure valid naming
-        return dasherize(String(key).replace(/:/g, '#'));
+    _normalizeKey(registryName, key) {
+        const dasherizedKey = dasherize(String(key));
+        
+        // For Ember native types, don't modify the key (keep Ember conventions)
+        if (this._isEmberNativeType(registryName)) {
+            return dasherizedKey;
+        }
+        
+        // For custom registries, replace colons with hash for categorization
+        return dasherizedKey.replace(/:/g, '#');
     }
 
     /**
@@ -78,7 +127,7 @@ export default class RegistryService extends Service {
      */
     _buildContainerName(registryName, key) {
         const normalizedRegistry = dasherize(registryName);
-        const normalizedKey = this._normalizeKey(key);
+        const normalizedKey = this._normalizeKey(registryName, key);
         return `${normalizedRegistry}:${normalizedKey}`;
     }
 
