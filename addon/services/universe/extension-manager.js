@@ -5,6 +5,7 @@ import { getOwner } from '@ember/application';
 import { assert } from '@ember/debug';
 import loadExtensions from '@fleetbase/ember-core/utils/load-extensions';
 import mapEngines from '@fleetbase/ember-core/utils/map-engines';
+import { EXTENSION_LOADERS } from '@fleetbase/console/utils/extension-loaders.generated';
 
 /**
  * ExtensionManagerService
@@ -337,18 +338,36 @@ export default class ExtensionManagerService extends Service {
             // Extension is an object with name, version, etc. from package.json
             const extensionName = extension.name || extension;
             
+            // Lookup the loader function from the build-time generated map
+            const loader = EXTENSION_LOADERS[extensionName];
+            
+            if (!loader) {
+                console.warn(
+                    `[ExtensionManager] No loader registered for ${extensionName}. ` +
+                    'Ensure addon/extension.js exists and prebuild generated the mapping.'
+                );
+                continue;
+            }
+            
             try {
-                // Dynamically require the extension.js file
-                const setupExtension = require(`${extensionName}/extension`).default;
-
+                // Use dynamic import() via the loader function
+                const module = await loader();
+                const setupExtension = module.default ?? module;
+                
                 if (typeof setupExtension === 'function') {
                     console.log(`[ExtensionManager] Running setup for ${extensionName}`);
                     // Execute the extension setup function
-                    setupExtension(appInstance, universe);
+                    await setupExtension(appInstance, universe);
+                } else {
+                    console.warn(
+                        `[ExtensionManager] ${extensionName}/extension did not export a function.`
+                    );
                 }
             } catch (error) {
-                // Silently fail if extension.js doesn't exist
-                console.warn(`[ExtensionManager] Could not load extension.js for ${extensionName}:`, error.message);
+                console.error(
+                    `[ExtensionManager] Failed to load or run extension.js for ${extensionName}:`,
+                    error
+                );
             }
         }
 
