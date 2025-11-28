@@ -5,7 +5,7 @@ import { getOwner } from '@ember/application';
 import { assert } from '@ember/debug';
 import loadExtensions from '@fleetbase/ember-core/utils/load-extensions';
 import mapEngines from '@fleetbase/ember-core/utils/map-engines';
-import { EXTENSION_LOADERS } from '@fleetbase/console/utils/extension-loaders.generated';
+import { getExtensionLoader } from '@fleetbase/console/extensions';
 
 /**
  * ExtensionManagerService
@@ -339,7 +339,7 @@ export default class ExtensionManagerService extends Service {
             const extensionName = extension.name || extension;
             
             // Lookup the loader function from the build-time generated map
-            const loader = EXTENSION_LOADERS[extensionName];
+            const loader = getExtensionLoader(extensionName);
             
             if (!loader) {
                 console.warn(
