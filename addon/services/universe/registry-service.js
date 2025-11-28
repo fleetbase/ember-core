@@ -169,33 +169,18 @@ export default class RegistryService extends Service {
         const owner = getOwner(this);
         const fullName = this.#buildContainerName(registryName, key);
 
-        // Register in Ember's container for O(1) lookup
+        // Register in Ember's container (source of truth)
         if (owner && owner.register) {
             owner.register(fullName, value, { instantiate: false });
         }
 
-        // Also maintain in our registry for iteration
-        const registry = this.createRegistry(registryName);
+        // Maintain key index for iteration/filtering
+        const keyRegistry = this.createRegistry(registryName);
         
-        // Store the registration key with the value for filtering
-        // This allows filtering by key prefix (e.g., 'default#dashboard#')
-        if (typeof value === 'object' && value !== null) {
-            value._registryKey = key;
-        }
-        
-        // Check if already exists and update, otherwise add
-        const existing = registry.find(item => {
-            if (typeof item === 'object' && item !== null) {
-                return item._registryKey === key || item.slug === key || item.widgetId === key || item.id === key;
-            }
-            return false;
-        });
-
-        if (existing) {
-            const index = registry.indexOf(existing);
-            registry.replace(index, 1, [value]);
-        } else {
-            registry.pushObject(value);
+        // Only store the key, not the full object
+        // The Map acts as an index/query layer
+        if (!keyRegistry.includes(key)) {
+            keyRegistry.pushObject(key);
         }
     }
 
@@ -235,12 +220,22 @@ export default class RegistryService extends Service {
     /**
      * Get all items from a registry
      * 
+     * Looks up keys from the index Map, then fetches actual values from container.
+     * This ensures container is the single source of truth.
+     * 
      * @method getRegistry
      * @param {String} name Registry name
      * @returns {Array} Registry items
      */
     getRegistry(name) {
-        return this.registries.get(name) || A([]);
+        const keys = this.registries.get(name) || A([]);
+        const owner = getOwner(this);
+        
+        // Lookup each key from container
+        return A(keys.map(key => {
+            const fullName = this.#buildContainerName(name, key);
+            return owner.lookup(fullName);
+        }).filter(Boolean)); // Filter out any null/undefined lookups
     }
 
     /**
@@ -253,16 +248,20 @@ export default class RegistryService extends Service {
      * @returns {Array} Matching items
      */
     getAllFromPrefix(registryName, keyPrefix) {
-        const registry = this.getRegistry(registryName);
+        const keys = this.registries.get(registryName) || A([]);
         const normalizedPrefix = this.#normalizeKey(registryName, keyPrefix);
+        const owner = getOwner(this);
         
-        return registry.filter(item => {
-            if (typeof item === 'object' && item !== null && item._registryKey) {
-                const normalizedItemKey = this.#normalizeKey(registryName, item._registryKey);
-                return normalizedItemKey.startsWith(normalizedPrefix);
-            }
-            return false;
+        // Filter keys by prefix, then lookup from container
+        const matchingKeys = keys.filter(key => {
+            const normalizedKey = this.#normalizeKey(registryName, key);
+            return normalizedKey.startsWith(normalizedPrefix);
         });
+        
+        return A(matchingKeys.map(key => {
+            const fullName = this.#buildContainerName(registryName, key);
+            return owner.lookup(fullName);
+        }).filter(Boolean));
     }
 
     /**
