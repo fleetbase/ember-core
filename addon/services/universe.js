@@ -267,7 +267,17 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Array} Admin menu items
      */
     get adminMenuItems() {
-        return this.menuService.getAdminPanels();
+        return this.menuService.getAdminMenuItems();
+    }
+
+    /**
+     * Get admin menu panels
+     * 
+     * @computed adminMenuPanels
+     * @returns {Array} Admin menu panels
+     */
+    get adminMenuPanels() {
+        return this.menuService.getAdminMenuPanels();
     }
 
     // ============================================================================
