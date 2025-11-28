@@ -341,4 +341,78 @@ export default class MenuService extends Service {
     getSettingsMenuPanels() {
         return this.registryService.getRegistry('settings-panel');
     }
+
+    // ============================================================================
+    // Computed Getters (for template access)
+    // ============================================================================
+
+    /**
+     * Get header menu items (computed getter)
+     * 
+     * @computed headerMenuItems
+     * @returns {Array} Header menu items
+     */
+    get headerMenuItems() {
+        return this.getHeaderMenuItems();
+    }
+
+    /**
+     * Get organization menu items (computed getter)
+     * 
+     * @computed organizationMenuItems
+     * @returns {Array} Organization menu items
+     */
+    get organizationMenuItems() {
+        return this.getOrganizationMenuItems();
+    }
+
+    /**
+     * Get user menu items (computed getter)
+     * 
+     * @computed userMenuItems
+     * @returns {Array} User menu items
+     */
+    get userMenuItems() {
+        return this.getUserMenuItems();
+    }
+
+    /**
+     * Get admin menu items (computed getter)
+     * 
+     * @computed adminMenuItems
+     * @returns {Array} Admin menu items
+     */
+    get adminMenuItems() {
+        return this.getAdminMenuItems();
+    }
+
+    /**
+     * Get admin menu panels (computed getter)
+     * 
+     * @computed adminMenuPanels
+     * @returns {Array} Admin menu panels
+     */
+    get adminMenuPanels() {
+        return this.getAdminMenuPanels();
+    }
+
+    /**
+     * Get settings menu items (computed getter)
+     * 
+     * @computed settingsMenuItems
+     * @returns {Array} Settings menu items
+     */
+    get settingsMenuItems() {
+        return this.getSettingsMenuItems();
+    }
+
+    /**
+     * Get settings menu panels (computed getter)
+     * 
+     * @computed settingsMenuPanels
+     * @returns {Array} Settings menu panels
+     */
+    get settingsMenuPanels() {
+        return this.getSettingsMenuPanels();
+    }
 }
