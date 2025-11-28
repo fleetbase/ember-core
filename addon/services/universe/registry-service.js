@@ -63,6 +63,8 @@ export default class RegistryService extends Service {
     createRegistry(name) {
         if (!this.registries.has(name)) {
             this.registries.set(name, A([]));
+            // Reassign to trigger @tracked reactivity
+            this.registries = new Map(this.registries);
         }
         return this.registries.get(name);
     }
