@@ -32,6 +32,7 @@ export default class UniverseService extends Service.extend(Evented) {
     @service('universe/hook-service') hookService;
     @service router;
     @service intl;
+    @service urlSearchParams;
 
     @tracked applicationInstance;
     @tracked initialLocation = { ...window.location };
@@ -360,21 +361,61 @@ export default class UniverseService extends Service.extend(Evented) {
     // ============================================================================
 
     /**
+     * Get view from transition
+     * 
+     * @method getViewFromTransition
+     * @param {Object} transition Transition object
+     * @returns {String|null} View parameter
+     */
+    getViewFromTransition(transition) {
+        const queryParams = transition.to?.queryParams ?? { view: null };
+        return queryParams.view;
+    }
+
+    /**
+     * Virtual route redirect
+     * Handles redirecting to menu items based on URL slug
+     * 
+     * @method virtualRouteRedirect
+     * @param {Object} transition Transition object
+     * @param {String} registryName Registry name
+     * @param {String} route Route name
+     * @param {Object} options Options
+     * @returns {Promise} Transition promise
+     */
+    async virtualRouteRedirect(transition, registryName, route, options = {}) {
+        const view = this.getViewFromTransition(transition);
+        const slug = window.location.pathname.replace('/', '');
+        const queryParams = this.urlSearchParams.all();
+        const menuItem = this.lookupMenuItemFromRegistry(registryName, slug, view);
+        
+        if (menuItem && transition.from === null) {
+            return this.transitionMenuItem(route, menuItem, { queryParams }).then((transition) => {
+                if (options && options.restoreQueryParams === true) {
+                    this.urlSearchParams.setParamsToCurrentUrl(queryParams);
+                }
+                return transition;
+            });
+        }
+    }
+
+    /**
      * Transition to a menu item
      * 
      * @method transitionMenuItem
      * @param {String} route Route name
      * @param {Object} menuItem Menu item object
+     * @param {Object} options Options
      */
     @action
-    transitionMenuItem(route, menuItem) {
+    transitionMenuItem(route, menuItem, options = {}) {
         if (menuItem.route) {
             this.router.transitionTo(menuItem.route, ...menuItem.routeParams, {
-                queryParams: menuItem.queryParams
+                queryParams: options.queryParams || menuItem.queryParams
             });
         } else {
             this.router.transitionTo(route, menuItem.slug, {
-                queryParams: menuItem.queryParams
+                queryParams: options.queryParams || menuItem.queryParams
             });
         }
     }
