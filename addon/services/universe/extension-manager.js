@@ -2,7 +2,7 @@ import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { A } from '@ember/array';
 import { getOwner } from '@ember/application';
-import { assert } from '@ember/debug';
+import { assert, debug } from '@ember/debug';
 import loadExtensions from '@fleetbase/ember-core/utils/load-extensions';
 import mapEngines from '@fleetbase/ember-core/utils/map-engines';
 import { getExtensionLoader } from '@fleetbase/console/extensions';
@@ -288,13 +288,20 @@ export default class ExtensionManagerService extends Service {
      * @returns {Promise<Array>} Array of loaded extension names
      */
     async loadExtensions(application) {
-        console.log('[ExtensionManager] Loading extensions from API...');
+        const startTime = performance.now();
+        debug('[ExtensionManager] Loading extensions from API...');
         
         try {
+            const apiStartTime = performance.now();
             const extensions = await loadExtensions();
+            const apiEndTime = performance.now();
+            debug(`[ExtensionManager] API call took ${(apiEndTime - apiStartTime).toFixed(2)}ms`);
+            
             application.extensions = extensions;
             application.engines = mapEngines(extensions);
-            console.log('[ExtensionManager] Loaded extensions:', extensions);
+            
+            const endTime = performance.now();
+            debug(`[ExtensionManager] Loaded ${extensions.length} extensions in ${(endTime - startTime).toFixed(2)}ms:`, extensions.map(e => e.name || e));
             
             // Mark extensions as loaded
             this.finishLoadingExtensions();
@@ -320,23 +327,30 @@ export default class ExtensionManagerService extends Service {
      * @returns {Promise<void>}
      */
     async setupExtensions(appInstance, universe) {
+        const setupStartTime = performance.now();
         const application = appInstance.application;
 
-        console.log('[ExtensionManager] Waiting for extensions to load...');
+        debug('[ExtensionManager] Waiting for extensions to load...');
         
+        const waitStartTime = performance.now();
         // Wait for extensions to be loaded from API
         await this.waitForExtensionsLoaded();
+        const waitEndTime = performance.now();
+        debug(`[ExtensionManager] Wait for extensions took ${(waitEndTime - waitStartTime).toFixed(2)}ms`);
         
-        console.log('[ExtensionManager] Extensions loaded, setting up...');
+        debug('[ExtensionManager] Extensions loaded, setting up...');
 
         // Get the list of enabled extensions
         const extensions = application.extensions || [];
-        console.log('[ExtensionManager] Setting up extensions:', extensions);
+        debug(`[ExtensionManager] Setting up ${extensions.length} extensions:`, extensions.map(e => e.name || e));
+
+        const extensionTimings = [];
 
         // Load and execute extension.js from each enabled extension
         for (const extension of extensions) {
             // Extension is an object with name, version, etc. from package.json
             const extensionName = extension.name || extension;
+            const extStartTime = performance.now();
             
             // Lookup the loader function from the build-time generated map
             const loader = getExtensionLoader(extensionName);
@@ -350,14 +364,29 @@ export default class ExtensionManagerService extends Service {
             }
             
             try {
+                const loadStartTime = performance.now();
                 // Use dynamic import() via the loader function
                 const module = await loader();
+                const loadEndTime = performance.now();
+                
                 const setupExtension = module.default ?? module;
                 
                 if (typeof setupExtension === 'function') {
-                    console.log(`[ExtensionManager] Running setup for ${extensionName}`);
+                    debug(`[ExtensionManager] Running setup for ${extensionName}`);
+                    const execStartTime = performance.now();
                     // Execute the extension setup function
                     await setupExtension(appInstance, universe);
+                    const execEndTime = performance.now();
+                    
+                    const extEndTime = performance.now();
+                    const timing = {
+                        name: extensionName,
+                        load: (loadEndTime - loadStartTime).toFixed(2),
+                        execute: (execEndTime - execStartTime).toFixed(2),
+                        total: (extEndTime - extStartTime).toFixed(2)
+                    };
+                    extensionTimings.push(timing);
+                    debug(`[ExtensionManager] ${extensionName} - Load: ${timing.load}ms, Execute: ${timing.execute}ms, Total: ${timing.total}ms`);
                 } else {
                     console.warn(
                         `[ExtensionManager] ${extensionName}/extension did not export a function.`
@@ -371,10 +400,19 @@ export default class ExtensionManagerService extends Service {
             }
         }
 
-        console.log('[ExtensionManager] All extensions setup complete');
+        const setupEndTime = performance.now();
+        const totalSetupTime = (setupEndTime - setupStartTime).toFixed(2);
+        debug(`[ExtensionManager] All extensions setup complete in ${totalSetupTime}ms`);
+        debug('[ExtensionManager] Extension timings:', extensionTimings);
         
         // Execute boot callbacks and mark boot as complete
+        const callbackStartTime = performance.now();
         await universe.executeBootCallbacks();
+        const callbackEndTime = performance.now();
+        debug(`[ExtensionManager] Boot callbacks executed in ${(callbackEndTime - callbackStartTime).toFixed(2)}ms`);
+        
+        const totalTime = (callbackEndTime - setupStartTime).toFixed(2);
+        debug(`[ExtensionManager] Total extension boot time: ${totalTime}ms`);
     }
 
     /**

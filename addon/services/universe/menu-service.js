@@ -1,8 +1,7 @@
 import Service from '@ember/service';
 import { inject as service } from '@ember/service';
-import { tracked } from '@glimmer/tracking';
-import { A } from '@ember/array';
 import { dasherize } from '@ember/string';
+import { A } from '@ember/array';
 import MenuItem from '../../contracts/menu-item';
 import MenuPanel from '../../contracts/menu-panel';
 
@@ -10,17 +9,13 @@ import MenuPanel from '../../contracts/menu-panel';
  * MenuService
  * 
  * Manages all menu items and panels in the application.
- * Handles header menus, organization menus, user menus, admin panels, etc.
+ * Uses RegistryService for storage, providing cross-engine access.
  * 
  * @class MenuService
  * @extends Service
  */
 export default class MenuService extends Service {
     @service('universe/registry-service') registryService;
-
-    @tracked headerMenuItems = A([]);
-    @tracked organizationMenuItems = A([]);
-    @tracked userMenuItems = A([]);
 
     /**
      * Normalize a menu item input to a plain object
@@ -97,6 +92,10 @@ export default class MenuService extends Service {
         return input;
     }
 
+    // ============================================================================
+    // Registration Methods
+    // ============================================================================
+
     /**
      * Register a header menu item
      * 
@@ -107,11 +106,6 @@ export default class MenuService extends Service {
      */
     registerHeaderMenuItem(menuItemOrTitle, route = null, options = {}) {
         const menuItem = this.#normalizeMenuItem(menuItemOrTitle, route, options);
-        
-        this.headerMenuItems.pushObject(menuItem);
-        this.headerMenuItems = this.headerMenuItems.sortBy('priority');
-        
-        // Also register in registry for lookup
         this.registryService.register('menu-item', `header:${menuItem.slug}`, menuItem);
     }
 
@@ -133,8 +127,6 @@ export default class MenuService extends Service {
             menuItem.section = 'settings';
         }
 
-        this.organizationMenuItems.pushObject(menuItem);
-        
         this.registryService.register('menu-item', `organization:${menuItem.slug}`, menuItem);
     }
 
@@ -156,8 +148,6 @@ export default class MenuService extends Service {
             menuItem.section = 'account';
         }
 
-        this.userMenuItems.pushObject(menuItem);
-        
         this.registryService.register('menu-item', `user:${menuItem.slug}`, menuItem);
     }
 
@@ -171,7 +161,6 @@ export default class MenuService extends Service {
      */
     registerAdminMenuPanel(panelOrTitle, items = [], options = {}) {
         const panel = this.#normalizeMenuPanel(panelOrTitle, items, options);
-        
         this.registryService.register('admin-panel', panel.slug, panel);
     }
 
@@ -211,14 +200,75 @@ export default class MenuService extends Service {
         this.registryService.register(registryName, menuItem.slug || menuItem.title, menuItem);
     }
 
+    // ============================================================================
+    // Getter Methods (Improved DX)
+    // ============================================================================
+
+    /**
+     * Get menu items from a registry
+     * 
+     * @method getMenuItems
+     * @param {String} registryName Registry name (e.g., 'engine:fleet-ops')
+     * @returns {Array} Menu items
+     */
+    getMenuItems(registryName) {
+        return this.registryService.getRegistry(registryName);
+    }
+
+    /**
+     * Get menu panels from a registry
+     * 
+     * @method getMenuPanels
+     * @param {String} registryName Registry name (e.g., 'engine:fleet-ops')
+     * @returns {Array} Menu panels
+     */
+    getMenuPanels(registryName) {
+        return this.registryService.getRegistry(`${registryName}:panels`);
+    }
+
+    /**
+     * Lookup a menu item from a registry
+     * 
+     * @method lookupMenuItem
+     * @param {String} registryName Registry name
+     * @param {String} slug Menu item slug
+     * @param {String} view Optional view
+     * @param {String} section Optional section
+     * @returns {Object|null} Menu item or null
+     */
+    lookupMenuItem(registryName, slug, view = null, section = null) {
+        const items = this.getMenuItems(registryName);
+        return items.find(item => {
+            const slugMatch = item.slug === slug;
+            const viewMatch = !view || item.view === view;
+            const sectionMatch = !section || item.section === section;
+            return slugMatch && viewMatch && sectionMatch;
+        });
+    }
+
+    /**
+     * Alias for lookupMenuItem
+     * 
+     * @method getMenuItem
+     * @param {String} registryName Registry name
+     * @param {String} slug Menu item slug
+     * @param {String} view Optional view
+     * @param {String} section Optional section
+     * @returns {Object|null} Menu item or null
+     */
+    getMenuItem(registryName, slug, view = null, section = null) {
+        return this.lookupMenuItem(registryName, slug, view, section);
+    }
+
     /**
      * Get header menu items
      * 
      * @method getHeaderMenuItems
-     * @returns {Array} Header menu items
+     * @returns {Array} Header menu items sorted by priority
      */
     getHeaderMenuItems() {
-        return this.headerMenuItems;
+        const items = this.registryService.getAllFromPrefix('menu-item', 'header:');
+        return A(items).sortBy('priority');
     }
 
     /**
@@ -228,7 +278,7 @@ export default class MenuService extends Service {
      * @returns {Array} Organization menu items
      */
     getOrganizationMenuItems() {
-        return this.organizationMenuItems;
+        return this.registryService.getAllFromPrefix('menu-item', 'organization:');
     }
 
     /**
@@ -238,17 +288,38 @@ export default class MenuService extends Service {
      * @returns {Array} User menu items
      */
     getUserMenuItems() {
-        return this.userMenuItems;
+        return this.registryService.getAllFromPrefix('menu-item', 'user:');
     }
 
     /**
-     * Get admin panels
+     * Get admin menu panels
+     * 
+     * @method getAdminMenuPanels
+     * @returns {Array} Admin panels sorted by priority
+     */
+    getAdminMenuPanels() {
+        const panels = this.registryService.getRegistry('admin-panel');
+        return A(panels).sortBy('priority');
+    }
+
+    /**
+     * Alias for getAdminMenuPanels
      * 
      * @method getAdminPanels
      * @returns {Array} Admin panels
      */
     getAdminPanels() {
-        return this.registryService.getRegistry('admin-panel');
+        return this.getAdminMenuPanels();
+    }
+
+    /**
+     * Get admin menu items
+     * 
+     * @method getAdminMenuItems
+     * @returns {Array} Admin menu items
+     */
+    getAdminMenuItems() {
+        return this.registryService.getAllFromPrefix('menu-item', 'admin:');
     }
 
     /**
@@ -261,5 +332,13 @@ export default class MenuService extends Service {
         return this.registryService.getRegistry('settings-menu-item');
     }
 
-
+    /**
+     * Get settings menu panels
+     * 
+     * @method getSettingsMenuPanels
+     * @returns {Array} Settings menu panels
+     */
+    getSettingsMenuPanels() {
+        return this.registryService.getRegistry('settings-panel');
+    }
 }

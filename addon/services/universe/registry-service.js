@@ -218,6 +218,28 @@ export default class RegistryService extends Service {
     }
 
     /**
+     * Get all items from a registry that match a key prefix
+     * Useful for getting items like 'header:*', 'organization:*', etc.
+     * 
+     * @method getAllFromPrefix
+     * @param {String} registryName Registry name (e.g., 'menu-item')
+     * @param {String} keyPrefix Key prefix to match (e.g., 'header:')
+     * @returns {Array} Matching items
+     */
+    getAllFromPrefix(registryName, keyPrefix) {
+        const registry = this.getRegistry(registryName);
+        const normalizedPrefix = this.#normalizeKey(registryName, keyPrefix);
+        
+        return registry.filter(item => {
+            if (typeof item === 'object' && item !== null && item._registryKey) {
+                const normalizedItemKey = this.#normalizeKey(registryName, item._registryKey);
+                return normalizedItemKey.startsWith(normalizedPrefix);
+            }
+            return false;
+        });
+    }
+
+    /**
      * Check if a registry exists
      * 
      * @method hasRegistry
