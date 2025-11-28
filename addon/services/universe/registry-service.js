@@ -31,7 +31,33 @@ import { dasherize } from '@ember/string';
  * @extends Service
  */
 export default class RegistryService extends Service {
-    @tracked registries = new Map();
+    @tracked registries;
+
+    /**
+     * Initialize the service and get/create shared registries Map
+     * 
+     * The registries Map is stored in the application container so that
+     * all engines share the same registries. This enables cross-engine access.
+     */
+    constructor() {
+        super(...arguments);
+        const owner = getOwner(this);
+        
+        // Try to get shared registries from container
+        let sharedRegistries = owner.lookup('fleetbase:registries');
+        
+        if (!sharedRegistries) {
+            // First time - create and register in container
+            sharedRegistries = new Map();
+            owner.register('fleetbase:registries', sharedRegistries, {
+                instantiate: false,
+                singleton: true
+            });
+        }
+        
+        // Use the shared Map
+        this.registries = sharedRegistries;
+    }
 
     /**
      * Ember native type names that should not be modified
@@ -63,8 +89,6 @@ export default class RegistryService extends Service {
     createRegistry(name) {
         if (!this.registries.has(name)) {
             this.registries.set(name, A([]));
-            // Reassign to trigger @tracked reactivity
-            this.registries = new Map(this.registries);
         }
         return this.registries.get(name);
     }
