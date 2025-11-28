@@ -45,6 +45,19 @@ export default class UniverseService extends Service.extend(Evented) {
         this.applicationInstance = getOwner(this);
     }
 
+    /**
+     * Get a service by name
+     * Convenience method for extensions to access specialized services
+     * 
+     * @method getService
+     * @param {String} serviceName Service name (e.g., 'universe/menu-service')
+     * @returns {Service} The service instance
+     */
+    getService(serviceName) {
+        const owner = getOwner(this);
+        return owner.lookup(`service:${serviceName}`);
+    }
+
     // ============================================================================
     // Extension Management (delegates to ExtensionManager)
     // ============================================================================
