@@ -5,6 +5,7 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/application';
 import { A } from '@ember/array';
+import MenuItem from '../contracts/menu-item';
 
 /**
  * UniverseService (Refactored)
@@ -398,6 +399,101 @@ export default class UniverseService extends Service.extend(Evented) {
     // ============================================================================
     // Backward Compatibility Methods
     // ============================================================================
+
+    /**
+     * Get menu items from a registry
+     * Backward compatibility facade
+     * 
+     * @method getMenuItemsFromRegistry
+     * @param {String} registryName Registry name
+     * @returns {Array} Menu items
+     */
+    getMenuItemsFromRegistry(registryName) {
+        return this.registryService.getRegistry(registryName) || A([]);
+    }
+
+    /**
+     * Get menu panels from a registry
+     * Backward compatibility facade
+     * 
+     * @method getMenuPanelsFromRegistry
+     * @param {String} registryName Registry name
+     * @returns {Array} Menu panels
+     */
+    getMenuPanelsFromRegistry(registryName) {
+        return this.registryService.getRegistry(`${registryName}:panels`) || A([]);
+    }
+
+    /**
+     * Lookup a menu item from a registry
+     * Backward compatibility facade
+     * 
+     * @method lookupMenuItemFromRegistry
+     * @param {String} registryName Registry name
+     * @param {String} slug Menu item slug
+     * @param {String} view Optional view
+     * @param {String} section Optional section
+     * @returns {Object|null} Menu item or null
+     */
+    lookupMenuItemFromRegistry(registryName, slug, view = null, section = null) {
+        const items = this.getMenuItemsFromRegistry(registryName);
+        return items.find(item => {
+            const slugMatch = item.slug === slug;
+            const viewMatch = !view || item.view === view;
+            const sectionMatch = !section || item.section === section;
+            return slugMatch && viewMatch && sectionMatch;
+        });
+    }
+
+    /**
+     * Create a registry event
+     * Backward compatibility facade
+     * 
+     * @method createRegistryEvent
+     * @param {String} registryName Registry name
+     * @param {String} eventName Event name
+     * @param {...*} args Event arguments
+     */
+    createRegistryEvent(registryName, eventName, ...args) {
+        this.trigger(`${registryName}:${eventName}`, ...args);
+    }
+
+    /**
+     * Register after boot callback
+     * Backward compatibility facade
+     * 
+     * @method afterBoot
+     * @param {Function} callback Callback function
+     */
+    afterBoot(callback) {
+        this.extensionManager.afterBoot(callback);
+    }
+
+    /**
+     * Create a menu item (internal helper)
+     * Backward compatibility helper
+     * 
+     * @method _createMenuItem
+     * @param {String} title Menu item title
+     * @param {String} route Menu item route
+     * @param {Object} options Menu item options
+     * @returns {Object} Menu item object
+     */
+    _createMenuItem(title, route = null, options = {}) {
+        const menuItem = new MenuItem(title, route);
+        
+        if (options.icon) menuItem.withIcon(options.icon);
+        if (options.component) menuItem.withComponent(options.component);
+        if (options.slug) menuItem.withSlug(options.slug);
+        if (options.section) menuItem.inSection(options.section);
+        if (options.priority) menuItem.withPriority(options.priority);
+        if (options.type) menuItem.withType(options.type);
+        if (options.wrapperClass) menuItem.withWrapperClass(options.wrapperClass);
+        if (options.queryParams) menuItem.withQueryParams(options.queryParams);
+        if (options.onClick) menuItem.onClick(options.onClick);
+        
+        return menuItem.toObject();
+    }
 
     /**
      * Legacy method for registering renderable components
