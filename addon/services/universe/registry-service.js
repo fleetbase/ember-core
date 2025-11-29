@@ -32,6 +32,23 @@ export default class RegistryService extends Service {
     registries = new TrackedMap();
 
     /**
+     * Reference to the root Ember Application Instance.
+     * Used for registering components/services to the application container
+     * for cross-engine sharing.
+     */
+    @tracked applicationInstance = null;
+
+    /**
+     * Sets the root Ember Application Instance.
+     * Called by an initializer to enable cross-engine registration.
+     * @method setApplicationInstance
+     * @param {Object} appInstance
+     */
+    setApplicationInstance(appInstance) {
+        this.applicationInstance = appInstance;
+    }
+
+    /**
      * Register an item in a category
      * 
      * @method register
@@ -180,5 +197,52 @@ export default class RegistryService extends Service {
     clearAll() {
         this.registries.forEach(registry => registry.clear());
         this.registries.clear();
+    }
+
+    /**
+     * Registers a component to the root application container.
+     * This ensures the component is available to all engines and the host app.
+     * @method registerComponent
+     * @param {String} name The component name (e.g., 'my-component')
+     * @param {Class} componentClass The component class
+     * @param {Object} options Registration options (e.g., { singleton: true })
+     */
+    registerComponent(name, componentClass, options = {}) {
+        if (this.applicationInstance) {
+            this.applicationInstance.register(`component:${name}`, componentClass, options);
+        } else {
+            console.warn('Application instance not set on RegistryService. Cannot register component:', name);
+        }
+    }
+
+    /**
+     * Registers a service to the root application container.
+     * This ensures the service is available to all engines and the host app.
+     * @method registerService
+     * @param {String} name The service name (e.g., 'my-service')
+     * @param {Class} serviceClass The service class
+     * @param {Object} options Registration options (e.g., { singleton: true })
+     */
+    registerService(name, serviceClass, options = {}) {
+        if (this.applicationInstance) {
+            this.applicationInstance.register(`service:${name}`, serviceClass, options);
+        } else {
+            console.warn('Application instance not set on RegistryService. Cannot register service:', name);
+        }
+    }
+
+    /**
+     * Registers a utility or value to the root application container.
+     * @method registerUtil
+     * @param {String} name The utility name (e.g., 'my-util')
+     * @param {*} value The value to register
+     * @param {Object} options Registration options
+     */
+    registerUtil(name, value, options = {}) {
+        if (this.applicationInstance) {
+            this.applicationInstance.register(`util:${name}`, value, options);
+        } else {
+            console.warn('Application instance not set on RegistryService. Cannot register utility:', name);
+        }
     }
 }

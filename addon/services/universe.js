@@ -43,6 +43,8 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     constructor() {
         super(...arguments);
+        // The applicationInstance is now injected by the initializer 'inject-application-instance'
+        // and passed to the registryService. We keep this for backward compatibility/local lookup.
         this.applicationInstance = getOwner(this);
     }
 
@@ -154,6 +156,45 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     lookupFromRegistry(registryName, key) {
         return this.registryService.lookup(registryName, key);
+    }
+
+    // ============================================================================
+    // Application Container Registration (delegates to RegistryService)
+    // ============================================================================
+
+    /**
+     * Registers a component to the root application container.
+     * This ensures the component is available to all engines and the host app.
+     * @method registerComponent
+     * @param {String} name The component name (e.g., 'my-component')
+     * @param {Class} componentClass The component class
+     * @param {Object} options Registration options
+     */
+    registerComponent(name, componentClass, options = {}) {
+        this.registryService.registerComponent(name, componentClass, options);
+    }
+
+    /**
+     * Registers a service to the root application container.
+     * This ensures the service is available to all engines and the host app.
+     * @method registerService
+     * @param {String} name The service name (e.g., 'my-service')
+     * @param {Class} serviceClass The service class
+     * @param {Object} options Registration options
+     */
+    registerService(name, serviceClass, options = {}) {
+        this.registryService.registerService(name, serviceClass, options);
+    }
+
+    /**
+     * Registers a utility or value to the root application container.
+     * @method registerUtil
+     * @param {String} name The utility name (e.g., 'my-util')
+     * @param {*} value The value to register
+     * @param {Object} options Registration options
+     */
+    registerUtil(name, value, options = {}) {
+        this.registryService.registerUtil(name, value, options);
     }
 
     // ============================================================================
