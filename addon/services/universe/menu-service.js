@@ -278,7 +278,7 @@ export default class MenuService extends Service.extend(Evented) {
     registerMenuItem(registryName, titleOrMenuItem, options = {}) {
         let menuItem;
         
-        // Check if second parameter is a MenuItem instance
+        // Normalize the menu item first (handles both MenuItem instances and string titles)
         if (titleOrMenuItem instanceof MenuItem) {
             menuItem = this.#normalizeMenuItem(titleOrMenuItem);
         } else {
@@ -288,17 +288,18 @@ export default class MenuService extends Service.extend(Evented) {
             
             // Set defaults matching original behavior
             const slug = options.slug || '~';
-            const view = options.view || dasherize(title);
             
-            // Not really a fan of assumptions, but will do this for the timebeing till anyone complains
-            const finalView = (slug === view) ? null : view;
-            
-            // Create menu item with all options
             menuItem = this.#normalizeMenuItem(title, route, {
                 ...options,
-                slug,
-                view: finalView
+                slug
             });
+        }
+        
+        // Apply finalView normalization consistently for ALL menu items
+        // If slug === view, set view to null to prevent redundant query params
+        // This matches the legacy behavior: const finalView = (slug === view) ? null : view;
+        if (menuItem.slug && menuItem.view && menuItem.slug === menuItem.view) {
+            menuItem.view = null;
         }
         
         // Register the menu item
