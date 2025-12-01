@@ -98,6 +98,25 @@ export default class UniverseService extends Service.extend(Evented) {
         this.extensionManager.registerExtension(name, metadata);
     }
 
+    /**
+     * Listen for a specific engine to be loaded
+     * 
+     * @method onEngineLoaded
+     * @param {String} engineName The engine name to listen for
+     * @param {Function} callback Function to call when the engine loads, receives engineInstance as parameter
+     * @example
+     * universe.onEngineLoaded('@fleetbase/fleetops-engine', (engineInstance) => {
+     *     console.log('FleetOps engine loaded!', engineInstance);
+     * });
+     */
+    onEngineLoaded(engineName, callback) {
+        this.extensionManager.on('engine.loaded', (name, instance) => {
+            if (name === engineName) {
+                callback(instance);
+            }
+        });
+    }
+
     // ============================================================================
     // Registry Management (delegates to RegistryService)
     // ============================================================================

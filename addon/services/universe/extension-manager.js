@@ -28,6 +28,9 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     @tracked extensionsLoadedPromise = null;
     @tracked extensionsLoadedResolver = null;
     @tracked extensionsLoaded = false;
+    
+    // Private field to store onEngineLoaded hooks from extension.js
+    #engineLoadedHooks = new Map();
 
     constructor() {
         super(...arguments);
@@ -198,7 +201,11 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             // store loaded instance to engineInstances for booting
             engineInstances[name][instanceId] = engineInstance;
 
-            this.trigger('engine.loaded', engineInstance);
+            // Fire event for universe.onEngineLoaded() API
+            this.trigger('engine.loaded', name, engineInstance);
+
+            // Run stored onEngineLoaded hooks from extension.js
+            this.#runEngineLoadedHooks(name, engineInstance);
 
             return engineInstance.boot().then(() => {
                 return engineInstance;
@@ -541,15 +548,36 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
                 const module = await loader();
                 const loadEndTime = performance.now();
                 
-                const setupExtension = module.default ?? module;
+                const setup = module.default ?? module;
+                const execStartTime = performance.now();
+                let executed = false;
                 
-                if (typeof setupExtension === 'function') {
-                    debug(`[ExtensionManager] Running setup for ${extensionName}`);
-                    const execStartTime = performance.now();
-                    // Execute the extension setup function
-                    await setupExtension(appInstance, universe);
-                    const execEndTime = performance.now();
+                // Handle function export
+                if (typeof setup === 'function') {
+                    debug(`[ExtensionManager] Running setup function for ${extensionName}`);
+                    await setup(appInstance, universe);
+                    executed = true;
+                }
+                // Handle object export
+                else if (typeof setup === 'object' && setup !== null) {
+                    // Run setupExtension hook (before engine loads)
+                    if (typeof setup.setupExtension === 'function') {
+                        debug(`[ExtensionManager] Running setupExtension hook for ${extensionName}`);
+                        await setup.setupExtension(appInstance, universe);
+                        executed = true;
+                    }
                     
+                    // Store onEngineLoaded hook (runs after engine loads)
+                    if (typeof setup.onEngineLoaded === 'function') {
+                        debug(`[ExtensionManager] Registering onEngineLoaded hook for ${extensionName}`);
+                        this.#storeEngineLoadedHook(extensionName, setup.onEngineLoaded);
+                        executed = true;
+                    }
+                }
+                
+                const execEndTime = performance.now();
+                
+                if (executed) {
                     const extEndTime = performance.now();
                     const timing = {
                         name: extensionName,
@@ -561,7 +589,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
                     debug(`[ExtensionManager] ${extensionName} - Load: ${timing.load}ms, Execute: ${timing.execute}ms, Total: ${timing.total}ms`);
                 } else {
                     console.warn(
-                        `[ExtensionManager] ${extensionName}/extension did not export a function.`
+                        `[ExtensionManager] ${extensionName}/extension did not export a function or valid object with setupExtension/onEngineLoaded.`
                     );
                 }
             } catch (error) {
@@ -709,5 +737,52 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             loadedEngines: Array.from(this.loadedEngines.keys()),
             loadingEngines: Array.from(this.loadingPromises.keys())
         };
+    }
+
+    /**
+     * Store an onEngineLoaded hook for later execution
+     * 
+     * @private
+     * @method #storeEngineLoadedHook
+     * @param {String} engineName The name of the engine
+     * @param {Function} hookFn The hook function to store
+     */
+    #storeEngineLoadedHook(engineName, hookFn) {
+        if (!this.#engineLoadedHooks.has(engineName)) {
+            this.#engineLoadedHooks.set(engineName, []);
+        }
+        this.#engineLoadedHooks.get(engineName).push(hookFn);
+        debug(`[ExtensionManager] Stored onEngineLoaded hook for ${engineName}`);
+    }
+
+    /**
+     * Run all stored onEngineLoaded hooks for an engine
+     * 
+     * @private
+     * @method #runEngineLoadedHooks
+     * @param {String} engineName The name of the engine
+     * @param {EngineInstance} engineInstance The loaded engine instance
+     */
+    #runEngineLoadedHooks(engineName, engineInstance) {
+        const hooks = this.#engineLoadedHooks.get(engineName) || [];
+        
+        if (hooks.length === 0) {
+            return;
+        }
+
+        const owner = getOwner(this);
+        const universe = owner.lookup('service:universe');
+        const appInstance = owner;
+
+        debug(`[ExtensionManager] Running ${hooks.length} onEngineLoaded hook(s) for ${engineName}`);
+
+        hooks.forEach((hook, index) => {
+            try {
+                hook(engineInstance, universe, appInstance);
+                debug(`[ExtensionManager] Successfully ran onEngineLoaded hook ${index + 1}/${hooks.length} for ${engineName}`);
+            } catch (error) {
+                console.error(`[ExtensionManager] Error in onEngineLoaded hook for ${engineName}:`, error);
+            }
+        });
     }
 }
