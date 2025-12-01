@@ -324,7 +324,7 @@ export default class MenuService extends Service.extend(Evented) {
      * @returns {Array} Header menu items sorted by priority
      */
     getHeaderMenuItems() {
-        const items = this.registryService.getRegistry('header-menu', 'menu-item');
+        const items = this.registryService.getRegistry('header', 'menu-item');
         return A(items).sortBy('priority');
     }
 
