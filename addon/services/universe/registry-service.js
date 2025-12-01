@@ -1,24 +1,27 @@
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { A, isArray } from '@ember/array';
-import { TrackedMap } from 'tracked-built-ins';
+import { TrackedMap, TrackedObject } from 'tracked-built-ins';
 
 /**
  * RegistryService
  * 
- * Simple, performant registry for storing categorized items.
- * Used for menu items, widgets, hooks, and other extension points.
+ * Fully dynamic, Map-based registry for storing categorized items.
+ * Supports grouped registries with multiple list types per section.
+ * 
+ * Structure:
+ * registries (TrackedMap) → section name → TrackedObject { list-name: A([]), ... }
  * 
  * Usage:
  * ```javascript
- * // Register an item
- * registryService.register('admin-panel', 'fleet-ops', panelObject);
+ * // Register an item to a specific list within a section
+ * registryService.register('console:admin', 'menu-panels', 'fleet-ops', panelObject);
  * 
- * // Get all items in a category
- * const panels = registryService.getRegistry('admin-panel');
+ * // Get all items from a list
+ * const panels = registryService.getRegistry('console:admin', 'menu-panels');
  * 
  * // Lookup specific item
- * const panel = registryService.lookup('admin-panel', 'fleet-ops');
+ * const panel = registryService.lookup('console:admin', 'menu-panels', 'fleet-ops');
  * ```
  * 
  * @class RegistryService
@@ -26,34 +29,11 @@ import { TrackedMap } from 'tracked-built-ins';
  */
 export default class RegistryService extends Service {
     /**
-     * Fixed, grouped registries as requested by the user.
-     * Each property is a tracked object containing Ember Arrays (A([])) for reactivity.
+     * TrackedMap of section name → TrackedObject with dynamic lists
+     * Fully reactive - templates update when registries change
+     * @type {TrackedMap<string, TrackedObject>}
      */
-    @tracked consoleAdminRegistry = {
-        menuItems: A([]),
-        menuPanels: A([]),
-    };
-
-    @tracked consoleAccountRegistry = {
-        menuItems: A([]),
-        menuPanels: A([]),
-    };
-
-    @tracked consoleSettingsRegistry = {
-        menuItems: A([]),
-        menuPanels: A([]),
-    };
-
-    @tracked dashboardWidgets = {
-        defaultWidgets: A([]),
-        widgets: A([]),
-    };
-
-    /**
-     * Fallback for dynamic registries not explicitly defined.
-     * @type {TrackedMap<string, Ember.Array>}
-     */
-    @tracked dynamicRegistries = new TrackedMap();
+    registries = new TrackedMap();
 
     /**
      * Reference to the root Ember Application Instance.
@@ -73,23 +53,37 @@ export default class RegistryService extends Service {
     }
 
     /**
-     * Helper to get the correct registry section object.
-     * @param {String} sectionName e.g., 'console:admin', 'dashboard:widgets'
-     * @returns {Object|null} The tracked registry object or null.
+     * Get or create a registry section.
+     * Returns a TrackedObject containing dynamic lists.
+     * 
+     * @method getOrCreateSection
+     * @param {String} sectionName Section name (e.g., 'console:admin', 'dashboard:widgets')
+     * @returns {TrackedObject} The section object
      */
-    getRegistrySection(sectionName) {
-        switch (sectionName) {
-            case 'console:admin':
-                return this.consoleAdminRegistry;
-            case 'console:account':
-                return this.consoleAccountRegistry;
-            case 'console:settings':
-                return this.consoleSettingsRegistry;
-            case 'dashboard:widgets':
-                return this.dashboardWidgets;
-            default:
-                return null;
+    getOrCreateSection(sectionName) {
+        if (!this.registries.has(sectionName)) {
+            this.registries.set(sectionName, new TrackedObject({}));
         }
+        return this.registries.get(sectionName);
+    }
+
+    /**
+     * Get or create a list within a section.
+     * Returns an Ember Array for the specified list.
+     * 
+     * @method getOrCreateList
+     * @param {String} sectionName Section name
+     * @param {String} listName List name (e.g., 'menu-items', 'menu-panels')
+     * @returns {Array} The Ember Array for the list
+     */
+    getOrCreateList(sectionName, listName) {
+        const section = this.getOrCreateSection(sectionName);
+        
+        if (!section[listName]) {
+            section[listName] = A([]);
+        }
+        
+        return section[listName];
     }
 
     /**
@@ -97,28 +91,12 @@ export default class RegistryService extends Service {
      * 
      * @method register
      * @param {String} sectionName Section name (e.g., 'console:admin')
-     * @param {String} listName List name within the section (e.g., 'menuItems', 'menuPanels')
+     * @param {String} listName List name within the section (e.g., 'menu-items', 'menu-panels')
      * @param {String} key Unique identifier for the item
      * @param {Object} value The item to register
      */
     register(sectionName, listName, key, value) {
-        const section = this.getRegistrySection(sectionName);
-        let registry = section ? section[listName] : null;
-
-        // Fallback to dynamic registries if not a fixed section
-        if (!registry) {
-            registry = this.dynamicRegistries.get(sectionName);
-            if (!registry) {
-                registry = A([]);
-                this.dynamicRegistries.set(sectionName, registry);
-            }
-        }
-
-        // If it's a fixed registry, we expect the listName to exist
-        if (section && !registry) {
-            console.warn(`Registry list '${listName}' not found in section '${sectionName}'. Item not registered.`);
-            return;
-        }
+        const registry = this.getOrCreateList(sectionName, listName);
 
         // Store the key with the value for lookups
         if (typeof value === 'object' && value !== null) {
@@ -151,18 +129,28 @@ export default class RegistryService extends Service {
      * 
      * @method getRegistry
      * @param {String} sectionName Section name (e.g., 'console:admin')
-     * @param {String} listName List name within the section (e.g., 'menuItems', 'menuPanels')
-     * @returns {Array} Array of items in the list, or dynamic registry if listName is null.
+     * @param {String} listName List name within the section (e.g., 'menu-items', 'menu-panels')
+     * @returns {Array} Array of items in the list
      */
-    getRegistry(sectionName, listName = null) {
-        const section = this.getRegistrySection(sectionName);
+    getRegistry(sectionName, listName) {
+        const section = this.registries.get(sectionName);
         
-        if (section && listName) {
-            return section[listName] || A([]);
+        if (!section || !section[listName]) {
+            return A([]);
         }
+        
+        return section[listName];
+    }
 
-        // Fallback for dynamic registries
-        return this.dynamicRegistries.get(sectionName) || A([]);
+    /**
+     * Get the entire section object (all lists within a section).
+     * 
+     * @method getSection
+     * @param {String} sectionName Section name
+     * @returns {TrackedObject|null} The section object or null
+     */
+    getSection(sectionName) {
+        return this.registries.get(sectionName) || null;
     }
 
     /**
@@ -170,7 +158,7 @@ export default class RegistryService extends Service {
      * 
      * @method lookup
      * @param {String} sectionName Section name (e.g., 'console:admin')
-     * @param {String} listName List name within the section (e.g., 'menuItems', 'menuPanels')
+     * @param {String} listName List name within the section (e.g., 'menu-items', 'menu-panels')
      * @param {String} key Item key
      * @returns {Object|null} The item or null if not found
      */
@@ -192,7 +180,7 @@ export default class RegistryService extends Service {
      * 
      * @method getAllFromPrefix
      * @param {String} sectionName Section name (e.g., 'console:admin')
-     * @param {String} listName List name within the section (e.g., 'menuItems', 'menuPanels')
+     * @param {String} listName List name within the section (e.g., 'menu-items')
      * @param {String} prefix Key prefix to match
      * @returns {Array} Matching items
      */
@@ -207,79 +195,99 @@ export default class RegistryService extends Service {
     }
 
     /**
-     * Create a dynamic registry (or get existing)
+     * Create a registry section (or get existing).
+     * This is a convenience method for explicitly creating sections.
      * 
-     * @method createRegistry
+     * @method createSection
      * @param {String} sectionName Section name
-     * @returns {Array} The registry array
+     * @returns {TrackedObject} The section object
      */
-    createRegistry(sectionName) {
-        if (!this.dynamicRegistries.has(sectionName)) {
-            this.dynamicRegistries.set(sectionName, A([]));
-        }
-        return this.dynamicRegistries.get(sectionName);
+    createSection(sectionName) {
+        return this.getOrCreateSection(sectionName);
     }
 
     /**
-     * Create multiple dynamic registries
+     * Create multiple registry sections
      * 
-     * @method createRegistries
+     * @method createSections
      * @param {Array} sectionNames Array of section names
      */
-    createRegistries(sectionNames) {
+    createSections(sectionNames) {
         if (isArray(sectionNames)) {
-            sectionNames.forEach(sectionName => this.createRegistry(sectionName));
+            sectionNames.forEach(sectionName => this.createSection(sectionName));
         }
     }
 
     /**
-     * Check if a registry section exists (fixed or dynamic)
+     * Check if a section exists
      * 
-     * @method hasRegistry
+     * @method hasSection
      * @param {String} sectionName Section name
-     * @returns {Boolean} True if registry exists
+     * @returns {Boolean} True if section exists
      */
-    hasRegistry(sectionName) {
-        return !!this.getRegistrySection(sectionName) || this.dynamicRegistries.has(sectionName);
+    hasSection(sectionName) {
+        return this.registries.has(sectionName);
     }
 
     /**
-     * Clear a registry list or dynamic registry.
+     * Check if a list exists within a section
      * 
-     * @method clearRegistry
+     * @method hasList
      * @param {String} sectionName Section name
-     * @param {String} listName Optional list name
+     * @param {String} listName List name
+     * @returns {Boolean} True if list exists
      */
-    clearRegistry(sectionName, listName = null) {
-        const section = this.getRegistrySection(sectionName);
-        
-        if (section && listName && section[listName]) {
+    hasList(sectionName, listName) {
+        const section = this.registries.get(sectionName);
+        return !!(section && section[listName]);
+    }
+
+    /**
+     * Clear a specific list within a section
+     * 
+     * @method clearList
+     * @param {String} sectionName Section name
+     * @param {String} listName List name
+     */
+    clearList(sectionName, listName) {
+        const section = this.registries.get(sectionName);
+        if (section && section[listName]) {
             section[listName].clear();
-        } else if (this.dynamicRegistries.has(sectionName)) {
-            this.dynamicRegistries.get(sectionName).clear();
-            this.dynamicRegistries.delete(sectionName);
         }
     }
 
     /**
-     * Clear all registries (fixed and dynamic)
+     * Clear an entire section (all lists)
+     * 
+     * @method clearSection
+     * @param {String} sectionName Section name
+     */
+    clearSection(sectionName) {
+        const section = this.registries.get(sectionName);
+        if (section) {
+            Object.keys(section).forEach(listName => {
+                if (section[listName] && typeof section[listName].clear === 'function') {
+                    section[listName].clear();
+                }
+            });
+            this.registries.delete(sectionName);
+        }
+    }
+
+    /**
+     * Clear all registries
      * 
      * @method clearAll
      */
     clearAll() {
-        // Clear fixed registries
-        this.consoleAdminRegistry.menuItems.clear();
-        this.consoleAdminRegistry.menuPanels.clear();
-        this.consoleAccountRegistry.menuItems.clear();
-        this.consoleAccountRegistry.menuPanels.clear();
-        this.consoleSettingsRegistry.menuItems.clear();
-        this.consoleSettingsRegistry.menuPanels.clear();
-        this.dashboardWidgets.defaultWidgets.clear();
-        this.dashboardWidgets.widgets.clear();
-
-        // Clear dynamic registries
-        this.dynamicRegistries.forEach(registry => registry.clear());
-        this.dynamicRegistries.clear();
+        this.registries.forEach((section, sectionName) => {
+            Object.keys(section).forEach(listName => {
+                if (section[listName] && typeof section[listName].clear === 'function') {
+                    section[listName].clear();
+                }
+            });
+        });
+        this.registries.clear();
     }
 
     /**

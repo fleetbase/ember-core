@@ -104,11 +104,10 @@ export default class MenuService extends Service {
      * @param {String} route Optional route (if first param is string)
      * @param {Object} options Optional options (if first param is string)
      */
-	    registerHeaderMenuItem(menuItemOrTitle, route = null, options = {}) {
-	        const menuItem = this.#normalizeMenuItem(menuItemOrTitle, route, options);
-	        // Assuming global header menu items should use a dynamic registry for now
-	        this.registryService.register('header-menu', 'items', `header:${menuItem.slug}`, menuItem);
-	    }
+    registerHeaderMenuItem(menuItemOrTitle, route = null, options = {}) {
+        const menuItem = this.#normalizeMenuItem(menuItemOrTitle, route, options);
+        this.registryService.register('header-menu', 'menu-items', `header:${menuItem.slug}`, menuItem);
+    }
 
     /**
      * Register an organization menu item
@@ -117,20 +116,19 @@ export default class MenuService extends Service {
      * @param {MenuItem|String} menuItemOrTitle MenuItem instance or title
      * @param {Object} options Optional options
      */
-	    registerOrganizationMenuItem(menuItemOrTitle, options = {}) {
-	        const menuItem = this.#normalizeMenuItem(
-	            menuItemOrTitle,
-	            options.route || 'console.virtual',
-	            options
-	        );
-	
-	        if (!menuItem.section) {
-	            menuItem.section = 'settings';
-	        }
-	
-	        // Maps to consoleAccountRegistry.menuItems
-	        this.registryService.register('console:account', 'menuItems', `organization:${menuItem.slug}`, menuItem);
-	    }
+    registerOrganizationMenuItem(menuItemOrTitle, options = {}) {
+        const menuItem = this.#normalizeMenuItem(
+            menuItemOrTitle,
+            options.route || 'console.virtual',
+            options
+        );
+
+        if (!menuItem.section) {
+            menuItem.section = 'settings';
+        }
+
+        this.registryService.register('console:account', 'menu-items', `organization:${menuItem.slug}`, menuItem);
+    }
 
     /**
      * Register a user menu item
@@ -139,20 +137,19 @@ export default class MenuService extends Service {
      * @param {MenuItem|String} menuItemOrTitle MenuItem instance or title
      * @param {Object} options Optional options
      */
-	    registerUserMenuItem(menuItemOrTitle, options = {}) {
-	        const menuItem = this.#normalizeMenuItem(
-	            menuItemOrTitle,
-	            options.route || 'console.virtual',
-	            options
-	        );
-	
-	        if (!menuItem.section) {
-	            menuItem.section = 'account';
-	        }
-	
-	        // Maps to consoleAccountRegistry.menuItems
-	        this.registryService.register('console:account', 'menuItems', `user:${menuItem.slug}`, menuItem);
-	    }
+    registerUserMenuItem(menuItemOrTitle, options = {}) {
+        const menuItem = this.#normalizeMenuItem(
+            menuItemOrTitle,
+            options.route || 'console.virtual',
+            options
+        );
+
+        if (!menuItem.section) {
+            menuItem.section = 'account';
+        }
+
+        this.registryService.register('console:account', 'menu-items', `user:${menuItem.slug}`, menuItem);
+    }
 
     /**
      * Register an admin menu panel
@@ -162,21 +159,19 @@ export default class MenuService extends Service {
      * @param {Array} items Optional items array (if first param is string)
      * @param {Object} options Optional options (if first param is string)
      */
-	    registerAdminMenuPanel(panelOrTitle, items = [], options = {}) {
-	        const panel = this.#normalizeMenuPanel(panelOrTitle, items, options);
-	        // Maps to consoleAdminRegistry.menuPanels
-	        this.registryService.register('console:admin', 'menuPanels', panel.slug, panel);
-	
-	        // The PDF states: "Additionally registering menu panels should also register there items."
-	        // We assume the items are passed in the panel object or items array.
-	        if (panel.items && panel.items.length) {
-	            panel.items.forEach(item => {
-	                const menuItem = this.#normalizeMenuItem(item);
-	                // Register item to consoleAdminRegistry.menuItems
-	                this.registryService.register('console:admin', 'menuItems', menuItem.slug, menuItem);
-	            });
-	        }
-	    }
+    registerAdminMenuPanel(panelOrTitle, items = [], options = {}) {
+        const panel = this.#normalizeMenuPanel(panelOrTitle, items, options);
+        this.registryService.register('console:admin', 'menu-panels', panel.slug, panel);
+
+        // The PDF states: "Additionally registering menu panels should also register there items."
+        // We assume the items are passed in the panel object or items array.
+        if (panel.items && panel.items.length) {
+            panel.items.forEach(item => {
+                const menuItem = this.#normalizeMenuItem(item);
+                this.registryService.register('console:admin', 'menu-items', menuItem.slug, menuItem);
+            });
+        }
+    }
 
     /**
      * Register a settings menu item
@@ -185,16 +180,15 @@ export default class MenuService extends Service {
      * @param {MenuItem|String} menuItemOrTitle MenuItem instance or title
      * @param {Object} options Optional options
      */
-	    registerSettingsMenuItem(menuItemOrTitle, options = {}) {
-	        const menuItem = this.#normalizeMenuItem(
-	            menuItemOrTitle,
-	            options.route || 'console.settings.virtual',
-	            options
-	        );
-	
-	        // Maps to consoleSettingsRegistry.menuItems
-	        this.registryService.register('console:settings', 'menuItems', menuItem.slug, menuItem);
-	    }
+    registerSettingsMenuItem(menuItemOrTitle, options = {}) {
+        const menuItem = this.#normalizeMenuItem(
+            menuItemOrTitle,
+            options.route || 'console.settings.virtual',
+            options
+        );
+
+        this.registryService.register('console:settings', 'menu-items', menuItem.slug, menuItem);
+    }
 
     /**
      * Register a menu item to a custom registry
@@ -205,16 +199,16 @@ export default class MenuService extends Service {
      * @param {String|Object} routeOrOptions Route or options
      * @param {Object} options Optional options
      */
-	    registerMenuItem(registryName, menuItemOrTitle, routeOrOptions = {}, options = {}) {
-	        const isOptionsObject = typeof routeOrOptions === 'object';
-	        const route = isOptionsObject ? routeOrOptions.route : routeOrOptions;
-	        const opts = isOptionsObject ? routeOrOptions : options;
-	
-	        const menuItem = this.#normalizeMenuItem(menuItemOrTitle, route, opts);
-	        
-	        // For custom registries, we use the dynamic registry fallback with a default list name 'items'
-	        this.registryService.register(registryName, 'items', menuItem.slug || menuItem.title, menuItem);
-	    }
+    registerMenuItem(registryName, menuItemOrTitle, routeOrOptions = {}, options = {}) {
+        const isOptionsObject = typeof routeOrOptions === 'object';
+        const route = isOptionsObject ? routeOrOptions.route : routeOrOptions;
+        const opts = isOptionsObject ? routeOrOptions : options;
+
+        const menuItem = this.#normalizeMenuItem(menuItemOrTitle, route, opts);
+        
+        // For custom registries, we use the dynamic registry with a default list name 'menu-items'
+        this.registryService.register(registryName, 'menu-items', menuItem.slug || menuItem.title, menuItem);
+    }
 
     // ============================================================================
     // Getter Methods (Improved DX)
@@ -227,14 +221,9 @@ export default class MenuService extends Service {
      * @param {String} registryName Registry name (e.g., 'engine:fleet-ops')
      * @returns {Array} Menu items
      */
-	    getMenuItems(registryName) {
-	        // For dynamic registries, getRegistry(name) returns the dynamic array
-	        // For fixed registries, we assume the caller wants the 'menuItems' list
-	        if (registryName === 'header-menu') {
-	            return this.registryService.getRegistry(registryName);
-	        }
-	        return this.registryService.getRegistry(registryName, 'menuItems');
-	    }
+    getMenuItems(registryName) {
+        return this.registryService.getRegistry(registryName, 'menu-items');
+    }
 
     /**
      * Get menu panels from a registry
@@ -243,10 +232,9 @@ export default class MenuService extends Service {
      * @param {String} registryName Registry name (e.g., 'engine:fleet-ops')
      * @returns {Array} Menu panels
      */
-	    getMenuPanels(registryName) {
-	        // For fixed registries, we assume the caller wants the 'menuPanels' list
-	        return this.registryService.getRegistry(registryName, 'menuPanels');
-	    }
+    getMenuPanels(registryName) {
+        return this.registryService.getRegistry(registryName, 'menu-panels');
+    }
 
     /**
      * Lookup a menu item from a registry
@@ -288,11 +276,10 @@ export default class MenuService extends Service {
      * @method getHeaderMenuItems
      * @returns {Array} Header menu items sorted by priority
      */
-	    getHeaderMenuItems() {
-	        // Uses the dynamic registry 'header-menu'
-	        const items = this.registryService.getRegistry('header-menu');
-	        return A(items).sortBy('priority');
-	    }
+    getHeaderMenuItems() {
+        const items = this.registryService.getRegistry('header-menu', 'menu-items');
+        return A(items).sortBy('priority');
+    }
 
     /**
      * Get organization menu items
@@ -300,10 +287,9 @@ export default class MenuService extends Service {
      * @method getOrganizationMenuItems
      * @returns {Array} Organization menu items
      */
-	    getOrganizationMenuItems() {
-	        // Maps to consoleAccountRegistry.menuItems
-	        return this.registryService.getRegistry('console:account', 'menuItems');
-	    }
+    getOrganizationMenuItems() {
+        return this.registryService.getRegistry('console:account', 'menu-items');
+    }
 
     /**
      * Get user menu items
@@ -311,10 +297,9 @@ export default class MenuService extends Service {
      * @method getUserMenuItems
      * @returns {Array} User menu items
      */
-	    getUserMenuItems() {
-	        // Maps to consoleAccountRegistry.menuItems
-	        return this.registryService.getRegistry('console:account', 'menuItems');
-	    }
+    getUserMenuItems() {
+        return this.registryService.getRegistry('console:account', 'menu-items');
+    }
 
     /**
      * Get admin menu panels
@@ -322,11 +307,10 @@ export default class MenuService extends Service {
      * @method getAdminMenuPanels
      * @returns {Array} Admin panels sorted by priority
      */
-	    getAdminMenuPanels() {
-	        // Maps to consoleAdminRegistry.menuPanels
-	        const panels = this.registryService.getRegistry('console:admin', 'menuPanels');
-	        return A(panels).sortBy('priority');
-	    }
+    getAdminMenuPanels() {
+        const panels = this.registryService.getRegistry('console:admin', 'menu-panels');
+        return A(panels).sortBy('priority');
+    }
 
     /**
      * Alias for getAdminMenuPanels
@@ -354,20 +338,18 @@ export default class MenuService extends Service {
      * @method getSettingsMenuItems
      * @returns {Array} Settings menu items
      */
- 	    getAdminMenuItems() {
-	        // Maps to consoleAdminRegistry.menuItems
-	        return this.registryService.getRegistry('console:admin', 'menuItems');
-	    } }
+     getAdminMenuItems() {
+        return this.registryService.getRegistry('console:admin', 'menu-items');
+    } }
 
     /**
      * Get settings menu panels
      * 
      * @method getSettingsMenuPanels
      * @returns {Array} Settings menu panels
-   	    getSettingsMenuItems() {
-	        // Maps to consoleSettingsRegistry.menuItems
-	        return this.registryService.getRegistry('console:settings', 'menuItems');
-	    }
+       getSettingsMenuItems() {
+        return this.registryService.getRegistry('console:settings', 'menu-items');
+    }
     // ============================================================================
     // Computed Getters (for template access)
     // ============================================================================
