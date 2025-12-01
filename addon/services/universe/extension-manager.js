@@ -126,14 +126,23 @@ export default class ExtensionManagerService extends Service {
 
     /**
      * Get mount path from engine name
+     * Handles scoped packages and removes engine suffix
      * 
      * @private
      * @method #mountPathFromEngineName
-     * @param {String} name Engine name
-     * @returns {String} Mount path
+     * @param {String} engineName Engine name (e.g., '@fleetbase/fleetops-engine')
+     * @returns {String} Mount path (e.g., 'console.fleetops')
      */
-    #mountPathFromEngineName(name) {
-        return name;
+    #mountPathFromEngineName(engineName) {
+        let engineNameSegments = engineName.split('/');
+        let mountName = engineNameSegments[1];
+
+        if (typeof mountName !== 'string') {
+            mountName = engineNameSegments[0];
+        }
+
+        const mountPath = mountName.replace('-engine', '');
+        return `console.${mountPath}`;
     }
 
     /**
