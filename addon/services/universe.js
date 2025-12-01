@@ -443,23 +443,30 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Transition to a menu item
+     * Handles section, slug, and view parameters for virtual routes
      * 
      * @method transitionMenuItem
      * @param {String} route Route name
-     * @param {Object} menuItem Menu item object
-     * @param {Object} options Options
+     * @param {Object} menuItem Menu item object with slug, view, and optional section
+     * @returns {Transition} The router transition
      */
     @action
-    transitionMenuItem(route, menuItem, options = {}) {
-        if (menuItem.route) {
-            this.router.transitionTo(menuItem.route, ...menuItem.routeParams, {
-                queryParams: options.queryParams || menuItem.queryParams
-            });
-        } else {
-            this.router.transitionTo(route, menuItem.slug, {
-                queryParams: options.queryParams || menuItem.queryParams
-            });
+    transitionMenuItem(route, menuItem) {
+        const { slug, view, section } = menuItem;
+
+        if (section && slug && view) {
+            return this.router.transitionTo(route, section, slug, { queryParams: { view } });
         }
+
+        if (section && slug) {
+            return this.router.transitionTo(route, section, slug);
+        }
+
+        if (slug && view) {
+            return this.router.transitionTo(route, slug, { queryParams: { view } });
+        }
+
+        return this.router.transitionTo(route, slug);
     }
 
     /**
