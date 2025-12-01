@@ -18,6 +18,27 @@ import MenuPanel from '../../contracts/menu-panel';
  */
 export default class MenuService extends Service.extend(Evented) {
     @service('universe/registry-service') registryService;
+    @service universe;
+
+    /**
+     * Wrap an onClick handler to automatically pass menuItem and universe as parameters
+     * 
+     * @private
+     * @method #wrapOnClickHandler
+     * @param {Function} onClick The original onClick function
+     * @param {Object} menuItem The menu item object
+     * @returns {Function} Wrapped onClick function
+     */
+    #wrapOnClickHandler(onClick, menuItem) {
+        if (typeof onClick !== 'function') {
+            return onClick;
+        }
+        
+        const universe = this.universe;
+        return function() {
+            return onClick(menuItem, universe);
+        };
+    }
 
     /**
      * Normalize a menu item input to a plain object
@@ -30,15 +51,13 @@ export default class MenuService extends Service.extend(Evented) {
      * @returns {Object} Normalized menu item object
      */
     #normalizeMenuItem(input, route = null, options = {}) {
+        let menuItemObj;
+        
         if (input instanceof MenuItem) {
-            return input.toObject();
-        }
-
-        if (typeof input === 'object' && input !== null && !input.title) {
-            return input;
-        }
-
-        if (typeof input === 'string') {
+            menuItemObj = input.toObject();
+        } else if (typeof input === 'object' && input !== null && !input.title) {
+            menuItemObj = input;
+        } else if (typeof input === 'string') {
             const menuItem = new MenuItem(input, route);
             
             // Apply options
@@ -56,10 +75,17 @@ export default class MenuService extends Service.extend(Evented) {
                 else menuItem.setOption(key, options[key]);
             });
 
-            return menuItem.toObject();
+            menuItemObj = menuItem.toObject();
+        } else {
+            menuItemObj = input;
         }
-
-        return input;
+        
+        // Wrap onClick handler to automatically pass menuItem and universe
+        if (menuItemObj && typeof menuItemObj.onClick === 'function') {
+            menuItemObj.onClick = this.#wrapOnClickHandler(menuItemObj.onClick, menuItemObj);
+        }
+        
+        return menuItemObj;
     }
 
     /**
