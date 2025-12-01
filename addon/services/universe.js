@@ -117,6 +117,16 @@ export default class UniverseService extends Service.extend(Evented) {
         });
     }
 
+    /**
+     * Get the application instance
+     * 
+     * @method getApplicationInstance
+     * @returns {ApplicationInstance} The application instance
+     */
+    getApplicationInstance() {
+        return this.applicationInstance;
+    }
+
     // ============================================================================
     // Registry Management (delegates to RegistryService)
     // ============================================================================
