@@ -1,7 +1,6 @@
 import Service from '@ember/service';
 import { inject as service } from '@ember/service';
-import { tracked } from '@glimmer/tracking';
-import { A, isArray } from '@ember/array';
+import { isArray } from '@ember/array';
 import Widget from '../../contracts/widget';
 import isObject from '../../utils/is-object';
 
@@ -14,13 +13,16 @@ import isObject from '../../utils/is-object';
  * - registerWidgets(dashboardName, widgets) - Makes widgets available for selection on a dashboard
  * - registerDefaultWidgets(dashboardName, widgets) - Auto-loads specific widgets on a dashboard
  * 
+ * Registry Structure:
+ * - Dashboards: 'dashboards' section, 'dashboards' list
+ * - Widgets: 'dashboard:widgets' section, 'widgets' list
+ * - Default Widgets: 'dashboard:widgets' section, 'default-widgets' list
+ * 
  * @class WidgetService
  * @extends Service
  */
 export default class WidgetService extends Service {
     @service('universe/registry-service') registryService;
-
-    @tracked dashboards = A([]);
 
     /**
      * Normalize a widget input to a plain object
@@ -66,8 +68,8 @@ export default class WidgetService extends Service {
             ...options
         };
 
-        this.dashboards.pushObject(dashboard);
-        this.registryService.register('dashboard', name, dashboard);
+        // Register to 'dashboards' section, 'dashboards' list
+        this.registryService.register('dashboards', 'dashboards', name, dashboard);
     }
 
     /**
@@ -87,13 +89,23 @@ export default class WidgetService extends Service {
         widgets.forEach(widget => {
             const normalized = this.#normalizeWidget(widget);
             
-            // Register widget to dashboard-specific registry
-            // Format: widget:dashboardName#widgetId
-            this.registryService.register('widget', `${dashboardName}#${normalized.id}`, normalized);
+            // Register widget to 'dashboard:widgets' section, 'widgets' list
+            // Key format: dashboardName#widgetId
+            this.registryService.register(
+                'dashboard:widgets', 
+                'widgets', 
+                `${dashboardName}#${normalized.id}`, 
+                normalized
+            );
             
-            // If marked as default, also register to default widgets
+            // If marked as default, also register to default widgets list
             if (normalized.default === true) {
-                this.registryService.register('widget', `default#${dashboardName}#${normalized.id}`, normalized);
+                this.registryService.register(
+                    'dashboard:widgets', 
+                    'default-widgets', 
+                    `${dashboardName}#${normalized.id}`, 
+                    normalized
+                );
             }
         });
     }
@@ -107,27 +119,22 @@ export default class WidgetService extends Service {
      * @param {Array<Widget>} widgets Array of widget instances or objects
      */
     registerDefaultWidgets(dashboardName, widgets) {
-        console.log('[WidgetService] registerDefaultWidgets called:', { dashboardName, widgets });
-        
         if (!isArray(widgets)) {
             widgets = [widgets];
         }
 
         widgets.forEach(widget => {
             const normalized = this.#normalizeWidget(widget);
-            console.log('[WidgetService] Normalized widget:', normalized);
             
-            // Register to default widgets registry for this dashboard
-            // Format: widget:default#dashboardName#widgetId
-            // The registry service will store the key as _registryKey on the widget
-            this.registryService.register('widget', `default#${dashboardName}#${normalized.id}`, normalized);
-            
-            console.log('[WidgetService] Registered with key:', `default#${dashboardName}#${normalized.id}`);
+            // Register to 'dashboard:widgets' section, 'default-widgets' list
+            // Key format: dashboardName#widgetId
+            this.registryService.register(
+                'dashboard:widgets', 
+                'default-widgets', 
+                `${dashboardName}#${normalized.id}`, 
+                normalized
+            );
         });
-        
-        console.log('[WidgetService] Registration complete. Checking registry...');
-        const registry = this.registryService.getRegistry('widget');
-        console.log('[WidgetService] Widget registry after registration:', registry);
     }
 
     /**
@@ -143,19 +150,17 @@ export default class WidgetService extends Service {
             return [];
         }
         
-        // Get all widgets from registry (this is an array)
-        const registry = this.registryService.getRegistry('widget');
+        // Get all widgets from 'dashboard:widgets' section, 'widgets' list
+        const registry = this.registryService.getRegistry('dashboard:widgets', 'widgets');
         
         // Filter widgets by registration key prefix
-        // This includes both default widgets (default#dashboard#id) and regular widgets (dashboard#id)
         const prefix = `${dashboardName}#`;
         
         return registry.filter(widget => {
             if (!widget || typeof widget !== 'object') return false;
             
             // Match widgets registered for this dashboard
-            // Matches: 'dashboard#widget-id' or 'default#dashboard#widget-id'
-            return widget._registryKey && widget._registryKey.includes(prefix);
+            return widget._registryKey && widget._registryKey.startsWith(prefix);
         });
     }
 
@@ -168,34 +173,22 @@ export default class WidgetService extends Service {
      * @returns {Array} Default widgets for the dashboard
      */
     getDefaultWidgets(dashboardName) {
-        console.log('[WidgetService] getDefaultWidgets called for:', dashboardName);
-        
         if (!dashboardName) {
-            console.log('[WidgetService] No dashboardName provided, returning empty array');
             return [];
         }
         
-        // Get all widgets from registry (this is an array)
-        const registry = this.registryService.getRegistry('widget');
-        console.log('[WidgetService] Full widget registry array:', registry);
+        // Get all default widgets from 'dashboard:widgets' section, 'default-widgets' list
+        const registry = this.registryService.getRegistry('dashboard:widgets', 'default-widgets');
         
         // Filter widgets by registration key prefix
-        const prefix = `default#${dashboardName}#`;
-        console.log('[WidgetService] Looking for widgets with key prefix:', prefix);
+        const prefix = `${dashboardName}#`;
         
-        const defaultWidgets = registry.filter(widget => {
+        return registry.filter(widget => {
             if (!widget || typeof widget !== 'object') return false;
             
-            // Check if the registration key starts with our prefix
-            const hasMatchingKey = widget._registryKey && widget._registryKey.startsWith(prefix);
-            console.log('[WidgetService] Widget:', widget.id, 'Key:', widget._registryKey, 'Matches:', hasMatchingKey);
-            
-            return hasMatchingKey;
+            // Match default widgets registered for this dashboard
+            return widget._registryKey && widget._registryKey.startsWith(prefix);
         });
-        
-        console.log('[WidgetService] Filtered default widgets:', defaultWidgets);
-        
-        return defaultWidgets;
     }
 
     /**
@@ -207,7 +200,11 @@ export default class WidgetService extends Service {
      * @returns {Object|null} Widget or null
      */
     getWidget(dashboardName, widgetId) {
-        return this.registryService.lookup('widget', `${dashboardName}#${widgetId}`);
+        return this.registryService.lookup(
+            'dashboard:widgets', 
+            'widgets', 
+            `${dashboardName}#${widgetId}`
+        );
     }
 
     /**
@@ -217,7 +214,7 @@ export default class WidgetService extends Service {
      * @returns {Array} All dashboards
      */
     getDashboards() {
-        return this.dashboards;
+        return this.registryService.getRegistry('dashboards', 'dashboards');
     }
 
     /**
@@ -228,7 +225,7 @@ export default class WidgetService extends Service {
      * @returns {Object|null} Dashboard or null
      */
     getDashboard(name) {
-        return this.registryService.lookup('dashboard', name);
+        return this.registryService.lookup('dashboards', 'dashboards', name);
     }
 
     /**
@@ -242,8 +239,6 @@ export default class WidgetService extends Service {
     getRegistry(dashboardId) {
         return this.getWidgets(dashboardId);
     }
-
-
 
     // ============================================================================
     // DEPRECATED METHODS (for backward compatibility)
