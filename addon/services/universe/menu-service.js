@@ -169,6 +169,9 @@ export default class MenuService extends Service {
         if (panel.items && panel.items.length) {
             panel.items.forEach(item => {
                 const menuItem = this.#normalizeMenuItem(item);
+                // Mark as panel item to prevent duplication in main menu
+                menuItem._isPanelItem = true;
+                menuItem._panelSlug = panel.slug;
                 this.registryService.register('console:admin', 'menu-item', menuItem.slug, menuItem);
             });
         }
@@ -325,12 +328,27 @@ export default class MenuService extends Service {
 
     /**
      * Get admin menu items
+     * Excludes items that belong to panels (to prevent duplication)
      * 
      * @method getAdminMenuItems
-     * @returns {Array} Admin menu items
+     * @returns {Array} Admin menu items (excluding panel items)
      */
     getAdminMenuItems() {
-        return this.registryService.getRegistry('console:admin', 'menu-item');
+        const items = this.registryService.getRegistry('console:admin', 'menu-item');
+        // Filter out panel items to prevent duplication in the UI
+        return items.filter(item => !item._isPanelItem);
+    }
+
+    /**
+     * Get menu items from a specific panel
+     * 
+     * @method getMenuItemsFromPanel
+     * @param {String} panelSlug Panel slug
+     * @returns {Array} Menu items belonging to the panel
+     */
+    getMenuItemsFromPanel(panelSlug) {
+        const items = this.registryService.getRegistry('console:admin', 'menu-item');
+        return items.filter(item => item._panelSlug === panelSlug);
     }
 
     /**

@@ -56,7 +56,7 @@ export default class ExtensionManagerService extends Service {
         }
 
         // Start loading the engine
-        const loadingPromise = this._loadEngine(engineName);
+        const loadingPromise = this.#loadEngine(engineName);
         this.loadingPromises.set(engineName, loadingPromise);
 
         try {
@@ -74,63 +74,66 @@ export default class ExtensionManagerService extends Service {
      * Internal method to load an engine
      * 
      * @private
-     * @method _loadEngine
-     * @param {String} engineName Name of the engine
+     * @method #loadEngine
+     * @param {String} name Name of the engine
      * @returns {Promise<EngineInstance>} The engine instance
      */
-    _loadEngine(engineName) {
-        const owner = getOwner(this);
-        const router = owner.lookup('router:main');
-        const name = engineName;
+    #loadEngine(name) {
+        const router = getOwner(this).lookup('router:main');
         const instanceId = 'manual'; // Arbitrary instance id, should be unique per engine
+        const mountPoint = this.#mountPathFromEngineName(name);
 
-        assert(
-            `ExtensionManager requires an owner to load engines`,
-            owner
-        );
-
-        // Ensure enginePromises structure exists
-        if (!router._enginePromises) {
-            router._enginePromises = Object.create(null);
-        }
         if (!router._enginePromises[name]) {
             router._enginePromises[name] = Object.create(null);
         }
 
-        // 1. Check if a Promise for this engine instance already exists
-        if (router._enginePromises[name][instanceId]) {
-            return router._enginePromises[name][instanceId];
+        let enginePromise = router._enginePromises[name][instanceId];
+
+        // We already have a Promise for this engine instance
+        if (enginePromise) {
+            return enginePromise;
         }
 
-        let enginePromise;
-
-        // 2. Check if the engine is already loaded
-        if (router.engineIsLoaded(name)) {
-            // Engine is loaded, but no Promise exists, so create one
+        if (router._engineIsLoaded(name)) {
+            // The Engine is loaded, but has no Promise
             enginePromise = RSVP.resolve();
         } else {
-            // 3. Engine is not loaded, load the bundle
-            enginePromise = router.assetLoader.loadBundle(name).then(() => {
-                // Asset loaded, now register the engine
-                return router.registerEngine(name, instanceId, null); // null for mountPoint initially
-            });
+            // The Engine is not loaded and has no Promise
+            enginePromise = router._assetLoader.loadBundle(name).then(
+                () => router._registerEngine(name),
+                (error) => {
+                    router._enginePromises[name][instanceId] = undefined;
+                    throw error;
+                }
+            );
         }
 
-        // 4. Construct and boot the engine instance after assets are loaded and registered
-        const finalPromise = enginePromise.then(() => {
-            return this.constructEngineInstance(name, instanceId, null);
-        }).catch((error) => {
-            // Clear the promise on error
-            if (router._enginePromises[name]) {
-                delete router._enginePromises[name][instanceId];
-            }
-            throw error;
-        });
+        return (router._enginePromises[name][instanceId] = enginePromise.then(() => {
+            return this.constructEngineInstance(name, instanceId, mountPoint);
+        }));
+    }
 
-        // Store the final promise
-        router._enginePromises[name][instanceId] = finalPromise;
+    /**
+     * Public alias for loading an engine
+     * 
+     * @method loadEngine
+     * @param {String} name Name of the engine
+     * @returns {Promise<EngineInstance>} The engine instance
+     */
+    loadEngine(name) {
+        return this.#loadEngine(name);
+    }
 
-        return finalPromise;
+    /**
+     * Get mount path from engine name
+     * 
+     * @private
+     * @method #mountPathFromEngineName
+     * @param {String} name Engine name
+     * @returns {String} Mount path
+     */
+    #mountPathFromEngineName(name) {
+        return name;
     }
 
     /**
