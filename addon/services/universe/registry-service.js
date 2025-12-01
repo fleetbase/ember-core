@@ -1,5 +1,6 @@
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { warn } from '@ember/debug';
 import { A, isArray } from '@ember/array';
 import { TrackedMap, TrackedObject } from 'tracked-built-ins';
 
@@ -197,14 +198,14 @@ export default class RegistryService extends Service {
     /**
      * Create a registry (section with default list).
      * For backward compatibility with existing code.
-     * Creates a section with a 'menu-items' list by default.
+     * Creates a section with a 'menu-item' list by default.
      * 
      * @method createRegistry
      * @param {String} sectionName Section name
      * @returns {Array} The default list array
      */
     createRegistry(sectionName) {
-        return this.getOrCreateList(sectionName, 'menu-items');
+        return this.getOrCreateList(sectionName, 'menu-item');
     }
 
     /**
@@ -327,7 +328,7 @@ export default class RegistryService extends Service {
         if (this.applicationInstance) {
             this.applicationInstance.register(`component:${name}`, componentClass, options);
         } else {
-            console.warn('Application instance not set on RegistryService. Cannot register component:', name);
+            warn('Application instance not set on RegistryService. Cannot register component.', { id: 'registry-service.no-app-instance' });
         }
     }
 
@@ -343,7 +344,7 @@ export default class RegistryService extends Service {
         if (this.applicationInstance) {
             this.applicationInstance.register(`service:${name}`, serviceClass, options);
         } else {
-            console.warn('Application instance not set on RegistryService. Cannot register service:', name);
+            warn('Application instance not set on RegistryService. Cannot register service.', { id: 'registry-service.no-app-instance' });
         }
     }
 

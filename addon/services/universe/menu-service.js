@@ -1,5 +1,6 @@
 import Service from '@ember/service';
 import { inject as service } from '@ember/service';
+import { warn } from '@ember/debug';
 import { dasherize } from '@ember/string';
 import { A } from '@ember/array';
 import MenuItem from '../../contracts/menu-item';

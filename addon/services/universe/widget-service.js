@@ -1,5 +1,6 @@
 import Service from '@ember/service';
 import { inject as service } from '@ember/service';
+import { warn } from '@ember/debug';
 import { isArray } from '@ember/array';
 import Widget from '../../contracts/widget';
 import isObject from '../../utils/is-object';
@@ -14,9 +15,9 @@ import isObject from '../../utils/is-object';
  * - registerDefaultWidgets(dashboardName, widgets) - Auto-loads specific widgets on a dashboard
  * 
  * Registry Structure:
- * - Dashboards: 'dashboards' section, 'dashboards' list
- * - Widgets: 'dashboard:widgets' section, 'widgets' list
- * - Default Widgets: 'dashboard:widgets' section, 'default-widgets' list
+ * - Dashboards: 'dashboards' section, 'dashboard' list
+ * - Widgets: 'dashboard:widgets' section, 'widget' list
+ * - Default Widgets: 'dashboard:widgets' section, 'default-widget' list
  * 
  * @class WidgetService
  * @extends Service
@@ -43,7 +44,7 @@ export default class WidgetService extends Service {
             const id = input.id || input.widgetId;
             
             if (!id) {
-                console.warn('[WidgetService] Widget definition is missing id or widgetId:', input);
+                warn('[WidgetService] Widget definition is missing id or widgetId', { id: 'widget-service.missing-id' });
             }
             
             return {
@@ -68,8 +69,8 @@ export default class WidgetService extends Service {
             ...options
         };
 
-        // Register to 'dashboards' section, 'dashboards' list
-        this.registryService.register('dashboards', 'dashboards', name, dashboard);
+        // Register to 'dashboards' section, 'dashboard' list
+        this.registryService.register('dashboards', 'dashboard', name, dashboard);
     }
 
     /**
@@ -89,20 +90,20 @@ export default class WidgetService extends Service {
         widgets.forEach(widget => {
             const normalized = this.#normalizeWidget(widget);
             
-            // Register widget to 'dashboard:widgets' section, 'widgets' list
+            // Register widget to 'dashboard:widgets' section, 'widget' list
             // Key format: dashboardName#widgetId
             this.registryService.register(
                 'dashboard:widgets', 
-                'widgets', 
+                'widget', 
                 `${dashboardName}#${normalized.id}`, 
                 normalized
             );
             
-            // If marked as default, also register to default widgets list
+            // If marked as default, also register to default widget list
             if (normalized.default === true) {
                 this.registryService.register(
                     'dashboard:widgets', 
-                    'default-widgets', 
+                    'default-widget', 
                     `${dashboardName}#${normalized.id}`, 
                     normalized
                 );
@@ -126,11 +127,11 @@ export default class WidgetService extends Service {
         widgets.forEach(widget => {
             const normalized = this.#normalizeWidget(widget);
             
-            // Register to 'dashboard:widgets' section, 'default-widgets' list
+            // Register to 'dashboard:widgets' section, 'default-widget' list
             // Key format: dashboardName#widgetId
             this.registryService.register(
                 'dashboard:widgets', 
-                'default-widgets', 
+                'default-widget', 
                 `${dashboardName}#${normalized.id}`, 
                 normalized
             );
@@ -150,8 +151,8 @@ export default class WidgetService extends Service {
             return [];
         }
         
-        // Get all widgets from 'dashboard:widgets' section, 'widgets' list
-        const registry = this.registryService.getRegistry('dashboard:widgets', 'widgets');
+        // Get all widgets from 'dashboard:widgets' section, 'widget' list
+        const registry = this.registryService.getRegistry('dashboard:widgets', 'widget');
         
         // Filter widgets by registration key prefix
         const prefix = `${dashboardName}#`;
@@ -177,8 +178,8 @@ export default class WidgetService extends Service {
             return [];
         }
         
-        // Get all default widgets from 'dashboard:widgets' section, 'default-widgets' list
-        const registry = this.registryService.getRegistry('dashboard:widgets', 'default-widgets');
+        // Get all default widgets from 'dashboard:widgets' section, 'default-widget' list
+        const registry = this.registryService.getRegistry('dashboard:widgets', 'default-widget');
         
         // Filter widgets by registration key prefix
         const prefix = `${dashboardName}#`;
@@ -202,7 +203,7 @@ export default class WidgetService extends Service {
     getWidget(dashboardName, widgetId) {
         return this.registryService.lookup(
             'dashboard:widgets', 
-            'widgets', 
+            'widget', 
             `${dashboardName}#${widgetId}`
         );
     }
@@ -214,7 +215,7 @@ export default class WidgetService extends Service {
      * @returns {Array} All dashboards
      */
     getDashboards() {
-        return this.registryService.getRegistry('dashboards', 'dashboards');
+        return this.registryService.getRegistry('dashboards', 'dashboard');
     }
 
     /**
@@ -225,7 +226,7 @@ export default class WidgetService extends Service {
      * @returns {Object|null} Dashboard or null
      */
     getDashboard(name) {
-        return this.registryService.lookup('dashboards', 'dashboards', name);
+        return this.registryService.lookup('dashboards', 'dashboard', name);
     }
 
     /**
@@ -253,7 +254,7 @@ export default class WidgetService extends Service {
      * @deprecated Use registerDefaultWidgets('dashboard', widgets) instead
      */
     registerDefaultDashboardWidgets(widgets) {
-        console.warn('[WidgetService] registerDefaultDashboardWidgets is deprecated. Use registerDefaultWidgets(dashboardName, widgets) instead.');
+        warn('[WidgetService] registerDefaultDashboardWidgets is deprecated. Use registerDefaultWidgets(dashboardName, widgets) instead.', { id: 'widget-service.deprecated-method' });
         this.registerDefaultWidgets('dashboard', widgets);
     }
 
@@ -266,7 +267,7 @@ export default class WidgetService extends Service {
      * @deprecated Use registerWidgets('dashboard', widgets) instead
      */
     registerDashboardWidgets(widgets) {
-        console.warn('[WidgetService] registerDashboardWidgets is deprecated. Use registerWidgets(dashboardName, widgets) instead.');
+        warn('[WidgetService] registerDashboardWidgets is deprecated. Use registerWidgets(dashboardName, widgets) instead.', { id: 'widget-service.deprecated-method' });
         this.registerWidgets('dashboard', widgets);
     }
 }
