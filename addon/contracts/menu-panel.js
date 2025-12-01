@@ -52,6 +52,7 @@ export default class MenuPanel extends BaseContract {
             this.items = definition.items || [];
             this.slug = definition.slug || dasherize(this.title);
             this.icon = definition.icon || null;
+            this.open = definition.open !== undefined ? definition.open : true;
             this.priority = definition.priority !== undefined ? definition.priority : 9;
         } else {
             // Handle string title (chaining pattern)
@@ -59,6 +60,7 @@ export default class MenuPanel extends BaseContract {
             this.items = items;
             this.slug = dasherize(titleOrDefinition);
             this.icon = null;
+            this.open = true;
             this.priority = 9;
         }
         
@@ -156,6 +158,7 @@ export default class MenuPanel extends BaseContract {
             title: this.title,
             slug: this.slug,
             icon: this.icon,
+            open: this.open,
             priority: this.priority,
             items: this.items,
             ...this._options
