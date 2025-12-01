@@ -169,6 +169,14 @@ export default class MenuService extends Service {
         if (panel.items && panel.items.length) {
             panel.items.forEach(item => {
                 const menuItem = this.#normalizeMenuItem(item);
+                console.log('[registerAdminMenuPanel] Before setting section:', {
+                    title: menuItem.title,
+                    slug: menuItem.slug,
+                    section: menuItem.section,
+                    view: menuItem.view,
+                    panelSlug: panel.slug
+                });
+                
                 // Mark as panel item to prevent duplication in main menu
                 menuItem._isPanelItem = true;
                 menuItem._panelSlug = panel.slug;
@@ -179,6 +187,13 @@ export default class MenuService extends Service {
                 if (!menuItem.section) {
                     menuItem.section = panel.slug;
                 }
+                
+                console.log('[registerAdminMenuPanel] After setting section:', {
+                    title: menuItem.title,
+                    slug: menuItem.slug,
+                    section: menuItem.section,
+                    view: menuItem.view
+                });
                 
                 this.registryService.register('console:admin', 'menu-item', menuItem.slug, menuItem);
             });
