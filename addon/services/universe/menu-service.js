@@ -169,33 +169,24 @@ export default class MenuService extends Service {
         if (panel.items && panel.items.length) {
             panel.items = panel.items.map(item => {
                 const menuItem = this.#normalizeMenuItem(item);
-                console.log('[registerAdminMenuPanel] Before setting section:', {
-                    title: menuItem.title,
-                    slug: menuItem.slug,
-                    section: menuItem.section,
-                    view: menuItem.view,
-                    panelSlug: panel.slug
-                });
+                
+                // CRITICAL: Original behavior for panel items:
+                // - slug = panel slug (e.g., 'fleet-ops') ← Used in URL
+                // - view = item slug (e.g., 'navigator-app') ← Used in query param
+                // - section = null (not used for panel items)
+                // Result: /admin/fleet-ops?view=navigator-app
+                
+                const itemSlug = menuItem.slug; // Save the original item slug
+                menuItem.slug = panel.slug; // Set slug to panel slug for URL
+                menuItem.view = itemSlug; // Set view to item slug for query param
+                menuItem.section = null; // Panel items don't use section
                 
                 // Mark as panel item to prevent duplication in main menu
                 menuItem._isPanelItem = true;
                 menuItem._panelSlug = panel.slug;
                 
-                // Set section for proper routing (view is already set by MenuItem constructor)
-                // section = panel slug (e.g., 'fleet-ops')
-                // view = already set to dasherize(title) by MenuItem (e.g., 'navigator-app')
-                if (!menuItem.section) {
-                    menuItem.section = panel.slug;
-                }
-                
-                console.log('[registerAdminMenuPanel] After setting section:', {
-                    title: menuItem.title,
-                    slug: menuItem.slug,
-                    section: menuItem.section,
-                    view: menuItem.view
-                });
-                
-                this.registryService.register('console:admin', 'menu-item', menuItem.slug, menuItem);
+                // Register with the item slug as key (for lookup)
+                this.registryService.register('console:admin', 'menu-item', itemSlug, menuItem);
                 
                 // Return the modified menu item so panel.items gets updated
                 return menuItem;
