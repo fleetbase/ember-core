@@ -52,38 +52,107 @@ export default class MenuItem extends BaseContract {
         if (isObject(titleOrDefinition)) {
             const definition = titleOrDefinition;
             
+            // Core properties
             this.title = definition.title;
-            this.route = definition.route || null;
-            this.icon = definition.icon || 'circle-dot';
-            this.priority = definition.priority !== undefined ? definition.priority : 9;
-            this.component = definition.component || null;
+            this.text = definition.text || definition.title;
+            this.label = definition.label || definition.title;
+            this.id = definition.id || dasherize(definition.title);
             this.slug = definition.slug || dasherize(this.title);
-            this.index = definition.index !== undefined ? definition.index : 0;
+            
+            // Routing properties
+            this.route = definition.route || null;
             this.section = definition.section || null;
             this.queryParams = definition.queryParams || {};
             this.routeParams = definition.routeParams || [];
-            this.type = definition.type || 'default';
-            this.wrapperClass = definition.wrapperClass || null;
-            this.onClick = definition.onClick || null;
-            this.componentParams = definition.componentParams || null;
+            this.view = definition.view || dasherize(this.title);
+            
+            // Display properties
+            this.icon = definition.icon || 'circle-dot';
+            this.iconComponent = definition.iconComponent || null;
+            this.iconComponentOptions = definition.iconComponentOptions || {};
+            this.iconSize = definition.iconSize || null;
+            this.iconPrefix = definition.iconPrefix || null;
+            this.iconClass = definition.iconClass || null;
+            
+            // Component properties
+            this.component = definition.component || null;
+            this.componentParams = definition.componentParams || {};
             this.renderComponentInPlace = definition.renderComponentInPlace || false;
+            
+            // Styling properties
+            this.class = definition.class || null;
+            this.inlineClass = definition.inlineClass || null;
+            this.wrapperClass = definition.wrapperClass || null;
+            this.overwriteWrapperClass = definition.overwriteWrapperClass || false;
+            
+            // Behavior properties
+            this.priority = definition.priority !== undefined ? definition.priority : 9;
+            this.index = definition.index !== undefined ? definition.index : 0;
+            this.type = definition.type || 'default';
+            this.buttonType = definition.buttonType || null;
+            this.onClick = definition.onClick || null;
+            
+            // State properties
+            this.disabled = definition.disabled || false;
+            this.isLoading = definition.isLoading || false;
+            
+            // Permission and i18n
+            this.permission = definition.permission || null;
+            this.intl = definition.intl || null;
+            
+            // Nested items
+            this.items = definition.items || null;
         } else {
             // Handle string title with optional route (chaining pattern)
             this.title = titleOrDefinition;
-            this.route = route;
-            this.icon = 'circle-dot';
-            this.priority = 9;
-            this.component = null;
+            this.text = titleOrDefinition;
+            this.label = titleOrDefinition;
+            this.id = dasherize(titleOrDefinition);
             this.slug = dasherize(titleOrDefinition);
-            this.index = 0;
+            
+            // Routing properties
+            this.route = route;
             this.section = null;
             this.queryParams = {};
             this.routeParams = [];
-            this.type = 'default';
-            this.wrapperClass = null;
-            this.onClick = null;
-            this.componentParams = null;
+            this.view = dasherize(titleOrDefinition);
+            
+            // Display properties
+            this.icon = 'circle-dot';
+            this.iconComponent = null;
+            this.iconComponentOptions = {};
+            this.iconSize = null;
+            this.iconPrefix = null;
+            this.iconClass = null;
+            
+            // Component properties
+            this.component = null;
+            this.componentParams = {};
             this.renderComponentInPlace = false;
+            
+            // Styling properties
+            this.class = null;
+            this.inlineClass = null;
+            this.wrapperClass = null;
+            this.overwriteWrapperClass = false;
+            
+            // Behavior properties
+            this.priority = 9;
+            this.index = 0;
+            this.type = 'default';
+            this.buttonType = null;
+            this.onClick = null;
+            
+            // State properties
+            this.disabled = false;
+            this.isLoading = false;
+            
+            // Permission and i18n
+            this.permission = null;
+            this.intl = null;
+            
+            // Nested items
+            this.items = null;
         }
         
         // Call setup() to trigger validation after properties are set
@@ -281,18 +350,58 @@ export default class MenuItem extends BaseContract {
      */
     toObject() {
         return {
+            // Core properties
+            id: this.id,
             title: this.title,
-            route: this.route,
-            icon: this.icon,
-            priority: this.priority,
-            component: this.component,
+            text: this.text,
+            label: this.label,
             slug: this.slug,
-            index: this.index,
+            
+            // Routing properties
+            route: this.route,
             section: this.section,
+            view: this.view,
             queryParams: this.queryParams,
             routeParams: this.routeParams,
-            type: this.type,
+            
+            // Display properties
+            icon: this.icon,
+            iconComponent: this.iconComponent,
+            iconComponentOptions: this.iconComponentOptions,
+            iconSize: this.iconSize,
+            iconPrefix: this.iconPrefix,
+            iconClass: this.iconClass,
+            
+            // Component properties
+            component: this.component,
+            componentParams: this.componentParams,
+            renderComponentInPlace: this.renderComponentInPlace,
+            
+            // Styling properties
+            class: this.class,
+            inlineClass: this.inlineClass,
             wrapperClass: this.wrapperClass,
+            overwriteWrapperClass: this.overwriteWrapperClass,
+            
+            // Behavior properties
+            priority: this.priority,
+            index: this.index,
+            type: this.type,
+            buttonType: this.buttonType,
+            onClick: this.onClick,
+            
+            // State properties
+            disabled: this.disabled,
+            isLoading: this.isLoading,
+            
+            // Permission and i18n
+            permission: this.permission,
+            intl: this.intl,
+            
+            // Nested items
+            items: this.items,
+            
+            // Include any additional options
             ...this._options
         };
     }

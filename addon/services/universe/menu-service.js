@@ -173,11 +173,12 @@ export default class MenuService extends Service {
                 menuItem._isPanelItem = true;
                 menuItem._panelSlug = panel.slug;
                 
-                // Set section and view for proper routing
+                // Set section for proper routing (view is already set by MenuItem constructor)
                 // section = panel slug (e.g., 'fleet-ops')
-                // view = menu item slug (e.g., 'navigator-app')
-                menuItem.section = panel.slug;
-                menuItem.view = menuItem.slug;
+                // view = already set to dasherize(title) by MenuItem (e.g., 'navigator-app')
+                if (!menuItem.section) {
+                    menuItem.section = panel.slug;
+                }
                 
                 this.registryService.register('console:admin', 'menu-item', menuItem.slug, menuItem);
             });
