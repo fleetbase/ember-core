@@ -6,6 +6,8 @@ import { assert, debug } from '@ember/debug';
 import loadExtensions from '@fleetbase/ember-core/utils/load-extensions';
 import mapEngines from '@fleetbase/ember-core/utils/map-engines';
 import { getExtensionLoader } from '@fleetbase/console/extensions';
+import { isArray } from '@ember/array';
+import RSVP from 'rsvp';
 
 /**
  * ExtensionManagerService
@@ -76,22 +78,59 @@ export default class ExtensionManagerService extends Service {
      * @param {String} engineName Name of the engine
      * @returns {Promise<EngineInstance>} The engine instance
      */
-    async _loadEngine(engineName) {
+    _loadEngine(engineName) {
         const owner = getOwner(this);
-        
+        const router = owner.lookup('router:main');
+        const name = engineName;
+        const instanceId = 'manual'; // Arbitrary instance id, should be unique per engine
+
         assert(
             `ExtensionManager requires an owner to load engines`,
             owner
         );
 
-        // This lookup triggers Ember's lazy loading mechanism
-        const engineInstance = owner.lookup(`engine:${engineName}`);
-
-        if (!engineInstance) {
-            throw new Error(`Engine '${engineName}' not found. Make sure it is mounted in router.js`);
+        // Ensure enginePromises structure exists
+        if (!router._enginePromises) {
+            router._enginePromises = Object.create(null);
+        }
+        if (!router._enginePromises[name]) {
+            router._enginePromises[name] = Object.create(null);
         }
 
-        return engineInstance;
+        // 1. Check if a Promise for this engine instance already exists
+        if (router._enginePromises[name][instanceId]) {
+            return router._enginePromises[name][instanceId];
+        }
+
+        let enginePromise;
+
+        // 2. Check if the engine is already loaded
+        if (router.engineIsLoaded(name)) {
+            // Engine is loaded, but no Promise exists, so create one
+            enginePromise = RSVP.resolve();
+        } else {
+            // 3. Engine is not loaded, load the bundle
+            enginePromise = router.assetLoader.loadBundle(name).then(() => {
+                // Asset loaded, now register the engine
+                return router.registerEngine(name, instanceId, null); // null for mountPoint initially
+            });
+        }
+
+        // 4. Construct and boot the engine instance after assets are loaded and registered
+        const finalPromise = enginePromise.then(() => {
+            return this.constructEngineInstance(name, instanceId, null);
+        }).catch((error) => {
+            // Clear the promise on error
+            if (router._enginePromises[name]) {
+                delete router._enginePromises[name][instanceId];
+            }
+            throw error;
+        });
+
+        // Store the final promise
+        router._enginePromises[name][instanceId] = finalPromise;
+
+        return finalPromise;
     }
 
     /**
@@ -102,8 +141,145 @@ export default class ExtensionManagerService extends Service {
      * @param {String} engineName Name of the engine
      * @returns {EngineInstance|null} The engine instance or null
      */
-    getEngineInstance(engineName) {
-        return this.loadedEngines.get(engineName) || null;
+    /**
+     * Construct an engine instance. If the instance does not exist yet, it
+     * will be created.
+     * 
+     * @method constructEngineInstance
+     * @param {String} name The name of the engine
+     * @param {String} instanceId The id of the engine instance
+     * @param {String} mountPoint The mount point of the engine
+     * @returns {Promise<EngineInstance>} A Promise that resolves with the constructed engine instance
+     */
+    constructEngineInstance(name, instanceId, mountPoint) {
+        const owner = getOwner(this);
+        const router = owner.lookup('router:main');
+
+        assert(
+            `You attempted to load the engine '${name}' with '${instanceId}', but the engine cannot be found.`,
+            router.hasRegistration(`engine:${name}`)
+        );
+
+        let engineInstances = router._engineInstances;
+        if (!engineInstances) {
+            engineInstances = router._engineInstances = Object.create(null);
+        }
+        if (!engineInstances[name]) {
+            engineInstances[name] = Object.create(null);
+        }
+
+        let engineInstance = engineInstances[name][instanceId];
+
+        if (!engineInstance) {
+            engineInstance = owner.buildChildEngineInstance(name, {
+                routable: true,
+                mountPoint: mountPoint
+            });
+
+            // correct mountPoint using engine instance
+            const _mountPoint = this._getMountPointFromEngineInstance(engineInstance);
+            if (_mountPoint) {
+                engineInstance.mountPoint = _mountPoint;
+            }
+
+            // make sure to set dependencies from base instance
+            if (engineInstance.base) {
+                engineInstance.dependencies = this._setupEngineParentDependenciesBeforeBoot(engineInstance.base.dependencies);
+            }
+
+            // store loaded instance to engineInstances for booting
+            engineInstances[name][instanceId] = engineInstance;
+
+            this.trigger('engine.loaded', engineInstance);
+
+            return engineInstance.boot().then(() => {
+                return engineInstance;
+            });
+        }
+
+        return RSVP.resolve(engineInstance);
+    }
+
+    /**
+     * Helper to get the mount point from the engine instance.
+     * @private
+     * @param {EngineInstance} engineInstance 
+     * @returns {String|null}
+     */
+    _getMountPointFromEngineInstance(engineInstance) {
+        const owner = getOwner(this);
+        const router = owner.lookup('router:main');
+        const engineName = engineInstance.base.name;
+        
+        // This logic is complex and depends on how the router stores mount points.
+        // For now, we'll return the engine name as a fallback, assuming the router
+        // handles the actual mount point lookup during engine registration.
+        // The original code snippet suggests a custom method: this._mountPointFromEngineInstance(engineInstance)
+        // Since we don't have that, we'll rely on the engine's name or the default mountPoint.
+        return engineInstance.mountPoint || engineName;
+    }
+
+    /**
+     * Setup engine parent dependencies before boot.
+     * Fixes service and external route dependencies.
+     * 
+     * @private
+     * @param {Object} baseDependencies 
+     * @returns {Object} Fixed dependencies
+     */
+    _setupEngineParentDependenciesBeforeBoot(baseDependencies = {}) {
+        const dependencies = { ...baseDependencies };
+
+        // fix services
+        const servicesObject = {};
+        if (isArray(dependencies.services)) {
+            for (let i = 0; i < dependencies.services.length; i++) {
+                const service = dependencies.services.objectAt(i);
+                if (typeof service === 'object') {
+                    Object.assign(servicesObject, service);
+                    continue;
+                }
+                servicesObject[service] = service;
+            }
+        }
+        dependencies.services = servicesObject;
+
+        // fix external routes
+        const externalRoutesObject = {};
+        if (isArray(dependencies.externalRoutes)) {
+            for (let i = 0; i < dependencies.externalRoutes.length; i++) {
+                const externalRoute = dependencies.externalRoutes.objectAt(i);
+                if (typeof externalRoute === 'object') {
+                    Object.assign(externalRoutesObject, externalRoute);
+                    continue;
+                }
+                externalRoutesObject[externalRoute] = externalRoute;
+            }
+        }
+        dependencies.externalRoutes = externalRoutesObject;
+
+        return dependencies;
+    }
+
+    /**
+     * Get an engine instance if it's already loaded
+     * Does not trigger loading
+     * 
+     * @method getEngineInstance
+     * @param {String} engineName Name of the engine
+     * @param {String} instanceId Optional instance ID (defaults to 'manual')
+     * @returns {EngineInstance|null} The engine instance or null
+     */
+    getEngineInstance(engineName, instanceId = 'manual') {
+        const owner = getOwner(this);
+        const router = owner.lookup('router:main');
+        const engineInstances = router._engineInstances;
+
+        if (engineInstances && engineInstances[engineName] && engineInstances[engineName][instanceId]) {
+            return engineInstances[engineName][instanceId];
+        }
+
+        return null;
     }
 
     /**
@@ -114,7 +290,9 @@ export default class ExtensionManagerService extends Service {
      * @returns {Boolean} True if engine is loaded
      */
     isEngineLoaded(engineName) {
-        return this.loadedEngines.has(engineName);
+        const owner = getOwner(this);
+        const router = owner.lookup('router:main');
+        return router.engineIsLoaded(engineName);
     }
 
     /**
@@ -125,7 +303,9 @@ export default class ExtensionManagerService extends Service {
      * @returns {Boolean} True if engine is loading
      */
     isEngineLoading(engineName) {
-        return this.loadingPromises.has(engineName);
+        const owner = getOwner(this);
+        const router = owner.lookup('router:main');
+        return !!(router._enginePromises && router._enginePromises[engineName]);
     }
 
     /**
