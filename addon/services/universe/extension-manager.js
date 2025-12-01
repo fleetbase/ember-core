@@ -4,6 +4,7 @@ import { tracked } from '@glimmer/tracking';
 import { A } from '@ember/array';
 import { getOwner } from '@ember/application';
 import { assert, debug } from '@ember/debug';
+import { next } from '@ember/runloop';
 import loadExtensions from '@fleetbase/ember-core/utils/load-extensions';
 import mapEngines from '@fleetbase/ember-core/utils/map-engines';
 import { getExtensionLoader } from '@fleetbase/console/extensions';
@@ -38,6 +39,8 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         this.extensionsLoadedPromise = new Promise((resolve) => {
             this.extensionsLoadedResolver = resolve;
         });
+        // Patch owner to track engine loading via router
+        this.#patchOwnerForEngineTracking();
     }
 
     /**
@@ -206,6 +209,8 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
 
             // Run stored onEngineLoaded hooks from extension.js
             this.#runEngineLoadedHooks(name, engineInstance);
+            // Clear hooks after running to prevent double execution
+            this.#engineLoadedHooks.delete(name);
 
             return engineInstance.boot().then(() => {
                 return engineInstance;
@@ -771,6 +776,60 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             }
             this.#engineLoadedHooks.get(engineName).push(hookFn);
             debug(`[ExtensionManager] Stored onEngineLoaded hook for ${engineName}`);
+        }
+    }
+
+    /**
+     * Patch owner's buildChildEngineInstance to track engine loading via router
+     * This ensures hooks run even when engines are loaded through routing (LinkTo)
+     * 
+     * @private
+     * @method #patchOwnerForEngineTracking
+     */
+    #patchOwnerForEngineTracking() {
+        const owner = getOwner(this);
+        const originalBuildChildEngineInstance = owner.buildChildEngineInstance;
+        const self = this;
+        
+        owner.buildChildEngineInstance = function(name, options) {
+            debug(`[ExtensionManager] buildChildEngineInstance called for ${name}`);
+            const engineInstance = originalBuildChildEngineInstance.call(this, name, options);
+            
+            // Notify ExtensionManager that an engine instance was built
+            self.#onEngineInstanceBuilt(name, engineInstance);
+            
+            return engineInstance;
+        };
+        
+        debug('[ExtensionManager] Patched owner.buildChildEngineInstance for engine tracking');
+    }
+
+    /**
+     * Called when an engine instance is built (via router or manual loading)
+     * Schedules hooks to run after the engine boots
+     * 
+     * @private
+     * @method #onEngineInstanceBuilt
+     * @param {String} engineName The name of the engine
+     * @param {EngineInstance} engineInstance The built engine instance
+     */
+    #onEngineInstanceBuilt(engineName, engineInstance) {
+        const hooks = this.#engineLoadedHooks.get(engineName);
+        
+        if (hooks && hooks.length > 0) {
+            debug(`[ExtensionManager] Engine ${engineName} built, will run ${hooks.length} hook(s) after boot`);
+            
+            // Schedule hooks to run after engine boots
+            // Use next() to ensure engine is fully initialized
+            next(() => {
+                // Check if hooks still exist (they might have been run by constructEngineInstance)
+                const currentHooks = this.#engineLoadedHooks.get(engineName);
+                if (currentHooks && currentHooks.length > 0) {
+                    debug(`[ExtensionManager] Running hooks for ${engineName} (loaded via router)`);
+                    this.#runEngineLoadedHooks(engineName, engineInstance);
+                    this.#engineLoadedHooks.delete(engineName);
+                }
+            });
         }
     }
 
