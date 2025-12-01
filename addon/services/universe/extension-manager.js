@@ -180,14 +180,14 @@ export default class ExtensionManagerService extends Service {
             });
 
             // correct mountPoint using engine instance
-            const _mountPoint = this._getMountPointFromEngineInstance(engineInstance);
+            const _mountPoint = this.#getMountPointFromEngineInstance(engineInstance);
             if (_mountPoint) {
                 engineInstance.mountPoint = _mountPoint;
             }
 
             // make sure to set dependencies from base instance
             if (engineInstance.base) {
-                engineInstance.dependencies = this._setupEngineParentDependenciesBeforeBoot(engineInstance.base.dependencies);
+                engineInstance.dependencies = this.#setupEngineParentDependenciesBeforeBoot(engineInstance.base.dependencies);
             }
 
             // store loaded instance to engineInstances for booting
@@ -209,7 +209,7 @@ export default class ExtensionManagerService extends Service {
      * @param {EngineInstance} engineInstance 
      * @returns {String|null}
      */
-    _getMountPointFromEngineInstance(engineInstance) {
+    #getMountPointFromEngineInstance(engineInstance) {
         const owner = getOwner(this);
         const router = owner.lookup('router:main');
         const engineName = engineInstance.base.name;
@@ -230,7 +230,7 @@ export default class ExtensionManagerService extends Service {
      * @param {Object} baseDependencies 
      * @returns {Object} Fixed dependencies
      */
-    _setupEngineParentDependenciesBeforeBoot(baseDependencies = {}) {
+    #setupEngineParentDependenciesBeforeBoot(baseDependencies = {}) {
         const dependencies = { ...baseDependencies };
 
         // fix services
