@@ -1,4 +1,5 @@
 import Service from '@ember/service';
+import Evented from '@ember/object/evented';
 import { inject as service } from '@ember/service';
 import { warn } from '@ember/debug';
 import { dasherize } from '@ember/string';
@@ -15,7 +16,7 @@ import MenuPanel from '../../contracts/menu-panel';
  * @class MenuService
  * @extends Service
  */
-export default class MenuService extends Service {
+export default class MenuService extends Service.extend(Evented) {
     @service('universe/registry-service') registryService;
 
     /**
@@ -110,7 +111,7 @@ export default class MenuService extends Service {
         this.registryService.register('header', 'menu-item', menuItem.slug, menuItem);
         
         // Trigger event for backward compatibility
-        this.universe.trigger('menuItem.registered', menuItem, 'header');
+        this.trigger('menuItem.registered', menuItem, 'header');
     }
 
     /**
@@ -126,7 +127,7 @@ export default class MenuService extends Service {
         this.registryService.register('console:admin', 'menu-item', menuItem.slug, menuItem);
         
         // Trigger event for backward compatibility
-        this.universe.trigger('menuItem.registered', menuItem, 'console:admin');
+        this.trigger('menuItem.registered', menuItem, 'console:admin');
     }
 
     /**
@@ -208,7 +209,7 @@ export default class MenuService extends Service {
                 this.registryService.register('console:admin', 'menu-item', itemSlug, menuItem);
                 
                 // Trigger event for backward compatibility
-                this.universe.trigger('menuItem.registered', menuItem, 'console:admin');
+                this.trigger('menuItem.registered', menuItem, 'console:admin');
                 
                 // Return the modified menu item so panel.items gets updated
                 return menuItem;
@@ -216,7 +217,7 @@ export default class MenuService extends Service {
         }
         
         // Trigger event for backward compatibility
-        this.universe.trigger('menuPanel.registered', panel, 'console:admin');
+        this.trigger('menuPanel.registered', panel, 'console:admin');
     }
 
     /**
