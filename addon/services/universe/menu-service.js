@@ -167,7 +167,7 @@ export default class MenuService extends Service {
         // The PDF states: "Additionally registering menu panels should also register there items."
         // We assume the items are passed in the panel object or items array.
         if (panel.items && panel.items.length) {
-            panel.items.forEach(item => {
+            panel.items = panel.items.map(item => {
                 const menuItem = this.#normalizeMenuItem(item);
                 console.log('[registerAdminMenuPanel] Before setting section:', {
                     title: menuItem.title,
@@ -196,6 +196,9 @@ export default class MenuService extends Service {
                 });
                 
                 this.registryService.register('console:admin', 'menu-item', menuItem.slug, menuItem);
+                
+                // Return the modified menu item so panel.items gets updated
+                return menuItem;
             });
         }
     }
