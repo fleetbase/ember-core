@@ -186,16 +186,7 @@ export default class UniverseService extends Service.extend(Evented) {
         this.registryService.registerService(name, serviceClass, options);
     }
 
-    /**
-     * Registers a utility or value to the root application container.
-     * @method registerUtil
-     * @param {String} name The utility name (e.g., 'my-util')
-     * @param {*} value The value to register
-     * @param {Object} options Registration options
-     */
-    registerUtil(name, value, options = {}) {
-        this.registryService.registerUtil(name, value, options);
-    }
+
 
     // ============================================================================
     // Menu Management (delegates to MenuService)

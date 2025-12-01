@@ -195,6 +195,31 @@ export default class RegistryService extends Service {
     }
 
     /**
+     * Create a registry (section with default list).
+     * For backward compatibility with existing code.
+     * Creates a section with a 'menu-items' list by default.
+     * 
+     * @method createRegistry
+     * @param {String} sectionName Section name
+     * @returns {Array} The default list array
+     */
+    createRegistry(sectionName) {
+        return this.getOrCreateList(sectionName, 'menu-items');
+    }
+
+    /**
+     * Create multiple registries
+     * 
+     * @method createRegistries
+     * @param {Array} sectionNames Array of section names
+     */
+    createRegistries(sectionNames) {
+        if (isArray(sectionNames)) {
+            sectionNames.forEach(sectionName => this.createRegistry(sectionName));
+        }
+    }
+
+    /**
      * Create a registry section (or get existing).
      * This is a convenience method for explicitly creating sections.
      * 
@@ -322,18 +347,5 @@ export default class RegistryService extends Service {
         }
     }
 
-    /**
-     * Registers a utility or value to the root application container.
-     * @method registerUtil
-     * @param {String} name The utility name (e.g., 'my-util')
-     * @param {*} value The value to register
-     * @param {Object} options Registration options
-     */
-    registerUtil(name, value, options = {}) {
-        if (this.applicationInstance) {
-            this.applicationInstance.register(`util:${name}`, value, options);
-        } else {
-            console.warn('Application instance not set on RegistryService. Cannot register utility:', name);
-        }
-    }
+
 }
