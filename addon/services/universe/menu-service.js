@@ -240,21 +240,46 @@ export default class MenuService extends Service.extend(Evented) {
     /**
      * Register a menu item to a custom registry
      * 
+     * Supports two patterns:
+     * 1. Original: registerMenuItem(registryName, title, options)
+     * 2. New: registerMenuItem(registryName, menuItemInstance)
+     * 
      * @method registerMenuItem
-     * @param {String} registryName Registry name
-     * @param {MenuItem|String} menuItemOrTitle MenuItem instance or title
-     * @param {String|Object} routeOrOptions Route or options
-     * @param {Object} options Optional options
+     * @param {String} registryName Registry name (e.g., 'auth:login', 'engine:fleet-ops')
+     * @param {String|MenuItem} titleOrMenuItem Menu item title string or MenuItem instance
+     * @param {Object} options Optional options (only used with title string)
      */
-    registerMenuItem(registryName, menuItemOrTitle, routeOrOptions = {}, options = {}) {
-        const isOptionsObject = typeof routeOrOptions === 'object';
-        const route = isOptionsObject ? routeOrOptions.route : routeOrOptions;
-        const opts = isOptionsObject ? routeOrOptions : options;
-
-        const menuItem = this.#normalizeMenuItem(menuItemOrTitle, route, opts);
+    registerMenuItem(registryName, titleOrMenuItem, options = {}) {
+        let menuItem;
         
-        // For custom registries, we use the dynamic registry with a default list name 'menu-item'
+        // Check if second parameter is a MenuItem instance
+        if (titleOrMenuItem instanceof MenuItem) {
+            menuItem = this.#normalizeMenuItem(titleOrMenuItem);
+        } else {
+            // Original pattern: title string + options
+            const title = titleOrMenuItem;
+            const route = options.route || `console.${dasherize(registryName)}.virtual`;
+            
+            // Set defaults matching original behavior
+            const slug = options.slug || '~';
+            const view = options.view || dasherize(title);
+            
+            // Not really a fan of assumptions, but will do this for the timebeing till anyone complains
+            const finalView = (slug === view) ? null : view;
+            
+            // Create menu item with all options
+            menuItem = this.#normalizeMenuItem(title, route, {
+                ...options,
+                slug,
+                view: finalView
+            });
+        }
+        
+        // Register the menu item
         this.registryService.register(registryName, 'menu-item', menuItem.slug || menuItem.title, menuItem);
+        
+        // Trigger event
+        this.trigger('menuItem.registered', menuItem, registryName);
     }
 
     // ============================================================================
