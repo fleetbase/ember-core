@@ -127,6 +127,37 @@ export default class UniverseService extends Service.extend(Evented) {
         return this.applicationInstance;
     }
 
+    /**
+     * Get a service from a specific engine
+     * 
+     * @method getServiceFromEngine
+     * @param {String} engineName The engine name
+     * @param {String} serviceName The service name
+     * @param {Object} options Optional options
+     * @param {Object} options.inject Properties to inject into the service
+     * @returns {Service|null} The service instance or null
+     * @example
+     * const userService = universe.getServiceFromEngine('user-engine', 'user');
+     * if (userService) {
+     *     userService.doSomething();
+     * }
+     */
+    getServiceFromEngine(engineName, serviceName, options = {}) {
+        const engineInstance = this.getEngineInstance(engineName);
+
+        if (engineInstance && typeof serviceName === 'string') {
+            const serviceInstance = engineInstance.lookup(`service:${serviceName}`);
+            if (options && options.inject) {
+                for (let injectionName in options.inject) {
+                    serviceInstance[injectionName] = options.inject[injectionName];
+                }
+            }
+            return serviceInstance;
+        }
+
+        return null;
+    }
+
     // ============================================================================
     // Registry Management (delegates to RegistryService)
     // ============================================================================
