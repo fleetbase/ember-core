@@ -194,11 +194,6 @@ export default class ExtensionManagerService extends Service {
                 engineInstance.mountPoint = _mountPoint;
             }
 
-            // make sure to set dependencies from base instance
-            if (engineInstance.base) {
-                engineInstance.dependencies = this.#setupEngineParentDependenciesBeforeBoot(engineInstance.base.dependencies);
-            }
-
             // store loaded instance to engineInstances for booting
             engineInstances[name][instanceId] = engineInstance;
 
@@ -213,65 +208,49 @@ export default class ExtensionManagerService extends Service {
     }
 
     /**
-     * Helper to get the mount point from the engine instance.
-     * @private
-     * @param {EngineInstance} engineInstance 
-     * @returns {String|null}
+     * Retrieves the mount point of a specified engine by its name.
+     * 
+     * @method getEngineMountPoint
+     * @param {String} engineName - The name of the engine for which to get the mount point.
+     * @returns {String|null} The mount point of the engine or null if not found.
      */
-    #getMountPointFromEngineInstance(engineInstance) {
-        const owner = getOwner(this);
-        const router = owner.lookup('router:main');
-        const engineName = engineInstance.base.name;
-        
-        // This logic is complex and depends on how the router stores mount points.
-        // For now, we'll return the engine name as a fallback, assuming the router
-        // handles the actual mount point lookup during engine registration.
-        // The original code snippet suggests a custom method: this._mountPointFromEngineInstance(engineInstance)
-        // Since we don't have that, we'll rely on the engine's name or the default mountPoint.
-        return engineInstance.mountPoint || engineName;
+    getEngineMountPoint(engineName) {
+        const engineInstance = this.getEngineInstance(engineName);
+        return this.#getMountPointFromEngineInstance(engineInstance);
     }
 
     /**
-     * Setup engine parent dependencies before boot.
-     * Fixes service and external route dependencies.
+     * Determines the mount point from an engine instance by reading its configuration.
      * 
      * @private
-     * @param {Object} baseDependencies 
-     * @returns {Object} Fixed dependencies
+     * @method #getMountPointFromEngineInstance
+     * @param {Object} engineInstance - The instance of the engine.
+     * @returns {String|null} The resolved mount point or null if the instance is undefined or the configuration is not set.
      */
-    #setupEngineParentDependenciesBeforeBoot(baseDependencies = {}) {
-        const dependencies = { ...baseDependencies };
+    #getMountPointFromEngineInstance(engineInstance) {
+        if (engineInstance) {
+            const config = engineInstance.resolveRegistration('config:environment');
 
-        // fix services
-        const servicesObject = {};
-        if (isArray(dependencies.services)) {
-            for (let i = 0; i < dependencies.services.length; i++) {
-                const service = dependencies.services.objectAt(i);
-                if (typeof service === 'object') {
-                    Object.assign(servicesObject, service);
-                    continue;
+            if (config) {
+                let engineName = config.modulePrefix;
+                let mountedEngineRoutePrefix = config.mountedEngineRoutePrefix;
+
+                if (!mountedEngineRoutePrefix) {
+                    mountedEngineRoutePrefix = this.#mountPathFromEngineName(engineName);
                 }
-                servicesObject[service] = service;
+
+                if (!mountedEngineRoutePrefix.endsWith('.')) {
+                    mountedEngineRoutePrefix = mountedEngineRoutePrefix + '.';
+                }
+
+                return mountedEngineRoutePrefix;
             }
         }
-        dependencies.services = servicesObject;
 
-        // fix external routes
-        const externalRoutesObject = {};
-        if (isArray(dependencies.externalRoutes)) {
-            for (let i = 0; i < dependencies.externalRoutes.length; i++) {
-                const externalRoute = dependencies.externalRoutes.objectAt(i);
-                if (typeof externalRoute === 'object') {
-                    Object.assign(externalRoutesObject, externalRoute);
-                    continue;
-                }
-                externalRoutesObject[externalRoute] = externalRoute;
-            }
-        }
-        dependencies.externalRoutes = externalRoutesObject;
-
-        return dependencies;
+        return null;
     }
+
+
 
     /**
      * Get an engine instance if it's already loaded
@@ -605,6 +584,112 @@ export default class ExtensionManagerService extends Service {
         
         const totalTime = (callbackEndTime - setupStartTime).toFixed(2);
         debug(`[ExtensionManager] Total extension boot time: ${totalTime}ms`);
+    }
+
+    /**
+     * Register a service into a specific engine
+     * Allows sharing host services with engines
+     * 
+     * @method registerServiceIntoEngine
+     * @param {String} engineName Name of the engine
+     * @param {String} serviceName Name of the service to register
+     * @param {Class} serviceClass Service class to register
+     * @param {Object} options Registration options
+     * @returns {Boolean} True if successful, false if engine not found
+     */
+    registerServiceIntoEngine(engineName, serviceName, serviceClass, options = {}) {
+        const engineInstance = this.getEngineInstance(engineName);
+        
+        if (!engineInstance) {
+            console.warn(`[ExtensionManager] Cannot register service '${serviceName}' - engine '${engineName}' not loaded`);
+            return false;
+        }
+        
+        try {
+            engineInstance.register(`service:${serviceName}`, serviceClass, options);
+            debug(`[ExtensionManager] Registered service '${serviceName}' into engine '${engineName}'`);
+            return true;
+        } catch (error) {
+            console.error(`[ExtensionManager] Failed to register service '${serviceName}' into engine '${engineName}':`, error);
+            return false;
+        }
+    }
+
+    /**
+     * Register a component into a specific engine
+     * Allows sharing host components with engines
+     * 
+     * @method registerComponentIntoEngine
+     * @param {String} engineName Name of the engine
+     * @param {String} componentName Name of the component to register
+     * @param {Class} componentClass Component class to register
+     * @param {Object} options Registration options
+     * @returns {Boolean} True if successful, false if engine not found
+     */
+    registerComponentIntoEngine(engineName, componentName, componentClass, options = {}) {
+        const engineInstance = this.getEngineInstance(engineName);
+        
+        if (!engineInstance) {
+            console.warn(`[ExtensionManager] Cannot register component '${componentName}' - engine '${engineName}' not loaded`);
+            return false;
+        }
+        
+        try {
+            engineInstance.register(`component:${componentName}`, componentClass, options);
+            debug(`[ExtensionManager] Registered component '${componentName}' into engine '${engineName}'`);
+            return true;
+        } catch (error) {
+            console.error(`[ExtensionManager] Failed to register component '${componentName}' into engine '${engineName}':`, error);
+            return false;
+        }
+    }
+
+    /**
+     * Register a service into all loaded engines
+     * Useful for sharing a host service with all engines
+     * 
+     * @method registerServiceIntoAllEngines
+     * @param {String} serviceName Name of the service to register
+     * @param {Class} serviceClass Service class to register
+     * @param {Object} options Registration options
+     * @returns {Array<String>} Array of engine names where registration succeeded
+     */
+    registerServiceIntoAllEngines(serviceName, serviceClass, options = {}) {
+        const succeededEngines = [];
+        
+        for (const [engineName] of this.loadedEngines) {
+            const success = this.registerServiceIntoEngine(engineName, serviceName, serviceClass, options);
+            if (success) {
+                succeededEngines.push(engineName);
+            }
+        }
+        
+        debug(`[ExtensionManager] Registered service '${serviceName}' into ${succeededEngines.length} engines:`, succeededEngines);
+        return succeededEngines;
+    }
+
+    /**
+     * Register a component into all loaded engines
+     * Useful for sharing a host component with all engines
+     * 
+     * @method registerComponentIntoAllEngines
+     * @param {String} componentName Name of the component to register
+     * @param {Class} componentClass Component class to register
+     * @param {Object} options Registration options
+     * @returns {Array<String>} Array of engine names where registration succeeded
+     */
+    registerComponentIntoAllEngines(componentName, componentClass, options = {}) {
+        const succeededEngines = [];
+        
+        for (const [engineName] of this.loadedEngines) {
+            const success = this.registerComponentIntoEngine(engineName, componentName, componentClass, options);
+            if (success) {
+                succeededEngines.push(engineName);
+            }
+        }
+        
+        debug(`[ExtensionManager] Registered component '${componentName}' into ${succeededEngines.length} engines:`, succeededEngines);
+        return succeededEngines;
     }
 
     /**
