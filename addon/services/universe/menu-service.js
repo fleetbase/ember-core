@@ -172,6 +172,13 @@ export default class MenuService extends Service {
                 // Mark as panel item to prevent duplication in main menu
                 menuItem._isPanelItem = true;
                 menuItem._panelSlug = panel.slug;
+                
+                // Set section and view for proper routing
+                // section = panel slug (e.g., 'fleet-ops')
+                // view = menu item slug (e.g., 'navigator-app')
+                menuItem.section = panel.slug;
+                menuItem.view = menuItem.slug;
+                
                 this.registryService.register('console:admin', 'menu-item', menuItem.slug, menuItem);
             });
         }
