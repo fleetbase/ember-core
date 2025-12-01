@@ -53,18 +53,18 @@ export default class MenuItem extends BaseContract {
             const definition = titleOrDefinition;
             
             // Core properties
-            this.title = definition.title;
+            this.title = definition.title || null;
             this.text = definition.text || definition.title;
             this.label = definition.label || definition.title;
-            this.id = definition.id || dasherize(definition.title);
-            this.slug = definition.slug || dasherize(this.title);
+            this.id = definition.id || (definition.title ? dasherize(definition.title) : null);
+            this.slug = definition.slug || (this.title ? dasherize(this.title) : null);
             
             // Routing properties
             this.route = definition.route || null;
             this.section = definition.section || null;
             this.queryParams = definition.queryParams || {};
             this.routeParams = definition.routeParams || [];
-            this.view = definition.view || dasherize(this.title);
+            this.view = definition.view || (this.title ? dasherize(this.title) : null);
             
             // Display properties
             this.icon = definition.icon || 'circle-dot';
