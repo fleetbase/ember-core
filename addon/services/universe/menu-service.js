@@ -107,7 +107,7 @@ export default class MenuService extends Service {
      */
     registerHeaderMenuItem(menuItemOrTitle, route = null, options = {}) {
         const menuItem = this.#normalizeMenuItem(menuItemOrTitle, route, options);
-        this.registryService.register('header-menu', 'menu-items', `header:${menuItem.slug}`, menuItem);
+        this.registryService.register('header-menu', 'menu-item', `header:${menuItem.slug}`, menuItem);
     }
 
     /**
@@ -128,7 +128,7 @@ export default class MenuService extends Service {
             menuItem.section = 'settings';
         }
 
-        this.registryService.register('console:account', 'menu-items', `organization:${menuItem.slug}`, menuItem);
+        this.registryService.register('console:account', 'menu-item', `organization:${menuItem.slug}`, menuItem);
     }
 
     /**
@@ -149,7 +149,7 @@ export default class MenuService extends Service {
             menuItem.section = 'account';
         }
 
-        this.registryService.register('console:account', 'menu-items', `user:${menuItem.slug}`, menuItem);
+        this.registryService.register('console:account', 'menu-item', `user:${menuItem.slug}`, menuItem);
     }
 
     /**
@@ -162,14 +162,14 @@ export default class MenuService extends Service {
      */
     registerAdminMenuPanel(panelOrTitle, items = [], options = {}) {
         const panel = this.#normalizeMenuPanel(panelOrTitle, items, options);
-        this.registryService.register('console:admin', 'menu-panels', panel.slug, panel);
+        this.registryService.register('console:admin', 'menu-panel', panel.slug, panel);
 
         // The PDF states: "Additionally registering menu panels should also register there items."
         // We assume the items are passed in the panel object or items array.
         if (panel.items && panel.items.length) {
             panel.items.forEach(item => {
                 const menuItem = this.#normalizeMenuItem(item);
-                this.registryService.register('console:admin', 'menu-items', menuItem.slug, menuItem);
+                this.registryService.register('console:admin', 'menu-item', menuItem.slug, menuItem);
             });
         }
     }
@@ -188,7 +188,7 @@ export default class MenuService extends Service {
             options
         );
 
-        this.registryService.register('console:settings', 'menu-items', menuItem.slug, menuItem);
+        this.registryService.register('console:settings', 'menu-item', menuItem.slug, menuItem);
     }
 
     /**
@@ -207,8 +207,8 @@ export default class MenuService extends Service {
 
         const menuItem = this.#normalizeMenuItem(menuItemOrTitle, route, opts);
         
-        // For custom registries, we use the dynamic registry with a default list name 'menu-items'
-        this.registryService.register(registryName, 'menu-items', menuItem.slug || menuItem.title, menuItem);
+        // For custom registries, we use the dynamic registry with a default list name 'menu-item'
+        this.registryService.register(registryName, 'menu-item', menuItem.slug || menuItem.title, menuItem);
     }
 
     // ============================================================================
@@ -223,7 +223,7 @@ export default class MenuService extends Service {
      * @returns {Array} Menu items
      */
     getMenuItems(registryName) {
-        return this.registryService.getRegistry(registryName, 'menu-items');
+        return this.registryService.getRegistry(registryName, 'menu-item');
     }
 
     /**
@@ -234,7 +234,7 @@ export default class MenuService extends Service {
      * @returns {Array} Menu panels
      */
     getMenuPanels(registryName) {
-        return this.registryService.getRegistry(registryName, 'menu-panels');
+        return this.registryService.getRegistry(registryName, 'menu-panel');
     }
 
     /**
@@ -278,7 +278,7 @@ export default class MenuService extends Service {
      * @returns {Array} Header menu items sorted by priority
      */
     getHeaderMenuItems() {
-        const items = this.registryService.getRegistry('header-menu', 'menu-items');
+        const items = this.registryService.getRegistry('header-menu', 'menu-item');
         return A(items).sortBy('priority');
     }
 
@@ -289,7 +289,7 @@ export default class MenuService extends Service {
      * @returns {Array} Organization menu items
      */
     getOrganizationMenuItems() {
-        return this.registryService.getRegistry('console:account', 'menu-items');
+        return this.registryService.getRegistry('console:account', 'menu-item');
     }
 
     /**
@@ -299,7 +299,7 @@ export default class MenuService extends Service {
      * @returns {Array} User menu items
      */
     getUserMenuItems() {
-        return this.registryService.getRegistry('console:account', 'menu-items');
+        return this.registryService.getRegistry('console:account', 'menu-item');
     }
 
     /**
@@ -309,7 +309,7 @@ export default class MenuService extends Service {
      * @returns {Array} Admin panels sorted by priority
      */
     getAdminMenuPanels() {
-        const panels = this.registryService.getRegistry('console:admin', 'menu-panels');
+        const panels = this.registryService.getRegistry('console:admin', 'menu-panel');
         return A(panels).sortBy('priority');
     }
 
@@ -330,7 +330,7 @@ export default class MenuService extends Service {
      * @returns {Array} Admin menu items
      */
     getAdminMenuItems() {
-        return this.registryService.getAllFromPrefix('menu-item', 'admin:');
+        return this.registryService.getRegistry('console:admin', 'menu-item');
     }
 
     /**
@@ -339,17 +339,19 @@ export default class MenuService extends Service {
      * @method getSettingsMenuItems
      * @returns {Array} Settings menu items
      */
-     getAdminMenuItems() {
-        return this.registryService.getRegistry('console:admin', 'menu-items');
-    } }
+    getSettingsMenuItems() {
+        return this.registryService.getRegistry('console:settings', 'menu-item');
+    }
 
     /**
      * Get settings menu panels
      * 
      * @method getSettingsMenuPanels
      * @returns {Array} Settings menu panels
-       getSettingsMenuItems() {
-        return this.registryService.getRegistry('console:settings', 'menu-items');
+     */
+    getSettingsMenuPanels() {
+        const panels = this.registryService.getRegistry('console:settings', 'menu-panel');
+        return A(panels).sortBy('priority');
     }
     // ============================================================================
     // Computed Getters (for template access)
