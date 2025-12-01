@@ -452,20 +452,32 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     @action
     transitionMenuItem(route, menuItem) {
+        console.log('[transitionMenuItem] Called with:', {
+            route,
+            menuItem,
+            slug: menuItem.slug,
+            view: menuItem.view,
+            section: menuItem.section
+        });
+        
         const { slug, view, section } = menuItem;
 
         if (section && slug && view) {
+            console.log('[transitionMenuItem] Using: section + slug + view');
             return this.router.transitionTo(route, section, slug, { queryParams: { view } });
         }
 
         if (section && slug) {
+            console.log('[transitionMenuItem] Using: section + slug');
             return this.router.transitionTo(route, section, slug);
         }
 
         if (slug && view) {
+            console.log('[transitionMenuItem] Using: slug + view');
             return this.router.transitionTo(route, slug, { queryParams: { view } });
         }
 
+        console.log('[transitionMenuItem] Using: slug only');
         return this.router.transitionTo(route, slug);
     }
 
