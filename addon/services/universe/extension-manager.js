@@ -169,7 +169,7 @@ export default class ExtensionManagerService extends Service {
 
         assert(
             `You attempted to load the engine '${name}' with '${instanceId}', but the engine cannot be found.`,
-            router.hasRegistration(`engine:${name}`)
+            owner.hasRegistration(`engine:${name}`)
         );
 
         let engineInstances = router._engineInstances;
