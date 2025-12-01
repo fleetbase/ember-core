@@ -105,9 +105,28 @@ export default class MenuService extends Service {
      * @param {String} route Optional route (if first param is string)
      * @param {Object} options Optional options (if first param is string)
      */
-    registerHeaderMenuItem(menuItemOrTitle, route = null, options = {}) {
-        const menuItem = this.#normalizeMenuItem(menuItemOrTitle, route, options);
-        this.registryService.register('header-menu', 'menu-item', `header:${menuItem.slug}`, menuItem);
+    registerHeaderMenuItem(itemOrTitle, route = null, options = {}) {
+        const menuItem = this.#normalizeMenuItem(itemOrTitle, route, options);
+        this.registryService.register('header', 'menu-item', menuItem.slug, menuItem);
+        
+        // Trigger event for backward compatibility
+        this.universe.trigger('menuItem.registered', menuItem, 'header');
+    }
+
+    /**
+     * Register an admin menu item
+     * 
+     * @method registerAdminMenuItem
+     * @param {MenuItem|String} itemOrTitle MenuItem instance or title
+     * @param {String} route Optional route (if first param is string)
+     * @param {Object} options Optional options (if first param is string)
+     */
+    registerAdminMenuItem(itemOrTitle, route = null, options = {}) {
+        const menuItem = this.#normalizeMenuItem(itemOrTitle, route, options);
+        this.registryService.register('console:admin', 'menu-item', menuItem.slug, menuItem);
+        
+        // Trigger event for backward compatibility
+        this.universe.trigger('menuItem.registered', menuItem, 'console:admin');
     }
 
     /**
@@ -188,10 +207,16 @@ export default class MenuService extends Service {
                 // Register with the item slug as key (for lookup)
                 this.registryService.register('console:admin', 'menu-item', itemSlug, menuItem);
                 
+                // Trigger event for backward compatibility
+                this.universe.trigger('menuItem.registered', menuItem, 'console:admin');
+                
                 // Return the modified menu item so panel.items gets updated
                 return menuItem;
             });
         }
+        
+        // Trigger event for backward compatibility
+        this.universe.trigger('menuPanel.registered', panel, 'console:admin');
     }
 
     /**
