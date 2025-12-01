@@ -1,4 +1,5 @@
 import Service from '@ember/service';
+import Evented from '@ember/object/evented';
 import { tracked } from '@glimmer/tracking';
 import { A } from '@ember/array';
 import { getOwner } from '@ember/application';
@@ -18,7 +19,7 @@ import RSVP from 'rsvp';
  * @class ExtensionManagerService
  * @extends Service
  */
-export default class ExtensionManagerService extends Service {
+export default class ExtensionManagerService extends Service.extend(Evented) {
     @tracked loadedEngines = new Map();
     @tracked registeredExtensions = A([]);
     @tracked loadingPromises = new Map();
