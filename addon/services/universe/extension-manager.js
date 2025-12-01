@@ -748,11 +748,30 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      * @param {Function} hookFn The hook function to store
      */
     #storeEngineLoadedHook(engineName, hookFn) {
-        if (!this.#engineLoadedHooks.has(engineName)) {
-            this.#engineLoadedHooks.set(engineName, []);
+        // Check if engine is already loaded
+        const engineInstance = this.getEngineInstance(engineName);
+        
+        if (engineInstance) {
+            // Engine already loaded, run hook immediately
+            debug(`[ExtensionManager] Engine ${engineName} already loaded, running hook immediately`);
+            const owner = getOwner(this);
+            const universe = owner.lookup('service:universe');
+            const appInstance = owner;
+            
+            try {
+                hookFn(engineInstance, universe, appInstance);
+                debug(`[ExtensionManager] Successfully ran immediate onEngineLoaded hook for ${engineName}`);
+            } catch (error) {
+                console.error(`[ExtensionManager] Error in immediate onEngineLoaded hook for ${engineName}:`, error);
+            }
+        } else {
+            // Engine not loaded yet, store hook for later
+            if (!this.#engineLoadedHooks.has(engineName)) {
+                this.#engineLoadedHooks.set(engineName, []);
+            }
+            this.#engineLoadedHooks.get(engineName).push(hookFn);
+            debug(`[ExtensionManager] Stored onEngineLoaded hook for ${engineName}`);
         }
-        this.#engineLoadedHooks.get(engineName).push(hookFn);
-        debug(`[ExtensionManager] Stored onEngineLoaded hook for ${engineName}`);
     }
 
     /**
