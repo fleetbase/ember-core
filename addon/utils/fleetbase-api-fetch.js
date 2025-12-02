@@ -28,6 +28,34 @@ export default async function fleetbaseApiFetch(method, uri, params = {}, fetchO
     const options = {
         method,
         headers,
+
+        // Core fetch options with safe defaults
+        mode: fetchOptions?.mode ?? 'cors',
+        cache: fetchOptions?.cache ?? 'default',
+        redirect: fetchOptions?.redirect ?? 'follow',
+        credentials: fetchOptions?.credentials ?? 'same-origin',
+
+        // Request body (only include when explicitly provided)
+        body: fetchOptions?.body,
+
+        // Referrer settings
+        referrer: fetchOptions?.referrer ?? 'about:client',
+        referrerPolicy: fetchOptions?.referrerPolicy ?? 'strict-origin-when-cross-origin',
+
+        // Subresource integrity
+        integrity: fetchOptions?.integrity ?? '',
+
+        // Abort controller
+        signal: fetchOptions?.signal,
+
+        // Keep the request alive on page unload
+        keepalive: fetchOptions?.keepalive ?? false,
+
+        // Priority (not supported in all browsers)
+        priority: fetchOptions?.priority ?? 'auto',
+
+        // Deprecated/unused by browsers — included for spec compatibility
+        window: fetchOptions?.window ?? null,
     };
 
     // Handle params based on method
