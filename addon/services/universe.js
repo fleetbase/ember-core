@@ -691,6 +691,32 @@ export default class UniverseService extends Service.extend(Evented) {
     }
 
     /**
+     * Register a helper to the application container
+     * Makes the helper available globally to all engines and the host app
+     * Facade method - delegates to RegistryService
+     * 
+     * @method registerHelper
+     * @param {String} helperName The helper name (e.g., 'calculate-delivery-fee')
+     * @param {Function|Class|TemplateHelper} helperClassOrTemplateHelper Helper function, class, or TemplateHelper instance
+     * @param {Object} options Registration options
+     * 
+     * @example
+     * // Direct function registration
+     * universe.registerHelper('calculate-delivery-fee', calculateDeliveryFeeHelper);
+     * 
+     * @example
+     * // Lazy loading from engine
+     * import TemplateHelper from '@fleetbase/ember-core/models/template-helper';
+     * universe.registerHelper(
+     *     'calculate-delivery-fee',
+     *     new TemplateHelper('@fleetbase/storefront-engine', 'helpers/calculate-delivery-fee')
+     * );
+     */
+    registerHelper(helperName, helperClassOrTemplateHelper, options = {}) {
+        return this.registryService.registerHelper(helperName, helperClassOrTemplateHelper, options);
+    }
+
+    /**
      * Legacy method for registering components in engines
      * Maintained for backward compatibility
      * 

@@ -3,6 +3,8 @@ import { tracked } from '@glimmer/tracking';
 import { warn } from '@ember/debug';
 import { A, isArray } from '@ember/array';
 import { TrackedMap, TrackedObject } from 'tracked-built-ins';
+import { getOwner } from '@ember/application';
+import TemplateHelper from '../../models/template-helper';
 
 /**
  * RegistryService
@@ -407,6 +409,124 @@ export default class RegistryService extends Service {
             this.applicationInstance.register(`service:${name}`, serviceClass, options);
         } else {
             warn('Application instance not set on RegistryService. Cannot register service.', { id: 'registry-service.no-app-instance' });
+        }
+    }
+
+    /**
+     * Registers a helper to the root application container.
+     * This makes the helper available globally to all engines and the host app.
+     * Supports both direct helper functions/classes and lazy loading via TemplateHelper.
+     * 
+     * @method registerHelper
+     * @param {String} helperName The helper name (e.g., 'calculate-delivery-fee')
+     * @param {Function|Class|TemplateHelper} helperClassOrTemplateHelper Helper function, class, or TemplateHelper instance
+     * @param {Object} options Registration options
+     * @param {Boolean} options.instantiate Whether to instantiate the helper (default: false for functions)
+     * 
+     * @example
+     * // Direct function registration
+     * registryService.registerHelper('calculate-delivery-fee', calculateDeliveryFeeHelper);
+     * 
+     * @example
+     * // Direct class registration
+     * registryService.registerHelper('format-currency', FormatCurrencyHelper);
+     * 
+     * @example
+     * // Lazy loading from engine
+     * registryService.registerHelper(
+     *     'calculate-delivery-fee',
+     *     new TemplateHelper('@fleetbase/storefront-engine', 'helpers/calculate-delivery-fee')
+     * );
+     */
+    registerHelper(helperName, helperClassOrTemplateHelper, options = {}) {
+        const owner = this.applicationInstance || getOwner(this);
+        
+        if (!owner) {
+            warn('No owner available for helper registration. Cannot register helper.', { 
+                id: 'registry-service.no-owner' 
+            });
+            return;
+        }
+
+        // Check if it's a TemplateHelper instance
+        if (helperClassOrTemplateHelper instanceof TemplateHelper) {
+            const templateHelper = helperClassOrTemplateHelper;
+            
+            if (templateHelper.isClass) {
+                // Direct class registration from TemplateHelper
+                owner.register(`helper:${helperName}`, templateHelper.class, {
+                    instantiate: options.instantiate !== undefined ? options.instantiate : true
+                });
+            } else {
+                // Lazy loading from engine
+                const helper = this.#loadHelperFromEngine(templateHelper);
+                if (helper) {
+                    owner.register(`helper:${helperName}`, helper, {
+                        instantiate: options.instantiate !== undefined ? options.instantiate : true
+                    });
+                } else {
+                    warn(`Failed to load helper from engine: ${templateHelper.engineName}/${templateHelper.path}`, {
+                        id: 'registry-service.helper-load-failed'
+                    });
+                }
+            }
+        } else {
+            // Direct function or class registration
+            const instantiate = options.instantiate !== undefined 
+                ? options.instantiate 
+                : (typeof helperClassOrTemplateHelper !== 'function' || helperClassOrTemplateHelper.prototype);
+            
+            owner.register(`helper:${helperName}`, helperClassOrTemplateHelper, {
+                instantiate
+            });
+        }
+    }
+
+    /**
+     * Loads a helper from an engine using TemplateHelper definition.
+     * @private
+     * @method #loadHelperFromEngine
+     * @param {TemplateHelper} templateHelper The TemplateHelper instance
+     * @returns {Function|Class|null} The loaded helper or null if failed
+     */
+    #loadHelperFromEngine(templateHelper) {
+        const owner = this.applicationInstance || getOwner(this);
+        
+        if (!owner) {
+            return null;
+        }
+
+        try {
+            // Get the engine instance
+            const engineInstance = owner.lookup(`engine:${templateHelper.engineName}`);
+            
+            if (!engineInstance) {
+                warn(`Engine not found: ${templateHelper.engineName}`, {
+                    id: 'registry-service.engine-not-found'
+                });
+                return null;
+            }
+
+            // Try to resolve the helper from the engine
+            const helperPath = templateHelper.path.startsWith('helper:') 
+                ? templateHelper.path 
+                : `helper:${templateHelper.path}`;
+            
+            const helper = engineInstance.resolveRegistration(helperPath);
+            
+            if (!helper) {
+                warn(`Helper not found in engine: ${helperPath}`, {
+                    id: 'registry-service.helper-not-found'
+                });
+                return null;
+            }
+
+            return helper;
+        } catch (error) {
+            warn(`Error loading helper from engine: ${error.message}`, {
+                id: 'registry-service.helper-load-error'
+            });
+            return null;
         }
     }
 
