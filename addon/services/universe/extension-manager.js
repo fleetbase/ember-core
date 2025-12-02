@@ -848,7 +848,8 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             // correct mountPoint using engine instance
             const _mountPoint = self.#getMountPointFromEngineInstance(engineInstance);
             if (_mountPoint) {
-                engineInstance.mountPoint = _mountPoint;
+                // Remove trailing dot before setting on engine instance
+                engineInstance.mountPoint = _mountPoint.endsWith('.') ? _mountPoint.slice(0, -1) : _mountPoint;
             }
 
             // make sure to set dependencies from base instance
