@@ -6,7 +6,9 @@ import { getOwner } from '@ember/application';
 import { assert, debug } from '@ember/debug';
 import { next } from '@ember/runloop';
 import loadExtensions from '@fleetbase/ember-core/utils/load-extensions';
+import loadInstalledExtensions from '@fleetbase/ember-core/utils/load-installed-extensions';
 import mapEngines from '@fleetbase/ember-core/utils/map-engines';
+import config from 'ember-get-config';
 import { getExtensionLoader } from '@fleetbase/console/extensions';
 import { isArray } from '@ember/array';
 import RSVP from 'rsvp';
@@ -475,8 +477,15 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         debug('[ExtensionManager] Loading extensions from API...');
         
         try {
+            // Get admin-configured extensions from config
+            const additionalCoreExtensions = config.APP?.extensions ?? [];
+            if (additionalCoreExtensions.length > 0) {
+                debug(`[ExtensionManager] Admin-configured extensions (${additionalCoreExtensions.length}):`, additionalCoreExtensions);
+            }
+            
             const apiStartTime = performance.now();
-            const extensions = await loadExtensions();
+            // Load installed extensions (includes core, admin-configured, and user-installed)
+            const extensions = await loadInstalledExtensions(additionalCoreExtensions);
             const apiEndTime = performance.now();
             debug(`[ExtensionManager] API call took ${(apiEndTime - apiStartTime).toFixed(2)}ms`);
             
@@ -484,7 +493,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             application.engines = mapEngines(extensions);
             
             const endTime = performance.now();
-            debug(`[ExtensionManager] Loaded ${extensions.length} extensions in ${(endTime - startTime).toFixed(2)}ms:`, extensions.map(e => e.name || e));
+            debug(`[ExtensionManager] Loaded ${extensions.length} installed extensions in ${(endTime - startTime).toFixed(2)}ms:`, extensions.map(e => e.name || e));
             
             // Mark extensions as loaded
             this.finishLoadingExtensions();
