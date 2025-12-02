@@ -15,10 +15,10 @@ import RSVP from 'rsvp';
 
 /**
  * ExtensionManagerService
- * 
+ *
  * Manages lazy loading of engines and extension lifecycle.
  * Replaces the old bootEngines mechanism with on-demand loading.
- * 
+ *
  * @class ExtensionManagerService
  * @extends Service
  */
@@ -31,7 +31,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     @tracked extensionsLoadedPromise = null;
     @tracked extensionsLoadedResolver = null;
     @tracked extensionsLoaded = false;
-    
+
     // Private field to store onEngineLoaded hooks from extension.js
     #engineLoadedHooks = new Map();
 
@@ -48,7 +48,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     /**
      * Ensure an engine is loaded
      * This is the key method that triggers lazy loading
-     * 
+     *
      * @method ensureEngineLoaded
      * @param {String} engineName Name of the engine to load
      * @returns {Promise<EngineInstance>} The loaded engine instance
@@ -81,7 +81,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
 
     /**
      * Internal method to load an engine
-     * 
+     *
      * @private
      * @method #loadEngine
      * @param {String} name Name of the engine
@@ -124,7 +124,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
 
     /**
      * Public alias for loading an engine
-     * 
+     *
      * @method loadEngine
      * @param {String} name Name of the engine
      * @returns {Promise<EngineInstance>} The engine instance
@@ -136,7 +136,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     /**
      * Get mount path from engine name
      * Handles scoped packages and removes engine suffix
-     * 
+     *
      * @private
      * @method #mountPathFromEngineName
      * @param {String} engineName Engine name (e.g., '@fleetbase/fleetops-engine')
@@ -157,7 +157,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     /**
      * Get an engine instance if it's already loaded
      * Does not trigger loading
-     * 
+     *
      * @method getEngineInstance
      * @param {String} engineName Name of the engine
      * @returns {EngineInstance|null} The engine instance or null
@@ -165,7 +165,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     /**
      * Construct an engine instance. If the instance does not exist yet, it
      * will be created.
-     * 
+     *
      * @method constructEngineInstance
      * @param {String} name The name of the engine
      * @param {String} instanceId The id of the engine instance
@@ -176,10 +176,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         const owner = getOwner(this);
         const router = owner.lookup('router:main');
 
-        assert(
-            `You attempted to load the engine '${name}' with '${instanceId}', but the engine cannot be found.`,
-            owner.hasRegistration(`engine:${name}`)
-        );
+        assert(`You attempted to load the engine '${name}' with '${instanceId}', but the engine cannot be found.`, owner.hasRegistration(`engine:${name}`));
 
         let engineInstances = router._engineInstances;
         if (!engineInstances) {
@@ -194,14 +191,8 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         if (!engineInstance) {
             engineInstance = owner.buildChildEngineInstance(name, {
                 routable: true,
-                mountPoint: mountPoint
+                mountPoint: mountPoint,
             });
-
-            // correct mountPoint using engine instance
-            const _mountPoint = this.#getMountPointFromEngineInstance(engineInstance);
-            if (_mountPoint) {
-                engineInstance.mountPoint = _mountPoint;
-            }
 
             // store loaded instance to engineInstances for booting
             engineInstances[name][instanceId] = engineInstance;
@@ -222,8 +213,63 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     }
 
     /**
+     * Setup engine parent dependencies before boot.
+     * Fixes service and external route dependencies.
+     *
+     * @private
+     * @param {Object} baseDependencies
+     * @returns {Object} Fixed dependencies
+     */
+    #setupEngineParentDependenciesBeforeBoot(baseDependencies = {}) {
+        const dependencies = { ...baseDependencies };
+
+        // Get service from app instance ?
+        const applicationInstance = getOwner(this);
+
+        // fix services
+        const servicesObject = {};
+        if (isArray(dependencies.services)) {
+            for (let i = 0; i < dependencies.services.length; i++) {
+                let serviceName = dependencies.services.objectAt(i);
+                if (typeof serviceName === 'object') {
+                    Object.assign(servicesObject, serviceName);
+                    continue;
+                }
+
+                if (serviceName === 'hostRouter') {
+                    const service = applicationInstance.lookup('service:router') ?? serviceName;
+                    servicesObject[serviceName] = service;
+                    continue;
+                }
+
+                const service = applicationInstance.lookup(`service:${serviceName}`) ?? serviceName;
+                servicesObject[serviceName] = service;
+            }
+        }
+
+        // fix external routes
+        const externalRoutesObject = {};
+        if (isArray(dependencies.externalRoutes)) {
+            for (let i = 0; i < dependencies.externalRoutes.length; i++) {
+                const externalRoute = dependencies.externalRoutes.objectAt(i);
+
+                if (typeof externalRoute === 'object') {
+                    Object.assign(externalRoutesObject, externalRoute);
+                    continue;
+                }
+
+                externalRoutesObject[externalRoute] = externalRoute;
+            }
+        }
+
+        dependencies.externalRoutes = externalRoutesObject;
+        dependencies.services = servicesObject;
+        return dependencies;
+    }
+
+    /**
      * Retrieves the mount point of a specified engine by its name.
-     * 
+     *
      * @method getEngineMountPoint
      * @param {String} engineName - The name of the engine for which to get the mount point.
      * @returns {String|null} The mount point of the engine or null if not found.
@@ -235,7 +281,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
 
     /**
      * Determines the mount point from an engine instance by reading its configuration.
-     * 
+     *
      * @private
      * @method #getMountPointFromEngineInstance
      * @param {Object} engineInstance - The instance of the engine.
@@ -264,12 +310,10 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         return null;
     }
 
-
-
     /**
      * Get an engine instance if it's already loaded
      * Does not trigger loading
-     * 
+     *
      * @method getEngineInstance
      * @param {String} engineName Name of the engine
      * @param {String} instanceId Optional instance ID (defaults to 'manual')
@@ -289,7 +333,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
 
     /**
      * Check if an engine is loaded
-     * 
+     *
      * @method isEngineLoaded
      * @param {String} engineName Name of the engine
      * @returns {Boolean} True if engine is loaded
@@ -302,7 +346,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
 
     /**
      * Check if an engine is currently loading
-     * 
+     *
      * @method isEngineLoading
      * @param {String} engineName Name of the engine
      * @returns {Boolean} True if engine is loading
@@ -315,27 +359,27 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
 
     /**
      * Register an extension
-     * 
+     *
      * @method registerExtension
      * @param {String} name Extension name
      * @param {Object} metadata Extension metadata
      */
     registerExtension(name, metadata = {}) {
-        const existing = this.registeredExtensions.find(ext => ext.name === name);
-        
+        const existing = this.registeredExtensions.find((ext) => ext.name === name);
+
         if (existing) {
             Object.assign(existing, metadata);
         } else {
             this.registeredExtensions.pushObject({
                 name,
-                ...metadata
+                ...metadata,
             });
         }
     }
 
     /**
      * Get all registered extensions
-     * 
+     *
      * @method getExtensions
      * @returns {Array} Array of registered extensions
      */
@@ -345,44 +389,44 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
 
     /**
      * Get a specific extension
-     * 
+     *
      * @method getExtension
      * @param {String} name Extension name
      * @returns {Object|null} Extension metadata or null
      */
     getExtension(name) {
-        return this.registeredExtensions.find(ext => ext.name === name) || null;
+        return this.registeredExtensions.find((ext) => ext.name === name) || null;
     }
 
     /**
      * Preload specific engines
      * Useful for critical engines that should load early
-     * 
+     *
      * @method preloadEngines
      * @param {Array<String>} engineNames Array of engine names to preload
      * @returns {Promise<Array>} Array of loaded engine instances
      */
     async preloadEngines(engineNames) {
-        const promises = engineNames.map(name => this.ensureEngineLoaded(name));
+        const promises = engineNames.map((name) => this.ensureEngineLoaded(name));
         return Promise.all(promises);
     }
 
     /**
      * Unload an engine
      * Useful for memory management in long-running applications
-     * 
+     *
      * @method unloadEngine
      * @param {String} engineName Name of the engine to unload
      */
     unloadEngine(engineName) {
         if (this.loadedEngines.has(engineName)) {
             const engineInstance = this.loadedEngines.get(engineName);
-            
+
             // Destroy the engine instance if it has a destroy method
             if (engineInstance && typeof engineInstance.destroy === 'function') {
                 engineInstance.destroy();
             }
-            
+
             this.loadedEngines.delete(engineName);
         }
     }
@@ -390,12 +434,12 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     /**
      * Mark extensions as loaded
      * Called by load-extensions initializer after extensions are loaded from API
-     * 
+     *
      * @method finishLoadingExtensions
      */
     finishLoadingExtensions() {
         this.extensionsLoaded = true;
-        
+
         // Resolve the extensions loaded promise
         if (this.extensionsLoadedResolver) {
             this.extensionsLoadedResolver();
@@ -406,7 +450,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     /**
      * Wait for extensions to be loaded from API
      * Returns immediately if already loaded
-     * 
+     *
      * @method waitForExtensionsLoaded
      * @returns {Promise} Promise that resolves when extensions are loaded
      */
@@ -420,12 +464,12 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     /**
      * Mark the boot process as complete
      * Called by the Universe service after all extensions are initialized
-     * 
+     *
      * @method finishBoot
      */
     finishBoot() {
         this.isBooting = false;
-        
+
         // Resolve the boot promise if it exists
         if (this.bootPromise) {
             this.bootPromise.resolve();
@@ -436,7 +480,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     /**
      * Wait for the boot process to complete
      * Returns immediately if already booted
-     * 
+     *
      * @method waitForBoot
      * @returns {Promise} Promise that resolves when boot is complete
      */
@@ -453,11 +497,11 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
                 resolve = res;
                 reject = rej;
             });
-            
+
             this.bootPromise = {
                 promise,
                 resolve,
-                reject
+                reject,
             };
         }
 
@@ -467,7 +511,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     /**
      * Load extensions from API and populate application
      * Encapsulates the extension loading logic
-     * 
+     *
      * @method loadExtensions
      * @param {Application} application The Ember application instance
      * @returns {Promise<Array>} Array of loaded extension names
@@ -475,29 +519,32 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     async loadExtensions(application) {
         const startTime = performance.now();
         debug('[ExtensionManager] Loading extensions from API...');
-        
+
         try {
             // Get admin-configured extensions from config
             const additionalCoreExtensions = config.APP?.extensions ?? [];
             if (additionalCoreExtensions.length > 0) {
                 debug(`[ExtensionManager] Admin-configured extensions (${additionalCoreExtensions.length}):`, additionalCoreExtensions);
             }
-            
+
             const apiStartTime = performance.now();
             // Load installed extensions (includes core, admin-configured, and user-installed)
             const extensions = await loadInstalledExtensions(additionalCoreExtensions);
             const apiEndTime = performance.now();
             debug(`[ExtensionManager] API call took ${(apiEndTime - apiStartTime).toFixed(2)}ms`);
-            
+
             application.extensions = extensions;
             application.engines = mapEngines(extensions);
-            
+
             const endTime = performance.now();
-            debug(`[ExtensionManager] Loaded ${extensions.length} installed extensions in ${(endTime - startTime).toFixed(2)}ms:`, extensions.map(e => e.name || e));
-            
+            debug(
+                `[ExtensionManager] Loaded ${extensions.length} installed extensions in ${(endTime - startTime).toFixed(2)}ms:`,
+                extensions.map((e) => e.name || e)
+            );
+
             // Mark extensions as loaded
             this.finishLoadingExtensions();
-            
+
             return extensions;
         } catch (error) {
             console.error('[ExtensionManager] Failed to load extensions:', error);
@@ -512,7 +559,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
 
     /**
      * Setup extensions by loading and executing their extension.js files
-     * 
+     *
      * @method setupExtensions
      * @param {ApplicationInstance} appInstance The application instance
      * @param {Service} universe The universe service
@@ -523,18 +570,21 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         const application = appInstance.application;
 
         debug('[ExtensionManager] Waiting for extensions to load...');
-        
+
         const waitStartTime = performance.now();
         // Wait for extensions to be loaded from API
         await this.waitForExtensionsLoaded();
         const waitEndTime = performance.now();
         debug(`[ExtensionManager] Wait for extensions took ${(waitEndTime - waitStartTime).toFixed(2)}ms`);
-        
+
         debug('[ExtensionManager] Extensions loaded, setting up...');
 
         // Get the list of enabled extensions
         const extensions = application.extensions || [];
-        debug(`[ExtensionManager] Setting up ${extensions.length} extensions:`, extensions.map(e => e.name || e));
+        debug(
+            `[ExtensionManager] Setting up ${extensions.length} extensions:`,
+            extensions.map((e) => e.name || e)
+        );
 
         const extensionTimings = [];
 
@@ -543,28 +593,25 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             // Extension is an object with name, version, etc. from package.json
             const extensionName = extension.name || extension;
             const extStartTime = performance.now();
-            
+
             // Lookup the loader function from the build-time generated map
             const loader = getExtensionLoader(extensionName);
-            
+
             if (!loader) {
-                console.warn(
-                    `[ExtensionManager] No loader registered for ${extensionName}. ` +
-                    'Ensure addon/extension.js exists and prebuild generated the mapping.'
-                );
+                console.warn(`[ExtensionManager] No loader registered for ${extensionName}. ` + 'Ensure addon/extension.js exists and prebuild generated the mapping.');
                 continue;
             }
-            
+
             try {
                 const loadStartTime = performance.now();
                 // Use dynamic import() via the loader function
                 const module = await loader();
                 const loadEndTime = performance.now();
-                
+
                 const setup = module.default ?? module;
                 const execStartTime = performance.now();
                 let executed = false;
-                
+
                 // Handle function export
                 if (typeof setup === 'function') {
                     debug(`[ExtensionManager] Running setup function for ${extensionName}`);
@@ -579,7 +626,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
                         await setup.setupExtension(appInstance, universe);
                         executed = true;
                     }
-                    
+
                     // Store onEngineLoaded hook (runs after engine loads)
                     if (typeof setup.onEngineLoaded === 'function') {
                         debug(`[ExtensionManager] Registering onEngineLoaded hook for ${extensionName}`);
@@ -587,29 +634,24 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
                         executed = true;
                     }
                 }
-                
+
                 const execEndTime = performance.now();
-                
+
                 if (executed) {
                     const extEndTime = performance.now();
                     const timing = {
                         name: extensionName,
                         load: (loadEndTime - loadStartTime).toFixed(2),
                         execute: (execEndTime - execStartTime).toFixed(2),
-                        total: (extEndTime - extStartTime).toFixed(2)
+                        total: (extEndTime - extStartTime).toFixed(2),
                     };
                     extensionTimings.push(timing);
                     debug(`[ExtensionManager] ${extensionName} - Load: ${timing.load}ms, Execute: ${timing.execute}ms, Total: ${timing.total}ms`);
                 } else {
-                    console.warn(
-                        `[ExtensionManager] ${extensionName}/extension did not export a function or valid object with setupExtension/onEngineLoaded.`
-                    );
+                    console.warn(`[ExtensionManager] ${extensionName}/extension did not export a function or valid object with setupExtension/onEngineLoaded.`);
                 }
             } catch (error) {
-                console.error(
-                    `[ExtensionManager] Failed to load or run extension.js for ${extensionName}:`,
-                    error
-                );
+                console.error(`[ExtensionManager] Failed to load or run extension.js for ${extensionName}:`, error);
             }
         }
 
@@ -617,13 +659,13 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         const totalSetupTime = (setupEndTime - setupStartTime).toFixed(2);
         debug(`[ExtensionManager] All extensions setup complete in ${totalSetupTime}ms`);
         debug('[ExtensionManager] Extension timings:', extensionTimings);
-        
+
         // Execute boot callbacks and mark boot as complete
         const callbackStartTime = performance.now();
         await universe.executeBootCallbacks();
         const callbackEndTime = performance.now();
         debug(`[ExtensionManager] Boot callbacks executed in ${(callbackEndTime - callbackStartTime).toFixed(2)}ms`);
-        
+
         const totalTime = (callbackEndTime - setupStartTime).toFixed(2);
         debug(`[ExtensionManager] Total extension boot time: ${totalTime}ms`);
     }
@@ -631,7 +673,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     /**
      * Register a service into a specific engine
      * Allows sharing host services with engines
-     * 
+     *
      * @method registerServiceIntoEngine
      * @param {String} engineName Name of the engine
      * @param {String} serviceName Name of the service to register
@@ -641,12 +683,12 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      */
     registerServiceIntoEngine(engineName, serviceName, serviceClass, options = {}) {
         const engineInstance = this.getEngineInstance(engineName);
-        
+
         if (!engineInstance) {
             console.warn(`[ExtensionManager] Cannot register service '${serviceName}' - engine '${engineName}' not loaded`);
             return false;
         }
-        
+
         try {
             engineInstance.register(`service:${serviceName}`, serviceClass, options);
             debug(`[ExtensionManager] Registered service '${serviceName}' into engine '${engineName}'`);
@@ -660,7 +702,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     /**
      * Register a component into a specific engine
      * Allows sharing host components with engines
-     * 
+     *
      * @method registerComponentIntoEngine
      * @param {String} engineName Name of the engine
      * @param {String} componentName Name of the component to register
@@ -670,12 +712,12 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      */
     registerComponentIntoEngine(engineName, componentName, componentClass, options = {}) {
         const engineInstance = this.getEngineInstance(engineName);
-        
+
         if (!engineInstance) {
             console.warn(`[ExtensionManager] Cannot register component '${componentName}' - engine '${engineName}' not loaded`);
             return false;
         }
-        
+
         try {
             engineInstance.register(`component:${componentName}`, componentClass, options);
             debug(`[ExtensionManager] Registered component '${componentName}' into engine '${engineName}'`);
@@ -689,7 +731,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     /**
      * Register a service into all loaded engines
      * Useful for sharing a host service with all engines
-     * 
+     *
      * @method registerServiceIntoAllEngines
      * @param {String} serviceName Name of the service to register
      * @param {Class} serviceClass Service class to register
@@ -698,14 +740,14 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      */
     registerServiceIntoAllEngines(serviceName, serviceClass, options = {}) {
         const succeededEngines = [];
-        
+
         for (const [engineName] of this.loadedEngines) {
             const success = this.registerServiceIntoEngine(engineName, serviceName, serviceClass, options);
             if (success) {
                 succeededEngines.push(engineName);
             }
         }
-        
+
         debug(`[ExtensionManager] Registered service '${serviceName}' into ${succeededEngines.length} engines:`, succeededEngines);
         return succeededEngines;
     }
@@ -713,7 +755,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     /**
      * Register a component into all loaded engines
      * Useful for sharing a host component with all engines
-     * 
+     *
      * @method registerComponentIntoAllEngines
      * @param {String} componentName Name of the component to register
      * @param {Class} componentClass Component class to register
@@ -722,21 +764,21 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      */
     registerComponentIntoAllEngines(componentName, componentClass, options = {}) {
         const succeededEngines = [];
-        
+
         for (const [engineName] of this.loadedEngines) {
             const success = this.registerComponentIntoEngine(engineName, componentName, componentClass, options);
             if (success) {
                 succeededEngines.push(engineName);
             }
         }
-        
+
         debug(`[ExtensionManager] Registered component '${componentName}' into ${succeededEngines.length} engines:`, succeededEngines);
         return succeededEngines;
     }
 
     /**
      * Get loading statistics
-     * 
+     *
      * @method getStats
      * @returns {Object} Statistics about loaded engines
      */
@@ -748,13 +790,13 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             loadingCount: this.loadingPromises.size,
             registeredCount: this.registeredExtensions.length,
             loadedEngines: Array.from(this.loadedEngines.keys()),
-            loadingEngines: Array.from(this.loadingPromises.keys())
+            loadingEngines: Array.from(this.loadingPromises.keys()),
         };
     }
 
     /**
      * Store an onEngineLoaded hook for later execution
-     * 
+     *
      * @private
      * @method #storeEngineLoadedHook
      * @param {String} engineName The name of the engine
@@ -763,14 +805,14 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     #storeEngineLoadedHook(engineName, hookFn) {
         // Check if engine is already loaded
         const engineInstance = this.getEngineInstance(engineName);
-        
+
         if (engineInstance) {
             // Engine already loaded, run hook immediately
             debug(`[ExtensionManager] Engine ${engineName} already loaded, running hook immediately`);
             const owner = getOwner(this);
             const universe = owner.lookup('service:universe');
             const appInstance = owner;
-            
+
             try {
                 hookFn(engineInstance, universe, appInstance);
                 debug(`[ExtensionManager] Successfully ran immediate onEngineLoaded hook for ${engineName}`);
@@ -790,7 +832,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     /**
      * Patch owner's buildChildEngineInstance to track engine loading via router
      * This ensures hooks run even when engines are loaded through routing (LinkTo)
-     * 
+     *
      * @private
      * @method #patchOwnerForEngineTracking
      */
@@ -798,24 +840,35 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         const owner = getOwner(this);
         const originalBuildChildEngineInstance = owner.buildChildEngineInstance;
         const self = this;
-        
-        owner.buildChildEngineInstance = function(name, options) {
+
+        owner.buildChildEngineInstance = function (name, options) {
             debug(`[ExtensionManager] buildChildEngineInstance called for ${name}`);
             const engineInstance = originalBuildChildEngineInstance.call(this, name, options);
-            
+
+            // correct mountPoint using engine instance
+            const _mountPoint = self.#getMountPointFromEngineInstance(engineInstance);
+            if (_mountPoint) {
+                engineInstance.mountPoint = _mountPoint;
+            }
+
+            // make sure to set dependencies from base instance
+            if (engineInstance.base) {
+                engineInstance.dependencies = self.#setupEngineParentDependenciesBeforeBoot(engineInstance.base.dependencies);
+            }
+
             // Notify ExtensionManager that an engine instance was built
             self.#onEngineInstanceBuilt(name, engineInstance);
-            
+
             return engineInstance;
         };
-        
+
         debug('[ExtensionManager] Patched owner.buildChildEngineInstance for engine tracking');
     }
 
     /**
      * Called when an engine instance is built (via router or manual loading)
      * Schedules hooks to run after the engine boots
-     * 
+     *
      * @private
      * @method #onEngineInstanceBuilt
      * @param {String} engineName The name of the engine
@@ -823,10 +876,10 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      */
     #onEngineInstanceBuilt(engineName, engineInstance) {
         const hooks = this.#engineLoadedHooks.get(engineName);
-        
+
         if (hooks && hooks.length > 0) {
             debug(`[ExtensionManager] Engine ${engineName} built, will run ${hooks.length} hook(s) after boot`);
-            
+
             // Schedule hooks to run after engine boots
             // Use next() to ensure engine is fully initialized
             next(() => {
@@ -843,7 +896,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
 
     /**
      * Run all stored onEngineLoaded hooks for an engine
-     * 
+     *
      * @private
      * @method #runEngineLoadedHooks
      * @param {String} engineName The name of the engine
@@ -851,7 +904,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      */
     #runEngineLoadedHooks(engineName, engineInstance) {
         const hooks = this.#engineLoadedHooks.get(engineName) || [];
-        
+
         if (hooks.length === 0) {
             return;
         }
