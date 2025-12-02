@@ -204,15 +204,14 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             // store loaded instance to engineInstances for booting
             engineInstances[name][instanceId] = engineInstance;
 
-            // Fire event for universe.onEngineLoaded() API
-            this.trigger('engine.loaded', name, engineInstance);
-
-            // Run stored onEngineLoaded hooks from extension.js
-            this.#runEngineLoadedHooks(name, engineInstance);
-            // Clear hooks after running to prevent double execution
-            this.#engineLoadedHooks.delete(name);
-
             return engineInstance.boot().then(() => {
+                // Fire event for universe.onEngineLoaded() API
+                this.trigger('engine.loaded', name, engineInstance);
+                // Run stored onEngineLoaded hooks from extension.js
+                this.#runEngineLoadedHooks(name, engineInstance);
+                // Clear hooks after running to prevent double execution
+                this.#engineLoadedHooks.delete(name);
+
                 return engineInstance;
             });
         }
