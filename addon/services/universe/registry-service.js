@@ -196,6 +196,18 @@ export default class RegistryService extends Service {
     }
 
     /**
+     * Get renderable components from a registry
+     * Convenience method for retrieving components list
+     * 
+     * @method getRenderableComponents
+     * @param {String} registryName Registry name
+     * @returns {Array} Array of component definitions/classes
+     */
+    getRenderableComponents(registryName) {
+        return this.getRegistry(registryName, 'components');
+    }
+
+    /**
      * Create a registry (section with default list).
      * For backward compatibility with existing code.
      * Creates a section with a 'menu-item' list by default.

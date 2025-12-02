@@ -4,7 +4,7 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/application';
-import { A } from '@ember/array';
+import { A, isArray } from '@ember/array';
 import MenuItem from '../contracts/menu-item';
 
 /**
@@ -659,16 +659,66 @@ export default class UniverseService extends Service.extend(Evented) {
     }
 
     /**
-     * Legacy method for registering renderable components
-     * Maintained for backward compatibility
+     * Register a renderable component for cross-engine rendering
+     * Supports both ExtensionComponent definitions and raw component classes
      * 
      * @method registerRenderableComponent
-     * @param {String} engineName Engine name
-     * @param {String} registryName Registry name
-     * @param {*} component Component
+     * @param {String} registryName Registry name (slot identifier)
+     * @param {Object|Class|Array} component ExtensionComponent definition, component class, or array of either
+     * @param {Object} options Optional configuration
+     * @param {String} options.engineName Engine name (required for raw component classes)
+     * 
+     * @example
+     * // ExtensionComponent definition with path (lazy loading)
+     * universe.registerRenderableComponent(
+     *     'fleet-ops:component:order:details',
+     *     new ExtensionComponent('@fleetbase/storefront-engine', 'storefront-order-summary')
+     * );
+     * 
+     * @example
+     * // ExtensionComponent definition with class (immediate)
+     * import MyComponent from './components/my-component';
+     * universe.registerRenderableComponent(
+     *     'fleet-ops:component:order:details',
+     *     new ExtensionComponent('@fleetbase/fleetops-engine', MyComponent)
+     * );
+     * 
+     * @example
+     * // Raw component class (requires engineName in options)
+     * universe.registerRenderableComponent(
+     *     'fleet-ops:component:order:details',
+     *     MyComponent,
+     *     { engineName: '@fleetbase/fleetops-engine' }
+     * );
      */
-    registerRenderableComponent(engineName, registryName, component) {
-        this.registryService.register(registryName, engineName, component);
+    registerRenderableComponent(registryName, component, options = {}) {
+        // Handle arrays
+        if (isArray(component)) {
+            component.forEach((comp) => this.registerRenderableComponent(registryName, comp, options));
+            return;
+        }
+
+        // Generate unique key for the component
+        const key = component._registryKey || 
+                    component.name || 
+                    component.path ||
+                    `component-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Register to RegistryService using map-based structure
+        // Structure: registries.get(registryName).components = [component1, component2, ...]
+        this.registryService.register(registryName, 'components', key, component);
+    }
+
+    /**
+     * Get renderable components from a registry
+     * Backward compatibility method - delegates to RegistryService
+     * 
+     * @method getRenderableComponentsFromRegistry
+     * @param {String} registryName Registry name
+     * @returns {Array} Array of component definitions/classes
+     */
+    getRenderableComponentsFromRegistry(registryName) {
+        return this.registryService.getRenderableComponents(registryName);
     }
 
     /**

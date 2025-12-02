@@ -34,12 +34,32 @@ export default class ExtensionComponent extends BaseContract {
      * 
      * @constructor
      * @param {String} engineName The name of the engine (e.g., '@fleetbase/fleetops-engine')
-     * @param {String|Object} pathOrOptions Component path or options object
+     * @param {String|Function|Object} pathClassOrOptions Component path, component class, or options object
      */
-    constructor(engineName, pathOrOptions = {}) {
-        const options = typeof pathOrOptions === 'string' 
-            ? { path: pathOrOptions }
-            : pathOrOptions;
+    constructor(engineName, pathClassOrOptions = {}) {
+        // Handle component class
+        if (typeof pathClassOrOptions === 'function' && pathClassOrOptions.prototype) {
+            const componentClass = pathClassOrOptions;
+            super({
+                engine: engineName,
+                class: componentClass,
+                name: componentClass.name
+            });
+            
+            this.engine = engineName;
+            this.class = componentClass;
+            this.name = componentClass.name;
+            this.path = null; // No path for classes
+            this.isClass = true;
+            this.loadingComponent = null;
+            this.errorComponent = null;
+            return;
+        }
+        
+        // Handle string path or options object
+        const options = typeof pathClassOrOptions === 'string' 
+            ? { path: pathClassOrOptions }
+            : pathClassOrOptions;
 
         super({
             engine: engineName,
@@ -48,6 +68,9 @@ export default class ExtensionComponent extends BaseContract {
 
         this.engine = engineName;
         this.path = options.path;
+        this.name = options.path; // Add name for parity
+        this.class = null;
+        this.isClass = false;
         this.loadingComponent = options.loadingComponent || null;
         this.errorComponent = options.errorComponent || null;
     }
@@ -56,14 +79,14 @@ export default class ExtensionComponent extends BaseContract {
      * Validate the component definition
      * 
      * @method validate
-     * @throws {Error} If engine name or path is missing
+     * @throws {Error} If engine name or path/class is missing
      */
     validate() {
         if (!this.engine) {
             throw new Error('ExtensionComponent requires an engine name');
         }
-        if (!this.path) {
-            throw new Error('ExtensionComponent requires a component path');
+        if (!this.path && !this.class) {
+            throw new Error('ExtensionComponent requires a component path or class');
         }
     }
 
@@ -127,6 +150,9 @@ export default class ExtensionComponent extends BaseContract {
         return {
             engine: this.engine,
             path: this.path,
+            name: this.name,
+            class: this.class,
+            isClass: this.isClass,
             loadingComponent: this.loadingComponent,
             errorComponent: this.errorComponent,
             ...this._options
