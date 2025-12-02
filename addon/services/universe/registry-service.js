@@ -4,7 +4,7 @@ import { warn } from '@ember/debug';
 import { A, isArray } from '@ember/array';
 import { TrackedMap, TrackedObject } from 'tracked-built-ins';
 import { getOwner } from '@ember/application';
-import TemplateHelper from '../../models/template-helper';
+import TemplateHelper from '../../contracts/template-helper';
 
 /**
  * RegistryService

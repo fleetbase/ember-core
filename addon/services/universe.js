@@ -706,7 +706,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * 
      * @example
      * // Lazy loading from engine
-     * import TemplateHelper from '@fleetbase/ember-core/models/template-helper';
+     * import TemplateHelper from '@fleetbase/ember-core/contracts/template-helper';
      * universe.registerHelper(
      *     'calculate-delivery-fee',
      *     new TemplateHelper('@fleetbase/storefront-engine', 'helpers/calculate-delivery-fee')
