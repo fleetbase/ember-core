@@ -5,7 +5,7 @@ import { A, isArray } from '@ember/array';
 import { TrackedMap, TrackedObject } from 'tracked-built-ins';
 import { getOwner } from '@ember/application';
 import TemplateHelper from '../../contracts/template-helper';
-import UniverseRegistry from '../../classes/universe-registry';
+import UniverseRegistry from '../../contracts/universe-registry';
 
 /**
  * RegistryService
