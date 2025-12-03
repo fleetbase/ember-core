@@ -5,6 +5,7 @@ import { A, isArray } from '@ember/array';
 import { TrackedMap, TrackedObject } from 'tracked-built-ins';
 import { getOwner } from '@ember/application';
 import TemplateHelper from '../../contracts/template-helper';
+import UniverseRegistry from '../../classes/universe-registry';
 
 /**
  * RegistryService
@@ -34,18 +35,27 @@ export default class RegistryService extends Service {
     @service('universe/extension-manager') extensionManager;
 
     /**
-     * TrackedMap of section name → TrackedObject with dynamic lists
-     * Fully reactive - templates update when registries change
-     * @type {TrackedMap<string, TrackedObject>}
-     */
-    registries = new TrackedMap();
-
-    /**
      * Reference to the root Ember Application Instance.
      * Used for registering components/services to the application container
      * for cross-engine sharing.
      */
     @tracked applicationInstance = null;
+
+    /**
+     * The singleton UniverseRegistry instance.
+     * Initialized once and shared across the app and all engines.
+     * @type {UniverseRegistry}
+     */
+    registry = this.#initializeRegistry();
+
+    /**
+     * Getter for the registries TrackedMap.
+     * Provides access to the shared registry data.
+     * @type {TrackedMap<string, TrackedObject>}
+     */
+    get registries() {
+        return this.registry.registries;
+    }
 
     /**
      * Sets the root Ember Application Instance.
@@ -55,6 +65,49 @@ export default class RegistryService extends Service {
      */
     setApplicationInstance(appInstance) {
         this.applicationInstance = appInstance;
+    }
+
+    /**
+     * Initializes the UniverseRegistry singleton.
+     * Registers it to the application container if not already registered.
+     * This ensures all service instances (app and engines) share the same registry.
+     * @private
+     * @method #initializeRegistry
+     * @returns {UniverseRegistry} The singleton registry instance
+     */
+    #initializeRegistry() {
+        const registryKey = 'registry:universe';
+        const owner = getOwner(this);
+        
+        // Try to get the application instance
+        // In engines, this will traverse up to the root application
+        let application = this.applicationInstance;
+        
+        if (!application) {
+            // Fallback: try to get from owner
+            if (owner && owner.application) {
+                application = owner.application;
+            } else if (typeof window !== 'undefined' && window.Fleetbase) {
+                // Last resort: use global Fleetbase app instance
+                application = window.Fleetbase;
+            } else {
+                warn('[RegistryService] Could not find application instance for registry initialization', {
+                    id: 'registry-service.no-application'
+                });
+                // Return a new instance as fallback (won't be shared)
+                return new UniverseRegistry();
+            }
+        }
+
+        // Register the singleton if not already registered
+        if (!application.hasRegistration(registryKey)) {
+            application.register(registryKey, new UniverseRegistry(), { 
+                instantiate: false 
+            });
+        }
+
+        // Resolve and return the singleton instance
+        return application.resolveRegistration(registryKey);
     }
 
     /**
