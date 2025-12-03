@@ -119,6 +119,8 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Listen for a specific engine to be loaded
+     * Note: This uses event listeners and will NOT run if the engine is already loaded.
+     * Use whenEngineLoaded() if you want to handle both cases.
      * 
      * @method onEngineLoaded
      * @param {String} engineName The engine name to listen for
@@ -134,6 +136,36 @@ export default class UniverseService extends Service.extend(Evented) {
                 callback(instance);
             }
         });
+    }
+
+    /**
+     * Execute a callback when an engine is loaded
+     * If the engine is already loaded, the callback runs immediately
+     * Otherwise, it's stored and runs when the engine loads
+     * 
+     * This is the recommended way to handle engine-dependent setup.
+     * 
+     * @method whenEngineLoaded
+     * @param {String} engineName The engine name
+     * @param {Function} callback Function to call, receives (engineInstance, universe, appInstance)
+     * @example
+     * // Replaces this pattern:
+     * if (universe.extensionManager.isEngineLoaded('@fleetbase/fleetops-engine')) {
+     *     const engine = universe.extensionManager.getEngineInstance('@fleetbase/fleetops-engine');
+     *     doSomething(engine);
+     * } else {
+     *     universe.onEngineLoaded('@fleetbase/fleetops-engine', (engine) => {
+     *         doSomething(engine);
+     *     });
+     * }
+     * 
+     * // With this simpler pattern:
+     * universe.whenEngineLoaded('@fleetbase/fleetops-engine', (engine) => {
+     *     doSomething(engine);
+     * });
+     */
+    whenEngineLoaded(engineName, callback) {
+        return this.extensionManager.whenEngineLoaded(engineName, callback);
     }
 
     /**

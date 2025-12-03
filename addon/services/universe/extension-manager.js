@@ -631,6 +631,30 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     }
 
     /**
+     * Execute a callback when an engine is loaded
+     * If the engine is already loaded, the callback runs immediately
+     * Otherwise, it's stored and runs when the engine loads
+     *
+     * @method whenEngineLoaded
+     * @param {String} engineName The name of the engine
+     * @param {Function} callback The callback to execute, receives (engineInstance, universe, appInstance)
+     * @example
+     * // Simple usage
+     * extensionManager.whenEngineLoaded('@fleetbase/fleetops-engine', (fleetopsEngine) => {
+     *     console.log('FleetOps loaded!', fleetopsEngine);
+     * });
+     *
+     * @example
+     * // With all parameters
+     * extensionManager.whenEngineLoaded('@fleetbase/customer-portal-engine', (portalEngine, universe, app) => {
+     *     setupIntegration(portalEngine, universe);
+     * });
+     */
+    whenEngineLoaded(engineName, callback) {
+        this.#storeEngineLoadedHook(engineName, callback);
+    }
+
+    /**
      * Mark extensions as loaded
      * Called by load-extensions initializer after extensions are loaded from API
      *
