@@ -39,14 +39,6 @@ export default class UniverseService extends Service.extend(Evented) {
     @tracked bootCallbacks = A([]);
 
     /**
-     * Initialize the service
-     */
-    constructor() {
-        super(...arguments);
-        // applicationInstance is set by the instance initializer
-    }
-
-    /**
      * Set the application instance on this service and cascade to RegistryService
      * Called by the instance initializer to ensure both services have access
      * to the root application container
