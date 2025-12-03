@@ -175,7 +175,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {ApplicationInstance} The application instance
      */
     getApplicationInstance() {
-        return this.applicationInstance;
+        return this.applicationInstance ?? window.Fleetbase;
     }
 
     /**
