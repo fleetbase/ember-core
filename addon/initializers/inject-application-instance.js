@@ -2,6 +2,12 @@ import Application from '@ember/application';
 import { getOwner } from '@ember/application';
 
 export function initialize(application) {
+    // Set window.Fleetbase to the application for global access
+    // This is used by services and engines to access the root application
+    if (typeof window !== 'undefined') {
+        window.Fleetbase = application;
+    }
+
     // Inject the application instance into the Universe service
     application.inject('service:universe', 'applicationInstance', 'application:main');
 
@@ -14,7 +20,7 @@ export function initialize(application) {
         initialize(appInstance) {
             const universeService = appInstance.lookup('service:universe');
             if (universeService && universeService.registryService) {
-                universeService.registryService.setApplicationInstance(appInstance.application);
+                universeService.registryService.setApplicationInstance(application);
             }
         }
     });
