@@ -5,12 +5,11 @@ export function initialize(appInstance) {
         window.Fleetbase = appInstance.application;
     }
 
-    // Look up UniverseService and set the application instance on RegistryService
-    // This ensures the RegistryService has access to the root application container
-    // for cross-engine registration
+    // Look up UniverseService and set the application instance
+    // This cascades to RegistryService automatically
     const universeService = appInstance.lookup('service:universe');
-    if (universeService && universeService.registryService) {
-        universeService.registryService.setApplicationInstance(appInstance.application);
+    if (universeService) {
+        universeService.setApplicationInstance(appInstance.application);
     }
 }
 

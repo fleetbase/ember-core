@@ -43,9 +43,22 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     constructor() {
         super(...arguments);
-        // The applicationInstance is now injected by the initializer 'inject-application-instance'
-        // and passed to the registryService. We keep this for backward compatibility/local lookup.
-        this.applicationInstance = getOwner(this);
+        // applicationInstance is set by the instance initializer
+    }
+
+    /**
+     * Set the application instance on this service and cascade to RegistryService
+     * Called by the instance initializer to ensure both services have access
+     * to the root application container
+     * 
+     * @method setApplicationInstance
+     * @param {Application} application The root application instance
+     */
+    setApplicationInstance(application) {
+        this.applicationInstance = application;
+        if (this.registryService) {
+            this.registryService.setApplicationInstance(application);
+        }
     }
 
     /**
