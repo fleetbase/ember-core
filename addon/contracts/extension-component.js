@@ -158,4 +158,18 @@ export default class ExtensionComponent extends BaseContract {
             ...this._options
         };
     }
+
+    /**
+     * Get the string representation
+     * 
+     * @method toString
+     * @returns {String} Plain string component definition properties
+     */
+    toString() {
+        if (this.isClass) {
+            return `#extension-component:${this.engine}:${this.name}`;
+        }
+
+        return `#extension-component:${this.engine}:${this.path}`;
+    }
 }
