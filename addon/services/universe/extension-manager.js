@@ -963,6 +963,13 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      */
     #patchOwnerForEngineTracking() {
         const owner = this.#getApplication();
+        
+        // Check if already patched to avoid multiple wrapping
+        if (owner._buildChildEngineInstancePatched) {
+            debug('[ExtensionManager] buildChildEngineInstance already patched, skipping');
+            return;
+        }
+        
         const originalBuildChildEngineInstance = owner.buildChildEngineInstance;
         const self = this;
 
@@ -988,6 +995,9 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             return engineInstance;
         };
 
+        // Mark as patched
+        owner._buildChildEngineInstancePatched = true;
+        
         debug('[ExtensionManager] Patched owner.buildChildEngineInstance for engine tracking');
     }
 
