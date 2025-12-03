@@ -1002,6 +1002,12 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
                 const originalBoot = engineInstance.boot.bind(engineInstance);
                 engineInstance.boot = function() {
                     return originalBoot().then(() => {
+                        // Add to loadedEngines Map for tracking
+                        if (!self.loadedEngines.has(name)) {
+                            self.loadedEngines.set(name, engineInstance);
+                            debug(`[ExtensionManager] Added ${name} to loadedEngines`);
+                        }
+                        
                         // Only trigger if not already triggered (prevent double execution)
                         if (!engineInstance._hooksTriggered) {
                             debug(`[ExtensionManager] Engine ${name} booted, triggering events`);
