@@ -699,21 +699,22 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {String} helperName The helper name (e.g., 'calculate-delivery-fee')
      * @param {Function|Class|TemplateHelper} helperClassOrTemplateHelper Helper function, class, or TemplateHelper instance
      * @param {Object} options Registration options
+     * @returns {Promise<void>}
      * 
      * @example
      * // Direct function registration
-     * universe.registerHelper('calculate-delivery-fee', calculateDeliveryFeeHelper);
+     * await universe.registerHelper('calculate-delivery-fee', calculateDeliveryFeeHelper);
      * 
      * @example
-     * // Lazy loading from engine
+     * // Lazy loading from engine (ensures engine is loaded first)
      * import TemplateHelper from '@fleetbase/ember-core/contracts/template-helper';
-     * universe.registerHelper(
+     * await universe.registerHelper(
      *     'calculate-delivery-fee',
      *     new TemplateHelper('@fleetbase/storefront-engine', 'helpers/calculate-delivery-fee')
      * );
      */
-    registerHelper(helperName, helperClassOrTemplateHelper, options = {}) {
-        return this.registryService.registerHelper(helperName, helperClassOrTemplateHelper, options);
+    async registerHelper(helperName, helperClassOrTemplateHelper, options = {}) {
+        return await this.registryService.registerHelper(helperName, helperClassOrTemplateHelper, options);
     }
 
     /**

@@ -1,4 +1,4 @@
-import Service from '@ember/service';
+import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { warn } from '@ember/debug';
 import { A, isArray } from '@ember/array';
@@ -31,6 +31,8 @@ import TemplateHelper from '../../contracts/template-helper';
  * @extends Service
  */
 export default class RegistryService extends Service {
+    @service('universe/extension-manager') extensionManager;
+
     /**
      * TrackedMap of section name → TrackedObject with dynamic lists
      * Fully reactive - templates update when registries change
@@ -422,23 +424,24 @@ export default class RegistryService extends Service {
      * @param {Function|Class|TemplateHelper} helperClassOrTemplateHelper Helper function, class, or TemplateHelper instance
      * @param {Object} options Registration options
      * @param {Boolean} options.instantiate Whether to instantiate the helper (default: false for functions)
+     * @returns {Promise<void>}
      * 
      * @example
      * // Direct function registration
-     * registryService.registerHelper('calculate-delivery-fee', calculateDeliveryFeeHelper);
+     * await registryService.registerHelper('calculate-delivery-fee', calculateDeliveryFeeHelper);
      * 
      * @example
      * // Direct class registration
-     * registryService.registerHelper('format-currency', FormatCurrencyHelper);
+     * await registryService.registerHelper('format-currency', FormatCurrencyHelper);
      * 
      * @example
-     * // Lazy loading from engine
-     * registryService.registerHelper(
+     * // Lazy loading from engine (ensures engine is loaded first)
+     * await registryService.registerHelper(
      *     'calculate-delivery-fee',
      *     new TemplateHelper('@fleetbase/storefront-engine', 'helpers/calculate-delivery-fee')
      * );
      */
-    registerHelper(helperName, helperClassOrTemplateHelper, options = {}) {
+    async registerHelper(helperName, helperClassOrTemplateHelper, options = {}) {
         const owner = this.applicationInstance || getOwner(this);
         
         if (!owner) {
@@ -458,8 +461,8 @@ export default class RegistryService extends Service {
                     instantiate: options.instantiate !== undefined ? options.instantiate : true
                 });
             } else {
-                // Lazy loading from engine
-                const helper = this.#loadHelperFromEngine(templateHelper);
+                // Lazy loading from engine (async - ensures engine is loaded)
+                const helper = await this.#loadHelperFromEngine(templateHelper);
                 if (helper) {
                     owner.register(`helper:${helperName}`, helper, {
                         instantiate: options.instantiate !== undefined ? options.instantiate : true
@@ -484,12 +487,13 @@ export default class RegistryService extends Service {
 
     /**
      * Loads a helper from an engine using TemplateHelper definition.
+     * Ensures the engine is loaded before attempting to resolve the helper.
      * @private
      * @method #loadHelperFromEngine
      * @param {TemplateHelper} templateHelper The TemplateHelper instance
-     * @returns {Function|Class|null} The loaded helper or null if failed
+     * @returns {Promise<Function|Class|null>} The loaded helper or null if failed
      */
-    #loadHelperFromEngine(templateHelper) {
+    async #loadHelperFromEngine(templateHelper) {
         const owner = this.applicationInstance || getOwner(this);
         
         if (!owner) {
@@ -497,12 +501,12 @@ export default class RegistryService extends Service {
         }
 
         try {
-            // Get the engine instance
-            const engineInstance = owner.lookup(`engine:${templateHelper.engineName}`);
+            // Ensure the engine is loaded (will load if not already loaded)
+            const engineInstance = await this.extensionManager.ensureEngineLoaded(templateHelper.engineName);
             
             if (!engineInstance) {
-                warn(`Engine not found: ${templateHelper.engineName}`, {
-                    id: 'registry-service.engine-not-found'
+                warn(`Engine could not be loaded: ${templateHelper.engineName}`, {
+                    id: 'registry-service.engine-not-loaded'
                 });
                 return null;
             }
