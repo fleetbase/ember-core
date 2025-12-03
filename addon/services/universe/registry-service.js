@@ -77,25 +77,26 @@ export default class RegistryService extends Service {
      */
     #initializeRegistry() {
         const registryKey = 'registry:universe';
-        const owner = getOwner(this);
         
-        // Try to get the application instance
-        // In engines, this will traverse up to the root application
+        // First priority: use applicationInstance if set
         let application = this.applicationInstance;
         
         if (!application) {
-            // Fallback: try to get from owner
-            if (owner && owner.application) {
-                application = owner.application;
-            } else if (typeof window !== 'undefined' && window.Fleetbase) {
-                // Last resort: use global Fleetbase app instance
+            // Second priority: window.Fleetbase
+            if (typeof window !== 'undefined' && window.Fleetbase) {
                 application = window.Fleetbase;
             } else {
-                warn('[RegistryService] Could not find application instance for registry initialization', {
-                    id: 'registry-service.no-application'
-                });
-                // Return a new instance as fallback (won't be shared)
-                return new UniverseRegistry();
+                // Third priority: try to get from owner
+                const owner = getOwner(this);
+                if (owner && owner.application) {
+                    application = owner.application;
+                } else {
+                    warn('[RegistryService] Could not find application instance for registry initialization', {
+                        id: 'registry-service.no-application'
+                    });
+                    // Return a new instance as fallback (won't be shared)
+                    return new UniverseRegistry();
+                }
             }
         }
 
@@ -495,7 +496,7 @@ export default class RegistryService extends Service {
      * );
      */
     async registerHelper(helperName, helperClassOrTemplateHelper, options = {}) {
-        const owner = this.applicationInstance || getOwner(this);
+        const owner = this.applicationInstance || (typeof window !== 'undefined' && window.Fleetbase) || getOwner(this);
         
         if (!owner) {
             warn('No owner available for helper registration. Cannot register helper.', { 
@@ -547,7 +548,7 @@ export default class RegistryService extends Service {
      * @returns {Promise<Function|Class|null>} The loaded helper or null if failed
      */
     async #loadHelperFromEngine(templateHelper) {
-        const owner = this.applicationInstance || getOwner(this);
+        const owner = this.applicationInstance || (typeof window !== 'undefined' && window.Fleetbase) || getOwner(this);
         
         if (!owner) {
             return null;

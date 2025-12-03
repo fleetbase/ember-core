@@ -26,6 +26,17 @@ export default class WidgetService extends Service {
     @service('universe/registry-service') registryService;
 
     /**
+     * Set the application instance (for consistency with other services)
+     * 
+     * @method setApplicationInstance
+     * @param {Application} application The root application instance
+     */
+    setApplicationInstance(application) {
+        // WidgetService doesn't currently need applicationInstance
+        // but we provide this method for consistency
+    }
+
+    /**
      * Normalize a widget input to a plain object
      * 
      * @private

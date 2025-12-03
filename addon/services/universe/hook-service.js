@@ -14,10 +14,22 @@ import HookRegistry from '../../contracts/hook-registry';
  * @extends Service
  */
 export default class HookService extends Service {
+    @tracked applicationInstance = null;
+
     constructor() {
         super(...arguments);
         // Initialize shared hook registry
         this.hookRegistry = this.#initializeHookRegistry();
+    }
+
+    /**
+     * Set the application instance
+     * 
+     * @method setApplicationInstance
+     * @param {Application} application The root application instance
+     */
+    setApplicationInstance(application) {
+        this.applicationInstance = application;
     }
 
     /**
@@ -48,19 +60,23 @@ export default class HookService extends Service {
      * @returns {Application}
      */
     #getApplication() {
-        const owner = getOwner(this);
-        
-        // Try to get application from owner
-        if (owner.application) {
-            return owner.application;
+        // First priority: use applicationInstance if set
+        if (this.applicationInstance) {
+            return this.applicationInstance;
         }
-        
-        // Fallback to window.Fleetbase
+
+        // Second priority: window.Fleetbase
         if (typeof window !== 'undefined' && window.Fleetbase) {
             return window.Fleetbase;
         }
         
-        // Last resort: return owner itself
+        // Third priority: try to get application from owner
+        const owner = getOwner(this);
+        if (owner && owner.application) {
+            return owner.application;
+        }
+        
+        // Last resort: return owner itself (might be EngineInstance)
         return owner;
     }
 

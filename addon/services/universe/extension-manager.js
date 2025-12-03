@@ -24,12 +24,24 @@ import ExtensionBootState from '../../contracts/extension-boot-state';
  * @extends Service
  */
 export default class ExtensionManagerService extends Service.extend(Evented) {
+    @tracked applicationInstance = null;
+
     constructor() {
         super(...arguments);
         // Initialize shared boot state
         this.bootState = this.#initializeBootState();
         // Patch owner to track engine loading via router
         this.#patchOwnerForEngineTracking();
+    }
+
+    /**
+     * Set the application instance
+     * 
+     * @method setApplicationInstance
+     * @param {Application} application The root application instance
+     */
+    setApplicationInstance(application) {
+        this.applicationInstance = application;
     }
 
     /**
@@ -65,19 +77,23 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      * @returns {Application}
      */
     #getApplication() {
-        const owner = getOwner(this);
-        
-        // Try to get application from owner
-        if (owner.application) {
-            return owner.application;
+        // First priority: use applicationInstance if set
+        if (this.applicationInstance) {
+            return this.applicationInstance;
         }
-        
-        // Fallback to window.Fleetbase
+
+        // Second priority: window.Fleetbase
         if (typeof window !== 'undefined' && window.Fleetbase) {
             return window.Fleetbase;
         }
         
-        // Last resort: return owner itself
+        // Third priority: try to get application from owner
+        const owner = getOwner(this);
+        if (owner && owner.application) {
+            return owner.application;
+        }
+        
+        // Last resort: return owner itself (might be EngineInstance)
         return owner;
     }
 
@@ -200,7 +216,8 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      * @returns {Promise<EngineInstance>} The engine instance
      */
     #loadEngine(name) {
-        const router = getOwner(this).lookup('router:main');
+        const application = this.#getApplication();
+        const router = application.lookup('router:main');
         const instanceId = 'manual'; // Arbitrary instance id, should be unique per engine
         const mountPoint = this.#mountPathFromEngineName(name);
 
@@ -285,10 +302,10 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      * @returns {Promise<EngineInstance>} A Promise that resolves with the constructed engine instance
      */
     constructEngineInstance(name, instanceId, mountPoint) {
-        const owner = getOwner(this);
-        const router = owner.lookup('router:main');
+        const application = this.#getApplication();
+        const router = application.lookup('router:main');
 
-        assert(`You attempted to load the engine '${name}' with '${instanceId}', but the engine cannot be found.`, owner.hasRegistration(`engine:${name}`));
+        assert(`You attempted to load the engine '${name}' with '${instanceId}', but the engine cannot be found.`, application.hasRegistration(`engine:${name}`));
 
         let engineInstances = router._engineInstances;
         if (!engineInstances) {
@@ -335,8 +352,8 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     #setupEngineParentDependenciesBeforeBoot(baseDependencies = {}) {
         const dependencies = { ...baseDependencies };
 
-        // Get service from app instance ?
-        const applicationInstance = getOwner(this);
+        // Get service from app instance
+        const applicationInstance = this.#getApplication();
 
         // fix services
         const servicesObject = {};
@@ -432,8 +449,8 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      * @returns {EngineInstance|null} The engine instance or null
      */
     getEngineInstance(engineName, instanceId = 'manual') {
-        const owner = getOwner(this);
-        const router = owner.lookup('router:main');
+        const application = this.#getApplication();
+        const router = application.lookup('router:main');
         const engineInstances = router._engineInstances;
 
         if (engineInstances && engineInstances[engineName] && engineInstances[engineName][instanceId]) {
@@ -451,8 +468,8 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      * @returns {Boolean} True if engine is loaded
      */
     isEngineLoaded(engineName) {
-        const owner = getOwner(this);
-        const router = owner.lookup('router:main');
+        const application = this.#getApplication();
+        const router = application.lookup('router:main');
         return router.engineIsLoaded(engineName);
     }
 
@@ -464,8 +481,8 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      * @returns {Boolean} True if engine is loading
      */
     isEngineLoading(engineName) {
-        const owner = getOwner(this);
-        const router = owner.lookup('router:main');
+        const application = this.#getApplication();
+        const router = application.lookup('router:main');
         return !!(router._enginePromises && router._enginePromises[engineName]);
     }
 
@@ -918,9 +935,8 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         if (engineInstance) {
             // Engine already loaded, run hook immediately
             debug(`[ExtensionManager] Engine ${engineName} already loaded, running hook immediately`);
-            const owner = getOwner(this);
-            const universe = owner.lookup('service:universe');
-            const appInstance = owner;
+            const appInstance = this.#getApplication();
+            const universe = appInstance.lookup('service:universe');
 
             try {
                 hookFn(engineInstance, universe, appInstance);
@@ -946,7 +962,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      * @method #patchOwnerForEngineTracking
      */
     #patchOwnerForEngineTracking() {
-        const owner = getOwner(this);
+        const owner = this.#getApplication();
         const originalBuildChildEngineInstance = owner.buildChildEngineInstance;
         const self = this;
 
@@ -1019,9 +1035,8 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             return;
         }
 
-        const owner = getOwner(this);
-        const universe = owner.lookup('service:universe');
-        const appInstance = owner;
+        const appInstance = this.#getApplication();
+        const universe = appInstance.lookup('service:universe');
 
         debug(`[ExtensionManager] Running ${hooks.length} onEngineLoaded hook(s) for ${engineName}`);
 

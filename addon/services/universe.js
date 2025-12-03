@@ -48,8 +48,22 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     setApplicationInstance(application) {
         this.applicationInstance = application;
+        
+        // Cascade to all child services
         if (this.registryService) {
             this.registryService.setApplicationInstance(application);
+        }
+        if (this.extensionManager) {
+            this.extensionManager.setApplicationInstance(application);
+        }
+        if (this.menuService) {
+            this.menuService.setApplicationInstance(application);
+        }
+        if (this.widgetService) {
+            this.widgetService.setApplicationInstance(application);
+        }
+        if (this.hookService) {
+            this.hookService.setApplicationInstance(application);
         }
     }
 

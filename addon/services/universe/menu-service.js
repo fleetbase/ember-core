@@ -21,6 +21,17 @@ export default class MenuService extends Service.extend(Evented) {
     @service universe;
 
     /**
+     * Set the application instance (for consistency with other services)
+     * 
+     * @method setApplicationInstance
+     * @param {Application} application The root application instance
+     */
+    setApplicationInstance(application) {
+        // MenuService doesn't currently need applicationInstance
+        // but we provide this method for consistency
+    }
+
+    /**
      * Wrap an onClick handler to automatically pass menuItem and universe as parameters
      * 
      * @private
