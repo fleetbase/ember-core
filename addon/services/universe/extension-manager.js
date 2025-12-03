@@ -533,6 +533,83 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     }
 
     /**
+     * Check if an extension is registered/installed
+     *
+     * @method isExtensionInstalled
+     * @param {String} name Extension name
+     * @returns {Boolean} True if extension is registered
+     */
+    isExtensionInstalled(name) {
+        return this.registeredExtensions.some((ext) => ext.name === name);
+    }
+
+    /**
+     * Alias for isExtensionInstalled
+     * @method isEngineInstalled
+     */
+    isEngineInstalled(name) {
+        return this.isExtensionInstalled(name);
+    }
+
+    /**
+     * Alias for isExtensionInstalled
+     * @method hasExtensionIndexed
+     */
+    hasExtensionIndexed(name) {
+        return this.isExtensionInstalled(name);
+    }
+
+    /**
+     * Alias for isExtensionInstalled
+     * @method isInstalled
+     */
+    isInstalled(name) {
+        return this.isExtensionInstalled(name);
+    }
+
+    /**
+     * Check if an engine has been loaded (boot started or completed)
+     *
+     * @method isEngineLoaded
+     * @param {String} name Engine name
+     * @returns {Boolean} True if engine is loaded
+     */
+    isEngineLoaded(name) {
+        return this.loadedEngines.has(name);
+    }
+
+    /**
+     * Check if an engine is currently loading
+     *
+     * @method isEngineLoading
+     * @param {String} name Engine name
+     * @returns {Boolean} True if engine is currently loading
+     */
+    isEngineLoading(name) {
+        return this.loadingPromises.has(name);
+    }
+
+    /**
+     * Check if an extension has been set up (extension.js executed)
+     * This checks if the extension has been registered, which happens during setup
+     *
+     * @method isExtensionSetup
+     * @param {String} name Extension name
+     * @returns {Boolean} True if extension setup has run
+     */
+    isExtensionSetup(name) {
+        return this.isExtensionInstalled(name);
+    }
+
+    /**
+     * Alias for isExtensionSetup
+     * @method hasExtensionSetup
+     */
+    hasExtensionSetup(name) {
+        return this.isExtensionSetup(name);
+    }
+
+    /**
      * Preload specific engines
      * Useful for critical engines that should load early
      *
@@ -734,6 +811,9 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             }
 
             try {
+                // Register the extension to registeredExtensions
+                this.registerExtension(extensionName, extension);
+                
                 const loadStartTime = performance.now();
                 // Use dynamic import() via the loader function
                 const module = await loader();
