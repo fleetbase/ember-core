@@ -784,7 +784,16 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
 
         const extensionTimings = [];
 
-        // Load and execute extension.js from each enabled extension
+        // Phase 1: Register all extensions first so isInstalled() works during setup
+        debug('[ExtensionManager] Phase 1: Registering all extensions...');
+        for (const extension of extensions) {
+            const extensionName = extension.name || extension;
+            this.registerExtension(extensionName, extension);
+        }
+        debug(`[ExtensionManager] Registered ${extensions.length} extensions`);
+
+        // Phase 2: Load and execute extension.js from each enabled extension
+        debug('[ExtensionManager] Phase 2: Loading and executing extension setup...');
         for (const extension of extensions) {
             // Extension is an object with name, version, etc. from package.json
             const extensionName = extension.name || extension;
@@ -799,8 +808,6 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             }
 
             try {
-                // Register the extension to registeredExtensions
-                this.registerExtension(extensionName, extension);
                 
                 const loadStartTime = performance.now();
                 // Use dynamic import() via the loader function
