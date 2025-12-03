@@ -1,11 +1,12 @@
 import { debug } from '@ember/debug';
+import config from 'ember-get-config';
 
 /**
  * Cache key for localStorage
  */
 const CACHE_KEY = 'fleetbase_extensions_list';
 const CACHE_VERSION_KEY = 'fleetbase_extensions_version';
-const CACHE_TTL = 1000 * 60 * 60; // 1 hour
+const CACHE_TTL = 1000 * 60 * 30; // 30 mins
 
 /**
  * Get cached extensions from localStorage
@@ -85,10 +86,13 @@ export function clearExtensionsCache() {
  * @returns {Promise<Array>} Extensions array
  */
 export default async function loadExtensions() {
-    // Try cache first
-    const cachedExtensions = getCachedExtensions();
-    if (cachedExtensions) {
-        return Promise.resolve(cachedExtensions);
+    const isProduction = config?.environment === 'production';
+    if (isProduction) {
+        // Try cache first only in production
+        const cachedExtensions = getCachedExtensions();
+        if (cachedExtensions) {
+            return Promise.resolve(cachedExtensions);
+        }
     }
 
     // Cache miss - fetch from server

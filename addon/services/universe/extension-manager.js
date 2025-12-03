@@ -524,7 +524,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             // Get admin-configured extensions from config
             const additionalCoreExtensions = config.APP?.extensions ?? [];
             if (additionalCoreExtensions.length > 0) {
-                debug(`[ExtensionManager] Admin-configured extensions (${additionalCoreExtensions.length}):`, additionalCoreExtensions);
+                debug(`[ExtensionManager] Admin-configured extensions (${additionalCoreExtensions.length}): ${additionalCoreExtensions.join(', ')}`);
             }
 
             const apiStartTime = performance.now();
@@ -537,10 +537,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             application.engines = mapEngines(extensions);
 
             const endTime = performance.now();
-            debug(
-                `[ExtensionManager] Loaded ${extensions.length} installed extensions in ${(endTime - startTime).toFixed(2)}ms:`,
-                extensions.map((e) => e.name || e)
-            );
+            debug(`[ExtensionManager] Loaded ${extensions.length} installed extensions in ${(endTime - startTime).toFixed(2)}ms: ` + extensions.map((e) => e.name || e).join(', '));
 
             // Mark extensions as loaded
             this.finishLoadingExtensions();
@@ -658,7 +655,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         const setupEndTime = performance.now();
         const totalSetupTime = (setupEndTime - setupStartTime).toFixed(2);
         debug(`[ExtensionManager] All extensions setup complete in ${totalSetupTime}ms`);
-        debug('[ExtensionManager] Extension timings:', extensionTimings);
+        debug('[ExtensionManager] Extension timings: ' + JSON.stringify(extensionTimings, null, 1));
 
         // Execute boot callbacks and mark boot as complete
         const callbackStartTime = performance.now();
