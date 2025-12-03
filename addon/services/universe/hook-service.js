@@ -1,6 +1,8 @@
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { getOwner } from '@ember/application';
 import Hook from '../../contracts/hook';
+import HookRegistry from '../../contracts/hook-registry';
 
 /**
  * HookService
@@ -12,7 +14,67 @@ import Hook from '../../contracts/hook';
  * @extends Service
  */
 export default class HookService extends Service {
-    @tracked hooks = {};
+    constructor() {
+        super(...arguments);
+        // Initialize shared hook registry
+        this.hookRegistry = this.#initializeHookRegistry();
+    }
+
+    /**
+     * Initialize shared hook registry singleton
+     * Ensures all HookService instances share the same hooks
+     * 
+     * @private
+     * @returns {HookRegistry}
+     */
+    #initializeHookRegistry() {
+        const registryKey = 'registry:hooks';
+        const application = this.#getApplication();
+        
+        if (!application.hasRegistration(registryKey)) {
+            application.register(registryKey, new HookRegistry(), { 
+                instantiate: false 
+            });
+        }
+        
+        return application.resolveRegistration(registryKey);
+    }
+
+    /**
+     * Get the application instance
+     * Tries multiple fallback methods to find the root application
+     * 
+     * @private
+     * @returns {Application}
+     */
+    #getApplication() {
+        const owner = getOwner(this);
+        
+        // Try to get application from owner
+        if (owner.application) {
+            return owner.application;
+        }
+        
+        // Fallback to window.Fleetbase
+        if (typeof window !== 'undefined' && window.Fleetbase) {
+            return window.Fleetbase;
+        }
+        
+        // Last resort: return owner itself
+        return owner;
+    }
+
+    /**
+     * Getter and setter for hooks property
+     * Delegates to the shared hookRegistry object
+     */
+    get hooks() {
+        return this.hookRegistry.hooks;
+    }
+
+    set hooks(value) {
+        this.hookRegistry.hooks = value;
+    }
 
     /**
      * Find a specific hook

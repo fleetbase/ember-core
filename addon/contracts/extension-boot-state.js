@@ -1,4 +1,5 @@
 import { tracked } from '@glimmer/tracking';
+import { A } from '@ember/array';
 
 /**
  * ExtensionBootState
@@ -39,4 +40,28 @@ export default class ExtensionBootState {
      * @type {boolean}
      */
     @tracked extensionsLoaded = false;
+
+    /**
+     * Map of loaded engine instances
+     * @type {Map}
+     */
+    @tracked loadedEngines = new Map();
+
+    /**
+     * Array of registered extensions
+     * @type {Array}
+     */
+    @tracked registeredExtensions = A([]);
+
+    /**
+     * Map of loading promises for engines
+     * @type {Map}
+     */
+    @tracked loadingPromises = new Map();
+
+    /**
+     * Map of engine loaded hooks
+     * @type {Map}
+     */
+    engineLoadedHooks = new Map();
 }

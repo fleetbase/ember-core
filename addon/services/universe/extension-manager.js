@@ -24,13 +24,6 @@ import ExtensionBootState from '../../contracts/extension-boot-state';
  * @extends Service
  */
 export default class ExtensionManagerService extends Service.extend(Evented) {
-    @tracked loadedEngines = new Map();
-    @tracked registeredExtensions = A([]);
-    @tracked loadingPromises = new Map();
-
-    // Private field to store onEngineLoaded hooks from extension.js
-    #engineLoadedHooks = new Map();
-
     constructor() {
         super(...arguments);
         // Initialize shared boot state
@@ -130,6 +123,38 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
 
     set extensionsLoaded(value) {
         this.bootState.extensionsLoaded = value;
+    }
+
+    get loadedEngines() {
+        return this.bootState.loadedEngines;
+    }
+
+    set loadedEngines(value) {
+        this.bootState.loadedEngines = value;
+    }
+
+    get registeredExtensions() {
+        return this.bootState.registeredExtensions;
+    }
+
+    set registeredExtensions(value) {
+        this.bootState.registeredExtensions = value;
+    }
+
+    get loadingPromises() {
+        return this.bootState.loadingPromises;
+    }
+
+    set loadingPromises(value) {
+        this.bootState.loadingPromises = value;
+    }
+
+    /**
+     * Getter for engineLoadedHooks (not tracked, just a Map)
+     * Delegates to the shared bootState object
+     */
+    get #engineLoadedHooks() {
+        return this.bootState.engineLoadedHooks;
     }
 
     /**
