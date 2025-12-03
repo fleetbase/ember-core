@@ -1013,7 +1013,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
                             self.#runEngineLoadedHooks(name, engineInstance);
                             
                             // Clear hooks after running to prevent double execution
-                            self.engineLoadedHooks.delete(name);
+                            self.#engineLoadedHooks.delete(name);
                             
                             // Mark as triggered
                             engineInstance._hooksTriggered = true;
