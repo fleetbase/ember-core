@@ -327,12 +327,17 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             engineInstances[name][instanceId] = engineInstance;
 
             return engineInstance.boot().then(() => {
-                // Fire event for universe.onEngineLoaded() API
-                this.trigger('engine.loaded', name, engineInstance);
-                // Run stored onEngineLoaded hooks from extension.js
-                this.#runEngineLoadedHooks(name, engineInstance);
-                // Clear hooks after running to prevent double execution
-                this.#engineLoadedHooks.delete(name);
+                // Only trigger if not already triggered (prevent double execution)
+                if (!engineInstance._hooksTriggered) {
+                    // Fire event for universe.onEngineLoaded() API
+                    this.trigger('engine.loaded', name, engineInstance);
+                    // Run stored onEngineLoaded hooks from extension.js
+                    this.#runEngineLoadedHooks(name, engineInstance);
+                    // Clear hooks after running to prevent double execution
+                    this.#engineLoadedHooks.delete(name);
+                    // Mark as triggered
+                    engineInstance._hooksTriggered = true;
+                }
 
                 return engineInstance;
             });
@@ -991,6 +996,34 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
 
             // Notify ExtensionManager that an engine instance was built
             self.#onEngineInstanceBuilt(name, engineInstance);
+
+            // Patch the engine instance's boot method to trigger events/hooks after boot
+            if (!engineInstance._bootPatched) {
+                const originalBoot = engineInstance.boot.bind(engineInstance);
+                engineInstance.boot = function() {
+                    return originalBoot().then(() => {
+                        // Only trigger if not already triggered (prevent double execution)
+                        if (!engineInstance._hooksTriggered) {
+                            debug(`[ExtensionManager] Engine ${name} booted, triggering events`);
+                            
+                            // Fire event for universe.onEngineLoaded() API
+                            self.trigger('engine.loaded', name, engineInstance);
+                            
+                            // Run stored onEngineLoaded hooks from extension.js
+                            self.#runEngineLoadedHooks(name, engineInstance);
+                            
+                            // Clear hooks after running to prevent double execution
+                            self.engineLoadedHooks.delete(name);
+                            
+                            // Mark as triggered
+                            engineInstance._hooksTriggered = true;
+                        }
+                        
+                        return engineInstance;
+                    });
+                };
+                engineInstance._bootPatched = true;
+            }
 
             return engineInstance;
         };
