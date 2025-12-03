@@ -12,6 +12,7 @@ import config from 'ember-get-config';
 import { getExtensionLoader } from '@fleetbase/console/extensions';
 import { isArray } from '@ember/array';
 import RSVP from 'rsvp';
+import ExtensionBootState from '../../contracts/extension-boot-state';
 
 /**
  * ExtensionManagerService
@@ -26,23 +27,109 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     @tracked loadedEngines = new Map();
     @tracked registeredExtensions = A([]);
     @tracked loadingPromises = new Map();
-    @tracked isBooting = true;
-    @tracked bootPromise = null;
-    @tracked extensionsLoadedPromise = null;
-    @tracked extensionsLoadedResolver = null;
-    @tracked extensionsLoaded = false;
 
     // Private field to store onEngineLoaded hooks from extension.js
     #engineLoadedHooks = new Map();
 
     constructor() {
         super(...arguments);
-        // Create a promise that resolves when extensions are loaded
-        this.extensionsLoadedPromise = new Promise((resolve) => {
-            this.extensionsLoadedResolver = resolve;
-        });
+        // Initialize shared boot state
+        this.bootState = this.#initializeBootState();
         // Patch owner to track engine loading via router
         this.#patchOwnerForEngineTracking();
+    }
+
+    /**
+     * Initialize shared boot state singleton
+     * Ensures all ExtensionManager instances share the same boot state
+     * 
+     * @private
+     * @returns {ExtensionBootState}
+     */
+    #initializeBootState() {
+        const stateKey = 'state:extension-boot';
+        const application = this.#getApplication();
+        
+        if (!application.hasRegistration(stateKey)) {
+            const bootState = new ExtensionBootState();
+            // Create the extensionsLoadedPromise
+            bootState.extensionsLoadedPromise = new Promise((resolve) => {
+                bootState.extensionsLoadedResolver = resolve;
+            });
+            application.register(stateKey, bootState, { 
+                instantiate: false 
+            });
+        }
+        
+        return application.resolveRegistration(stateKey);
+    }
+
+    /**
+     * Get the application instance
+     * Tries multiple fallback methods to find the root application
+     * 
+     * @private
+     * @returns {Application}
+     */
+    #getApplication() {
+        const owner = getOwner(this);
+        
+        // Try to get application from owner
+        if (owner.application) {
+            return owner.application;
+        }
+        
+        // Fallback to window.Fleetbase
+        if (typeof window !== 'undefined' && window.Fleetbase) {
+            return window.Fleetbase;
+        }
+        
+        // Last resort: return owner itself
+        return owner;
+    }
+
+    /**
+     * Getters and setters for boot state properties
+     * These delegate to the shared bootState object
+     */
+    get isBooting() {
+        return this.bootState.isBooting;
+    }
+
+    set isBooting(value) {
+        this.bootState.isBooting = value;
+    }
+
+    get bootPromise() {
+        return this.bootState.bootPromise;
+    }
+
+    set bootPromise(value) {
+        this.bootState.bootPromise = value;
+    }
+
+    get extensionsLoadedPromise() {
+        return this.bootState.extensionsLoadedPromise;
+    }
+
+    set extensionsLoadedPromise(value) {
+        this.bootState.extensionsLoadedPromise = value;
+    }
+
+    get extensionsLoadedResolver() {
+        return this.bootState.extensionsLoadedResolver;
+    }
+
+    set extensionsLoadedResolver(value) {
+        this.bootState.extensionsLoadedResolver = value;
+    }
+
+    get extensionsLoaded() {
+        return this.bootState.extensionsLoaded;
+    }
+
+    set extensionsLoaded(value) {
+        this.bootState.extensionsLoaded = value;
     }
 
     /**
