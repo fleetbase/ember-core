@@ -442,16 +442,12 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      *
      * @method getEngineInstance
      * @param {String} engineName Name of the engine
-     * @param {String} instanceId Optional instance ID (defaults to 'manual')
      * @returns {EngineInstance|null} The engine instance or null
      */
-    getEngineInstance(engineName, instanceId = 'manual') {
-        const application = this.#getApplication();
-        const router = application.lookup('router:main');
-        const engineInstances = router._engineInstances;
-
-        if (engineInstances && engineInstances[engineName] && engineInstances[engineName][instanceId]) {
-            return engineInstances[engineName][instanceId];
+    getEngineInstance(engineName) {
+        // Use loadedEngines Map which tracks all loaded engines regardless of how they were loaded
+        if (this.loadedEngines.has(engineName)) {
+            return this.loadedEngines.get(engineName);
         }
 
         return null;
