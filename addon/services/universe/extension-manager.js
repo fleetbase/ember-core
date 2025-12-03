@@ -284,14 +284,6 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     }
 
     /**
-     * Get an engine instance if it's already loaded
-     * Does not trigger loading
-     *
-     * @method getEngineInstance
-     * @param {String} engineName Name of the engine
-     * @returns {EngineInstance|null} The engine instance or null
-     */
-    /**
      * Construct an engine instance. If the instance does not exist yet, it
      * will be created.
      *
