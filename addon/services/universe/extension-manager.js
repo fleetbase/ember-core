@@ -318,7 +318,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         let engineInstance = engineInstances[name][instanceId];
 
         if (!engineInstance) {
-            engineInstance = owner.buildChildEngineInstance(name, {
+            engineInstance = application.buildChildEngineInstance(name, {
                 routable: true,
                 mountPoint: mountPoint,
             });
