@@ -11,6 +11,7 @@ import mapEngines from '@fleetbase/ember-core/utils/map-engines';
 import config from 'ember-get-config';
 import { getExtensionLoader } from '@fleetbase/console/extensions';
 import { isArray } from '@ember/array';
+import { isNone } from '@ember/utils';
 import RSVP from 'rsvp';
 import ExtensionBootState from '../../contracts/extension-boot-state';
 
@@ -35,48 +36,48 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     /**
      * Initialize shared boot state singleton
      * Ensures all ExtensionManager instances share the same boot state
-     * 
+     *
      * @private
      * @returns {ExtensionBootState}
      */
     #initializeBootState() {
         const stateKey = 'state:extension-boot';
         const application = this.#getApplication();
-        
+
         if (!application.hasRegistration(stateKey)) {
             const bootState = new ExtensionBootState();
             // Create the extensionsLoadedPromise
             bootState.extensionsLoadedPromise = new Promise((resolve) => {
                 bootState.extensionsLoadedResolver = resolve;
             });
-            application.register(stateKey, bootState, { 
-                instantiate: false 
+            application.register(stateKey, bootState, {
+                instantiate: false,
             });
         }
-        
+
         return application.resolveRegistration(stateKey);
     }
 
     /**
      * Get the application instance
      * Tries multiple fallback methods to find the root application
-     * 
+     *
      * @private
      * @returns {Application}
      */
     #getApplication() {
         const owner = getOwner(this);
-        
+
         // Try to get application from owner
         if (owner.application) {
             return owner.application;
         }
-        
+
         // Fallback to window.Fleetbase
         if (typeof window !== 'undefined' && window.Fleetbase) {
             return window.Fleetbase;
         }
-        
+
         // Last resort: return owner itself
         return owner;
     }
@@ -254,7 +255,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      * @param {String} engineName Engine name (e.g., '@fleetbase/fleetops-engine')
      * @returns {String} Mount path (e.g., 'console.fleetops')
      */
-    #mountPathFromEngineName(engineName) {
+    #mountPathFromEngineName(engineName, options = {}) {
         let engineNameSegments = engineName.split('/');
         let mountName = engineNameSegments[1];
 
@@ -263,6 +264,8 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         }
 
         const mountPath = mountName.replace('-engine', '');
+        if (options?.rootMount === true) return mountPath;
+
         return `console.${mountPath}`;
     }
 
@@ -402,17 +405,12 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     #getMountPointFromEngineInstance(engineInstance) {
         if (engineInstance) {
             const config = engineInstance.resolveRegistration('config:environment');
-
             if (config) {
                 let engineName = config.modulePrefix;
                 let mountedEngineRoutePrefix = config.mountedEngineRoutePrefix;
 
-                if (!mountedEngineRoutePrefix) {
+                if (isNone(mountedEngineRoutePrefix)) {
                     mountedEngineRoutePrefix = this.#mountPathFromEngineName(engineName);
-                }
-
-                if (!mountedEngineRoutePrefix.endsWith('.')) {
-                    mountedEngineRoutePrefix = mountedEngineRoutePrefix + '.';
                 }
 
                 return mountedEngineRoutePrefix;
@@ -947,6 +945,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      */
     #patchOwnerForEngineTracking() {
         const owner = getOwner(this);
+        console.log('[patchOwnerForEngineTracking #owner]', owner);
         const originalBuildChildEngineInstance = owner.buildChildEngineInstance;
         const self = this;
 
@@ -957,7 +956,6 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             // correct mountPoint using engine instance
             const _mountPoint = self.#getMountPointFromEngineInstance(engineInstance);
             if (_mountPoint) {
-                // Remove trailing dot before setting on engine instance
                 engineInstance.mountPoint = _mountPoint.endsWith('.') ? _mountPoint.slice(0, -1) : _mountPoint;
             }
 
@@ -1014,7 +1012,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      */
     #runEngineLoadedHooks(engineName, engineInstance) {
         const hooks = this.#engineLoadedHooks.get(engineName) || [];
-
+        console.log('[runEngineLoadedHooks hooks]', hooks);
         if (hooks.length === 0) {
             return;
         }
