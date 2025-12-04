@@ -4,13 +4,13 @@ import isObject from '../utils/is-object';
 
 /**
  * Represents a dashboard widget
- * 
+ *
  * Widgets are modular components that can be added to dashboards.
  * They support grid layout options, custom configurations, and lazy-loaded components.
- * 
+ *
  * @class Widget
  * @extends BaseContract
- * 
+ *
  * @example
  * // With chaining
  * new Widget('fleet-ops-metrics')
@@ -20,7 +20,7 @@ import isObject from '../utils/is-object';
  *   .withComponent(new ExtensionComponent('@fleetbase/fleetops-engine', 'components/widget/metrics'))
  *   .withGridOptions({ w: 12, h: 12, minW: 8, minH: 12 })
  *   .asDefault()
- * 
+ *
  * @example
  * // Full definition object (first-class)
  * new Widget({
@@ -32,7 +32,7 @@ import isObject from '../utils/is-object';
  *   grid_options: { w: 12, h: 12, minW: 8, minH: 12 },
  *   default: true
  * })
- * 
+ *
  * @example
  * // Full definition with string component (local)
  * new Widget({
@@ -45,18 +45,18 @@ import isObject from '../utils/is-object';
 export default class Widget extends BaseContract {
     /**
      * Create a new Widget
-     * 
+     *
      * @constructor
      * @param {String|Object} idOrDefinition Unique widget identifier or full definition object
      */
     constructor(idOrDefinition) {
         // Call super FIRST (JavaScript requirement)
         super(isObject(idOrDefinition) ? idOrDefinition : { id: idOrDefinition });
-        
+
         // THEN set properties
         if (isObject(idOrDefinition)) {
             const definition = idOrDefinition;
-            
+
             // Support both id and widgetId for backward compatibility
             this.id = definition.id || definition.widgetId;
             this.name = definition.name || null;
@@ -65,7 +65,7 @@ export default class Widget extends BaseContract {
             this.grid_options = definition.grid_options || {};
             this.options = definition.options || {};
             this.category = definition.category || 'default';
-            
+
             // Handle component - support both string and ExtensionComponent
             if (definition.component instanceof ExtensionComponent) {
                 this.component = definition.component.toObject();
@@ -76,7 +76,7 @@ export default class Widget extends BaseContract {
                 // String component path
                 this.component = definition.component || null;
             }
-            
+
             // Store default flag if present
             if (definition.default) {
                 this._options.default = true;
@@ -92,14 +92,14 @@ export default class Widget extends BaseContract {
             this.options = {};
             this.category = 'default';
         }
-        
+
         // Call setup() to trigger validation after properties are set
         super.setup();
     }
 
     /**
      * Validate the widget
-     * 
+     *
      * @method validate
      * @throws {Error} If id is missing
      */
@@ -111,7 +111,7 @@ export default class Widget extends BaseContract {
 
     /**
      * Set the widget name
-     * 
+     *
      * @method withName
      * @param {String} name Display name
      * @returns {Widget} This instance for chaining
@@ -124,7 +124,7 @@ export default class Widget extends BaseContract {
 
     /**
      * Set the widget description
-     * 
+     *
      * @method withDescription
      * @param {String} description Widget description
      * @returns {Widget} This instance for chaining
@@ -137,7 +137,7 @@ export default class Widget extends BaseContract {
 
     /**
      * Set the widget icon
-     * 
+     *
      * @method withIcon
      * @param {String} icon Icon name
      * @returns {Widget} This instance for chaining
@@ -151,7 +151,7 @@ export default class Widget extends BaseContract {
     /**
      * Set the widget component
      * Supports both string paths and ExtensionComponent instances
-     * 
+     *
      * @method withComponent
      * @param {String|ExtensionComponent|Object} component Component definition
      * @returns {Widget} This instance for chaining
@@ -168,7 +168,7 @@ export default class Widget extends BaseContract {
 
     /**
      * Set grid layout options
-     * 
+     *
      * @method withGridOptions
      * @param {Object} options Grid options (w, h, minW, minH, etc.)
      * @returns {Widget} This instance for chaining
@@ -181,7 +181,7 @@ export default class Widget extends BaseContract {
 
     /**
      * Set widget-specific options
-     * 
+     *
      * @method withOptions
      * @param {Object} options Widget options
      * @returns {Widget} This instance for chaining
@@ -194,7 +194,7 @@ export default class Widget extends BaseContract {
 
     /**
      * Set the widget category
-     * 
+     *
      * @method withCategory
      * @param {String} category Category name
      * @returns {Widget} This instance for chaining
@@ -208,7 +208,7 @@ export default class Widget extends BaseContract {
     /**
      * Mark this widget as a default widget
      * Default widgets are automatically added to new dashboards
-     * 
+     *
      * @method asDefault
      * @returns {Widget} This instance for chaining
      */
@@ -219,7 +219,7 @@ export default class Widget extends BaseContract {
 
     /**
      * Check if this widget is marked as default
-     * 
+     *
      * @method isDefault
      * @returns {Boolean} True if widget is a default widget
      */
@@ -229,7 +229,7 @@ export default class Widget extends BaseContract {
 
     /**
      * Set the widget title
-     * 
+     *
      * @method withTitle
      * @param {String} title Widget title
      * @returns {Widget} This instance for chaining
@@ -245,7 +245,7 @@ export default class Widget extends BaseContract {
 
     /**
      * Set refresh interval for the widget
-     * 
+     *
      * @method withRefreshInterval
      * @param {Number} milliseconds Refresh interval in milliseconds
      * @returns {Widget} This instance for chaining
@@ -261,7 +261,7 @@ export default class Widget extends BaseContract {
 
     /**
      * Get the plain object representation
-     * 
+     *
      * @method toObject
      * @returns {Object} Plain object with all widget properties
      */
@@ -275,7 +275,7 @@ export default class Widget extends BaseContract {
             grid_options: this.grid_options,
             options: this.options,
             category: this.category,
-            ...this._options
+            ...this._options,
         };
     }
 }

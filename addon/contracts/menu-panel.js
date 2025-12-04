@@ -5,12 +5,12 @@ import isObject from '../utils/is-object';
 
 /**
  * Represents a menu panel containing multiple menu items
- * 
+ *
  * Menu panels are used in admin settings and other sections to group related menu items.
- * 
+ *
  * @class MenuPanel
  * @extends BaseContract
- * 
+ *
  * @example
  * // With chaining
  * new MenuPanel('Fleet-Ops Config')
@@ -18,7 +18,7 @@ import isObject from '../utils/is-object';
  *   .withIcon('truck')
  *   .addItem(new MenuItem('Navigator App').withIcon('location-arrow'))
  *   .addItem(new MenuItem('Avatar Management').withIcon('images'))
- * 
+ *
  * @example
  * // Full definition object (first-class)
  * new MenuPanel({
@@ -35,7 +35,7 @@ import isObject from '../utils/is-object';
 export default class MenuPanel extends BaseContract {
     /**
      * Create a new MenuPanel
-     * 
+     *
      * @constructor
      * @param {String|Object} titleOrDefinition The panel title or full definition object
      * @param {Array} items Optional array of menu items (only used if first param is string)
@@ -43,11 +43,11 @@ export default class MenuPanel extends BaseContract {
     constructor(titleOrDefinition, items = []) {
         // Call super FIRST (JavaScript requirement)
         super(isObject(titleOrDefinition) && titleOrDefinition.title ? titleOrDefinition : { title: titleOrDefinition });
-        
+
         // THEN set properties
         if (isObject(titleOrDefinition) && titleOrDefinition.title) {
             const definition = titleOrDefinition;
-            
+
             this.title = definition.title;
             this.items = definition.items || [];
             this.slug = definition.slug || dasherize(this.title);
@@ -63,14 +63,14 @@ export default class MenuPanel extends BaseContract {
             this.open = true;
             this.priority = 9;
         }
-        
+
         // Call setup() to trigger validation after properties are set
         super.setup();
     }
 
     /**
      * Validate the menu panel
-     * 
+     *
      * @method validate
      * @throws {Error} If title is missing
      */
@@ -82,7 +82,7 @@ export default class MenuPanel extends BaseContract {
 
     /**
      * Set the panel slug
-     * 
+     *
      * @method withSlug
      * @param {String} slug URL-friendly slug
      * @returns {MenuPanel} This instance for chaining
@@ -95,7 +95,7 @@ export default class MenuPanel extends BaseContract {
 
     /**
      * Set the panel icon
-     * 
+     *
      * @method withIcon
      * @param {String} icon Icon name
      * @returns {MenuPanel} This instance for chaining
@@ -108,7 +108,7 @@ export default class MenuPanel extends BaseContract {
 
     /**
      * Set the panel priority
-     * 
+     *
      * @method withPriority
      * @param {Number} priority Priority value
      * @returns {MenuPanel} This instance for chaining
@@ -121,7 +121,7 @@ export default class MenuPanel extends BaseContract {
 
     /**
      * Add a menu item to the panel
-     * 
+     *
      * @method addItem
      * @param {MenuItem|Object} item Menu item to add
      * @returns {MenuPanel} This instance for chaining
@@ -137,19 +137,19 @@ export default class MenuPanel extends BaseContract {
 
     /**
      * Add multiple menu items to the panel
-     * 
+     *
      * @method addItems
      * @param {Array} items Array of menu items
      * @returns {MenuPanel} This instance for chaining
      */
     addItems(items) {
-        items.forEach(item => this.addItem(item));
+        items.forEach((item) => this.addItem(item));
         return this;
     }
 
     /**
      * Get the plain object representation
-     * 
+     *
      * @method toObject
      * @returns {Object} Plain object with all panel properties
      */
@@ -161,7 +161,9 @@ export default class MenuPanel extends BaseContract {
             open: this.open,
             priority: this.priority,
             items: this.items,
-            ...this._options
+            // Indicator flag
+            _isMenuPanel: true,
+            ...this._options,
         };
     }
 }

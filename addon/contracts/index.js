@@ -1,10 +1,10 @@
 /**
  * Extension Contract System
- * 
+ *
  * This module exports all contract classes used for defining extension integrations.
  * These classes provide a fluent, type-safe API for registering menus, widgets, hooks,
  * and other extension points.
- * 
+ *
  * @module @fleetbase/ember-core/contracts
  */
 

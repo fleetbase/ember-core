@@ -3,11 +3,11 @@ import { tracked } from '@glimmer/tracking';
 /**
  * Base class for all extension contracts
  * Provides common functionality for validation, serialization, and option management
- * 
+ *
  * Uses a two-phase construction pattern:
  * 1. Constructor - Sets up initial state
  * 2. setup() - Called after construction for validation and post-init logic
- * 
+ *
  * @class BaseContract
  */
 export default class BaseContract {
@@ -21,7 +21,7 @@ export default class BaseContract {
     /**
      * Setup method called after construction
      * Subclasses should call super.setup() to trigger validation
-     * 
+     *
      * @method setup
      */
     setup() {
@@ -31,7 +31,7 @@ export default class BaseContract {
     /**
      * Validate the contract
      * Override in subclasses to add specific validation logic
-     * 
+     *
      * @method validate
      */
     validate() {
@@ -40,7 +40,7 @@ export default class BaseContract {
 
     /**
      * Get the plain object representation of this contract
-     * 
+     *
      * @method toObject
      * @returns {Object} Plain object representation
      */
@@ -50,7 +50,7 @@ export default class BaseContract {
 
     /**
      * Set an option with method chaining support
-     * 
+     *
      * @method setOption
      * @param {String} key The option key
      * @param {*} value The option value
@@ -63,7 +63,7 @@ export default class BaseContract {
 
     /**
      * Get an option value
-     * 
+     *
      * @method getOption
      * @param {String} key The option key
      * @param {*} defaultValue Default value if option doesn't exist
@@ -75,7 +75,7 @@ export default class BaseContract {
 
     /**
      * Check if an option exists
-     * 
+     *
      * @method hasOption
      * @param {String} key The option key
      * @returns {Boolean} True if option exists
@@ -86,7 +86,7 @@ export default class BaseContract {
 
     /**
      * Remove an option
-     * 
+     *
      * @method removeOption
      * @param {String} key The option key
      * @returns {BaseContract} This instance for chaining
@@ -98,7 +98,7 @@ export default class BaseContract {
 
     /**
      * Get all options
-     * 
+     *
      * @method getOptions
      * @returns {Object} All options
      */

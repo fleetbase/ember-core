@@ -2,32 +2,32 @@ import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { warn } from '@ember/debug';
 import { A, isArray } from '@ember/array';
-import { TrackedMap, TrackedObject } from 'tracked-built-ins';
+import { TrackedObject } from 'tracked-built-ins';
 import { getOwner } from '@ember/application';
 import TemplateHelper from '../../contracts/template-helper';
 import UniverseRegistry from '../../contracts/universe-registry';
 
 /**
  * RegistryService
- * 
+ *
  * Fully dynamic, Map-based registry for storing categorized items.
  * Supports grouped registries with multiple list types per section.
- * 
+ *
  * Structure:
  * registries (TrackedMap) → section name → TrackedObject { list-name: A([]), ... }
- * 
+ *
  * Usage:
  * ```javascript
  * // Register an item to a specific list within a section
  * registryService.register('console:admin', 'menu-panels', 'fleet-ops', panelObject);
- * 
+ *
  * // Get all items from a list
  * const panels = registryService.getRegistry('console:admin', 'menu-panels');
- * 
+ *
  * // Lookup specific item
  * const panel = registryService.lookup('console:admin', 'menu-panels', 'fleet-ops');
  * ```
- * 
+ *
  * @class RegistryService
  * @extends Service
  */
@@ -77,10 +77,10 @@ export default class RegistryService extends Service {
      */
     #initializeRegistry() {
         const registryKey = 'registry:universe';
-        
+
         // First priority: use applicationInstance if set
         let application = this.applicationInstance;
-        
+
         if (!application) {
             // Second priority: window.Fleetbase
             if (typeof window !== 'undefined' && window.Fleetbase) {
@@ -92,7 +92,7 @@ export default class RegistryService extends Service {
                     application = owner.application;
                 } else {
                     warn('[RegistryService] Could not find application instance for registry initialization', {
-                        id: 'registry-service.no-application'
+                        id: 'registry-service.no-application',
                     });
                     // Return a new instance as fallback (won't be shared)
                     return new UniverseRegistry();
@@ -102,8 +102,8 @@ export default class RegistryService extends Service {
 
         // Register the singleton if not already registered
         if (!application.hasRegistration(registryKey)) {
-            application.register(registryKey, new UniverseRegistry(), { 
-                instantiate: false 
+            application.register(registryKey, new UniverseRegistry(), {
+                instantiate: false,
             });
         }
 
@@ -114,7 +114,7 @@ export default class RegistryService extends Service {
     /**
      * Get or create a registry section.
      * Returns a TrackedObject containing dynamic lists.
-     * 
+     *
      * @method getOrCreateSection
      * @param {String} sectionName Section name (e.g., 'console:admin', 'dashboard:widgets')
      * @returns {TrackedObject} The section object
@@ -129,7 +129,7 @@ export default class RegistryService extends Service {
     /**
      * Get or create a list within a section.
      * Returns an Ember Array for the specified list.
-     * 
+     *
      * @method getOrCreateList
      * @param {String} sectionName Section name
      * @param {String} listName List name (e.g., 'menu-items', 'menu-panels')
@@ -137,17 +137,17 @@ export default class RegistryService extends Service {
      */
     getOrCreateList(sectionName, listName) {
         const section = this.getOrCreateSection(sectionName);
-        
+
         if (!section[listName]) {
             section[listName] = A([]);
         }
-        
+
         return section[listName];
     }
 
     /**
      * Register an item in a specific list within a registry section.
-     * 
+     *
      * @method register
      * @param {String} sectionName Section name (e.g., 'console:admin')
      * @param {String} listName List name within the section (e.g., 'menu-items', 'menu-panels')
@@ -163,12 +163,9 @@ export default class RegistryService extends Service {
         }
 
         // Check if already exists
-        const existing = registry.find(item => {
+        const existing = registry.find((item) => {
             if (typeof item === 'object' && item !== null) {
-                return item._registryKey === key || 
-                       item.slug === key || 
-                       item.id === key ||
-                       item.widgetId === key;
+                return item._registryKey === key || item.slug === key || item.id === key || item.widgetId === key;
             }
             return false;
         });
@@ -185,7 +182,7 @@ export default class RegistryService extends Service {
 
     /**
      * Get all items from a specific list within a registry section.
-     * 
+     *
      * @method getRegistry
      * @param {String} sectionName Section name (e.g., 'console:admin')
      * @param {String} listName List name within the section (e.g., 'menu-items', 'menu-panels')
@@ -193,17 +190,17 @@ export default class RegistryService extends Service {
      */
     getRegistry(sectionName, listName) {
         const section = this.registries.get(sectionName);
-        
+
         if (!section || !section[listName]) {
             return A([]);
         }
-        
+
         return section[listName];
     }
 
     /**
      * Get the entire section object (all lists within a section).
-     * 
+     *
      * @method getSection
      * @param {String} sectionName Section name
      * @returns {TrackedObject|null} The section object or null
@@ -214,7 +211,7 @@ export default class RegistryService extends Service {
 
     /**
      * Lookup a specific item by key
-     * 
+     *
      * @method lookup
      * @param {String} sectionName Section name (e.g., 'console:admin')
      * @param {String} listName List name within the section (e.g., 'menu-items', 'menu-panels')
@@ -223,20 +220,19 @@ export default class RegistryService extends Service {
      */
     lookup(sectionName, listName, key) {
         const registry = this.getRegistry(sectionName, listName);
-        return registry.find(item => {
-            if (typeof item === 'object' && item !== null) {
-                return item._registryKey === key || 
-                       item.slug === key || 
-                       item.id === key ||
-                       item.widgetId === key;
-            }
-            return false;
-        }) || null;
+        return (
+            registry.find((item) => {
+                if (typeof item === 'object' && item !== null) {
+                    return item._registryKey === key || item.slug === key || item.id === key || item.widgetId === key;
+                }
+                return false;
+            }) || null
+        );
     }
 
     /**
      * Get items matching a key prefix
-     * 
+     *
      * @method getAllFromPrefix
      * @param {String} sectionName Section name (e.g., 'console:admin')
      * @param {String} listName List name within the section (e.g., 'menu-items')
@@ -245,7 +241,7 @@ export default class RegistryService extends Service {
      */
     getAllFromPrefix(sectionName, listName, prefix) {
         const registry = this.getRegistry(sectionName, listName);
-        return registry.filter(item => {
+        return registry.filter((item) => {
             if (typeof item === 'object' && item !== null && item._registryKey) {
                 return item._registryKey.startsWith(prefix);
             }
@@ -256,20 +252,20 @@ export default class RegistryService extends Service {
     /**
      * Register a renderable component for cross-engine rendering
      * Supports both ExtensionComponent definitions and raw component classes
-     * 
+     *
      * @method registerRenderableComponent
      * @param {String} registryName Registry name (slot identifier)
      * @param {Object|Class|Array} component ExtensionComponent definition, component class, or array of either
      * @param {Object} options Optional configuration
      * @param {String} options.engineName Engine name (required for raw component classes)
-     * 
+     *
      * @example
      * // ExtensionComponent definition with path (lazy loading)
      * registryService.registerRenderableComponent(
      *     'fleet-ops:component:order:details',
      *     new ExtensionComponent('@fleetbase/storefront-engine', 'storefront-order-summary')
      * );
-     * 
+     *
      * @example
      * // ExtensionComponent definition with class (immediate)
      * import MyComponent from './components/my-component';
@@ -277,7 +273,7 @@ export default class RegistryService extends Service {
      *     'fleet-ops:component:order:details',
      *     new ExtensionComponent('@fleetbase/fleetops-engine', MyComponent)
      * );
-     * 
+     *
      * @example
      * // Raw component class (requires engineName in options)
      * registryService.registerRenderableComponent(
@@ -294,11 +290,8 @@ export default class RegistryService extends Service {
         }
 
         // Generate unique key for the component
-        const key = component._registryKey || 
-                    component.name || 
-                    component.path ||
-                    `component-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        
+        const key = component._registryKey || component.name || component.path || `component-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
         // Register to RegistryService using map-based structure
         // Structure: registries.get(registryName).components = [component1, component2, ...]
         this.register(registryName, 'components', key, component);
@@ -306,7 +299,7 @@ export default class RegistryService extends Service {
 
     /**
      * Get renderable components from a registry
-     * 
+     *
      * @method getRenderableComponents
      * @param {String} registryName Registry name
      * @returns {Array} Array of component definitions/classes
@@ -319,7 +312,7 @@ export default class RegistryService extends Service {
      * Create a registry (section with default list).
      * For backward compatibility with existing code.
      * Creates a section with a 'menu-item' list by default.
-     * 
+     *
      * @method createRegistry
      * @param {String} sectionName Section name
      * @returns {Array} The default list array
@@ -330,20 +323,20 @@ export default class RegistryService extends Service {
 
     /**
      * Create multiple registries
-     * 
+     *
      * @method createRegistries
      * @param {Array} sectionNames Array of section names
      */
     createRegistries(sectionNames) {
         if (isArray(sectionNames)) {
-            sectionNames.forEach(sectionName => this.createRegistry(sectionName));
+            sectionNames.forEach((sectionName) => this.createRegistry(sectionName));
         }
     }
 
     /**
      * Create a registry section (or get existing).
      * This is a convenience method for explicitly creating sections.
-     * 
+     *
      * @method createSection
      * @param {String} sectionName Section name
      * @returns {TrackedObject} The section object
@@ -354,19 +347,19 @@ export default class RegistryService extends Service {
 
     /**
      * Create multiple registry sections
-     * 
+     *
      * @method createSections
      * @param {Array} sectionNames Array of section names
      */
     createSections(sectionNames) {
         if (isArray(sectionNames)) {
-            sectionNames.forEach(sectionName => this.createSection(sectionName));
+            sectionNames.forEach((sectionName) => this.createSection(sectionName));
         }
     }
 
     /**
      * Check if a section exists
-     * 
+     *
      * @method hasSection
      * @param {String} sectionName Section name
      * @returns {Boolean} True if section exists
@@ -377,7 +370,7 @@ export default class RegistryService extends Service {
 
     /**
      * Check if a list exists within a section
-     * 
+     *
      * @method hasList
      * @param {String} sectionName Section name
      * @param {String} listName List name
@@ -390,7 +383,7 @@ export default class RegistryService extends Service {
 
     /**
      * Clear a specific list within a section
-     * 
+     *
      * @method clearList
      * @param {String} sectionName Section name
      * @param {String} listName List name
@@ -404,14 +397,14 @@ export default class RegistryService extends Service {
 
     /**
      * Clear an entire section (all lists)
-     * 
+     *
      * @method clearSection
      * @param {String} sectionName Section name
      */
     clearSection(sectionName) {
         const section = this.registries.get(sectionName);
         if (section) {
-            Object.keys(section).forEach(listName => {
+            Object.keys(section).forEach((listName) => {
                 if (section[listName] && typeof section[listName].clear === 'function') {
                     section[listName].clear();
                 }
@@ -422,12 +415,12 @@ export default class RegistryService extends Service {
 
     /**
      * Clear all registries
-     * 
+     *
      * @method clearAll
      */
     clearAll() {
-        this.registries.forEach((section, sectionName) => {
-            Object.keys(section).forEach(listName => {
+        this.registries.forEach((section) => {
+            Object.keys(section).forEach((listName) => {
                 if (section[listName] && typeof section[listName].clear === 'function') {
                     section[listName].clear();
                 }
@@ -472,22 +465,22 @@ export default class RegistryService extends Service {
      * Registers a helper to the root application container.
      * This makes the helper available globally to all engines and the host app.
      * Supports both direct helper functions/classes and lazy loading via TemplateHelper.
-     * 
+     *
      * @method registerHelper
      * @param {String} helperName The helper name (e.g., 'calculate-delivery-fee')
      * @param {Function|Class|TemplateHelper} helperClassOrTemplateHelper Helper function, class, or TemplateHelper instance
      * @param {Object} options Registration options
      * @param {Boolean} options.instantiate Whether to instantiate the helper (default: false for functions)
      * @returns {Promise<void>}
-     * 
+     *
      * @example
      * // Direct function registration
      * await registryService.registerHelper('calculate-delivery-fee', calculateDeliveryFeeHelper);
-     * 
+     *
      * @example
      * // Direct class registration
      * await registryService.registerHelper('format-currency', FormatCurrencyHelper);
-     * 
+     *
      * @example
      * // Lazy loading from engine (ensures engine is loaded first)
      * await registryService.registerHelper(
@@ -497,10 +490,10 @@ export default class RegistryService extends Service {
      */
     async registerHelper(helperName, helperClassOrTemplateHelper, options = {}) {
         const owner = this.applicationInstance || (typeof window !== 'undefined' && window.Fleetbase) || getOwner(this);
-        
+
         if (!owner) {
-            warn('No owner available for helper registration. Cannot register helper.', { 
-                id: 'registry-service.no-owner' 
+            warn('No owner available for helper registration. Cannot register helper.', {
+                id: 'registry-service.no-owner',
             });
             return;
         }
@@ -508,33 +501,31 @@ export default class RegistryService extends Service {
         // Check if it's a TemplateHelper instance
         if (helperClassOrTemplateHelper instanceof TemplateHelper) {
             const templateHelper = helperClassOrTemplateHelper;
-            
+
             if (templateHelper.isClass) {
                 // Direct class registration from TemplateHelper
                 owner.register(`helper:${helperName}`, templateHelper.class, {
-                    instantiate: options.instantiate !== undefined ? options.instantiate : true
+                    instantiate: options.instantiate !== undefined ? options.instantiate : true,
                 });
             } else {
                 // Lazy loading from engine (async - ensures engine is loaded)
                 const helper = await this.#loadHelperFromEngine(templateHelper);
                 if (helper) {
                     owner.register(`helper:${helperName}`, helper, {
-                        instantiate: options.instantiate !== undefined ? options.instantiate : true
+                        instantiate: options.instantiate !== undefined ? options.instantiate : true,
                     });
                 } else {
                     warn(`Failed to load helper from engine: ${templateHelper.engineName}/${templateHelper.path}`, {
-                        id: 'registry-service.helper-load-failed'
+                        id: 'registry-service.helper-load-failed',
                     });
                 }
             }
         } else {
             // Direct function or class registration
-            const instantiate = options.instantiate !== undefined 
-                ? options.instantiate 
-                : (typeof helperClassOrTemplateHelper !== 'function' || helperClassOrTemplateHelper.prototype);
-            
+            const instantiate = options.instantiate !== undefined ? options.instantiate : typeof helperClassOrTemplateHelper !== 'function' || helperClassOrTemplateHelper.prototype;
+
             owner.register(`helper:${helperName}`, helperClassOrTemplateHelper, {
-                instantiate
+                instantiate,
             });
         }
     }
@@ -549,7 +540,7 @@ export default class RegistryService extends Service {
      */
     async #loadHelperFromEngine(templateHelper) {
         const owner = this.applicationInstance || (typeof window !== 'undefined' && window.Fleetbase) || getOwner(this);
-        
+
         if (!owner) {
             return null;
         }
@@ -557,24 +548,22 @@ export default class RegistryService extends Service {
         try {
             // Ensure the engine is loaded (will load if not already loaded)
             const engineInstance = await this.extensionManager.ensureEngineLoaded(templateHelper.engineName);
-            
+
             if (!engineInstance) {
                 warn(`Engine could not be loaded: ${templateHelper.engineName}`, {
-                    id: 'registry-service.engine-not-loaded'
+                    id: 'registry-service.engine-not-loaded',
                 });
                 return null;
             }
 
             // Try to resolve the helper from the engine
-            const helperPath = templateHelper.path.startsWith('helper:') 
-                ? templateHelper.path 
-                : `helper:${templateHelper.path}`;
-            
+            const helperPath = templateHelper.path.startsWith('helper:') ? templateHelper.path : `helper:${templateHelper.path}`;
+
             const helper = engineInstance.resolveRegistration(helperPath);
-            
+
             if (!helper) {
                 warn(`Helper not found in engine: ${helperPath}`, {
-                    id: 'registry-service.helper-not-found'
+                    id: 'registry-service.helper-not-found',
                 });
                 return null;
             }
@@ -582,11 +571,9 @@ export default class RegistryService extends Service {
             return helper;
         } catch (error) {
             warn(`Error loading helper from engine: ${error.message}`, {
-                id: 'registry-service.helper-load-error'
+                id: 'registry-service.helper-load-error',
             });
             return null;
         }
     }
-
-
 }

@@ -1,11 +1,9 @@
 import Service from '@ember/service';
 import Evented from '@ember/object/evented';
 import { tracked } from '@glimmer/tracking';
-import { A } from '@ember/array';
 import { getOwner } from '@ember/application';
 import { assert, debug, warn } from '@ember/debug';
 import { next } from '@ember/runloop';
-import loadExtensions from '@fleetbase/ember-core/utils/load-extensions';
 import loadInstalledExtensions from '@fleetbase/ember-core/utils/load-installed-extensions';
 import mapEngines from '@fleetbase/ember-core/utils/map-engines';
 import config from 'ember-get-config';
@@ -36,7 +34,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
 
     /**
      * Set the application instance
-     * 
+     *
      * @method setApplicationInstance
      * @param {Application} application The root application instance
      */
@@ -47,32 +45,32 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
     /**
      * Initialize shared boot state singleton
      * Ensures all ExtensionManager instances share the same boot state
-     * 
+     *
      * @private
      * @returns {ExtensionBootState}
      */
     #initializeBootState() {
         const stateKey = 'state:extension-boot';
         const application = this.#getApplication();
-        
+
         if (!application.hasRegistration(stateKey)) {
             const bootState = new ExtensionBootState();
             // Create the extensionsLoadedPromise
             bootState.extensionsLoadedPromise = new Promise((resolve) => {
                 bootState.extensionsLoadedResolver = resolve;
             });
-            application.register(stateKey, bootState, { 
-                instantiate: false 
+            application.register(stateKey, bootState, {
+                instantiate: false,
             });
         }
-        
+
         return application.resolveRegistration(stateKey);
     }
 
     /**
      * Get the application instance
      * Tries multiple fallback methods to find the root application
-     * 
+     *
      * @private
      * @returns {Application}
      */
@@ -86,13 +84,13 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         if (typeof window !== 'undefined' && window.Fleetbase) {
             return window.Fleetbase;
         }
-        
+
         // Third priority: try to get application from owner
         const owner = getOwner(this);
         if (owner && owner.application) {
             return owner.application;
         }
-        
+
         // Last resort: return owner itself (might be EngineInstance)
         return owner;
     }
@@ -311,7 +309,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
 
         if (!engineInstance) {
             const engineStartTime = performance.now();
-            
+
             engineInstance = application.buildChildEngineInstance(name, {
                 routable: true,
                 mountPoint: mountPoint,
@@ -324,7 +322,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
                 const engineEndTime = performance.now();
                 const loadTime = (engineEndTime - engineStartTime).toFixed(2);
                 debug(`[ExtensionManager] Engine '${name}' loaded in ${loadTime}ms`);
-                
+
                 // Only trigger if not already triggered (prevent double execution)
                 if (!engineInstance._hooksTriggered) {
                     // Fire event for universe.onEngineLoaded() API
@@ -457,32 +455,6 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         }
 
         return null;
-    }
-
-    /**
-     * Check if an engine is loaded
-     *
-     * @method isEngineLoaded
-     * @param {String} engineName Name of the engine
-     * @returns {Boolean} True if engine is loaded
-     */
-    isEngineLoaded(engineName) {
-        const application = this.#getApplication();
-        const router = application.lookup('router:main');
-        return router.engineIsLoaded(engineName);
-    }
-
-    /**
-     * Check if an engine is currently loading
-     *
-     * @method isEngineLoading
-     * @param {String} engineName Name of the engine
-     * @returns {Boolean} True if engine is loading
-     */
-    isEngineLoading(engineName) {
-        const application = this.#getApplication();
-        const router = application.lookup('router:main');
-        return !!(router._enginePromises && router._enginePromises[engineName]);
     }
 
     /**
@@ -747,7 +719,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      */
     async loadExtensions(application) {
         const startTime = performance.now();
-        
+
         try {
             // Get admin-configured extensions from config
             const additionalCoreExtensions = config.APP?.extensions ?? [];
@@ -810,7 +782,9 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             const loader = getExtensionLoader(extensionName);
 
             if (!loader) {
-                warn(`[ExtensionManager] No loader registered for ${extensionName}. Ensure addon/extension.js exists and prebuild generated the mapping.`, false, { id: 'ember-core.extension-manager.no-loader' });
+                warn(`[ExtensionManager] No loader registered for ${extensionName}. Ensure addon/extension.js exists and prebuild generated the mapping.`, false, {
+                    id: 'ember-core.extension-manager.no-loader',
+                });
                 continue;
             }
 
@@ -846,7 +820,9 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
                 debug(`[ExtensionManager] ${extensionName} setup completed in ${totalTime}ms`);
 
                 if (!executed) {
-                    warn(`[ExtensionManager] ${extensionName}/extension did not export a function or valid object with setupExtension/onEngineLoaded.`, false, { id: 'ember-core.extension-manager.invalid-export' });
+                    warn(`[ExtensionManager] ${extensionName}/extension did not export a function or valid object with setupExtension/onEngineLoaded.`, false, {
+                        id: 'ember-core.extension-manager.invalid-export',
+                    });
                 }
             } catch (error) {
                 console.error(`[ExtensionManager] Failed to load or run extension.js for ${extensionName}:`, error);
@@ -855,7 +831,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
 
         // Execute boot callbacks and mark boot as complete
         await universe.executeBootCallbacks();
-        
+
         const setupEndTime = performance.now();
         const totalTime = (setupEndTime - setupStartTime).toFixed(2);
         debug(`[ExtensionManager] All ${extensions.length} extensions setup completed in ${totalTime}ms`);
@@ -1021,12 +997,12 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      */
     #patchOwnerForEngineTracking() {
         const owner = this.#getApplication();
-        
+
         // Check if already patched to avoid multiple wrapping
         if (owner._buildChildEngineInstancePatched) {
             return;
         }
-        
+
         const originalBuildChildEngineInstance = owner.buildChildEngineInstance;
         const self = this;
 
@@ -1051,28 +1027,28 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             // Patch the engine instance's boot method to trigger events/hooks after boot
             if (!engineInstance._bootPatched) {
                 const originalBoot = engineInstance.boot.bind(engineInstance);
-                engineInstance.boot = function() {
+                engineInstance.boot = function () {
                     return originalBoot().then(() => {
                         // Add to loadedEngines Map for tracking
                         if (!self.loadedEngines.has(name)) {
                             self.loadedEngines.set(name, engineInstance);
                         }
-                        
+
                         // Only trigger if not already triggered (prevent double execution)
                         if (!engineInstance._hooksTriggered) {
                             // Fire event for universe.onEngineLoaded() API
                             self.trigger('engine.loaded', name, engineInstance);
-                            
+
                             // Run stored onEngineLoaded hooks from extension.js
                             self.#runEngineLoadedHooks(name, engineInstance);
-                            
+
                             // Clear hooks after running to prevent double execution
                             self.#engineLoadedHooks.delete(name);
-                            
+
                             // Mark as triggered
                             engineInstance._hooksTriggered = true;
                         }
-                        
+
                         return engineInstance;
                     });
                 };

@@ -3,11 +3,11 @@ import { A } from '@ember/array';
 
 /**
  * ExtensionBootState
- * 
+ *
  * Shared state object for extension booting process.
  * Registered as a singleton in the application container to ensure
  * all ExtensionManager instances (app and engines) share the same boot state.
- * 
+ *
  * @class ExtensionBootState
  */
 export default class ExtensionBootState {

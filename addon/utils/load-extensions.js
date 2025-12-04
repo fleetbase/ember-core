@@ -10,14 +10,14 @@ const CACHE_TTL = 1000 * 60 * 30; // 30 mins
 
 /**
  * Get cached extensions from localStorage
- * 
+ *
  * @returns {Array|null} Cached extensions or null
  */
 function getCachedExtensions() {
     try {
         const cached = localStorage.getItem(CACHE_KEY);
         const cachedVersion = localStorage.getItem(CACHE_VERSION_KEY);
-        
+
         if (!cached || !cachedVersion) {
             return null;
         }
@@ -41,14 +41,14 @@ function getCachedExtensions() {
 
 /**
  * Save extensions to localStorage cache
- * 
+ *
  * @param {Array} extensions Extensions array
  */
 function setCachedExtensions(extensions) {
     try {
         const cacheData = {
             extensions,
-            timestamp: Date.now()
+            timestamp: Date.now(),
         };
         localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
         localStorage.setItem(CACHE_VERSION_KEY, '1');
@@ -60,7 +60,7 @@ function setCachedExtensions(extensions) {
 
 /**
  * Clear cached extensions
- * 
+ *
  * @export
  */
 export function clearExtensionsCache() {
@@ -75,13 +75,13 @@ export function clearExtensionsCache() {
 
 /**
  * Load extensions list with localStorage caching
- * 
+ *
  * Strategy:
  * 1. Check localStorage cache first (instant, no HTTP request)
  * 2. If cache hit and valid, use it immediately
  * 3. If cache miss, fetch from server and cache the result
  * 4. Cache is valid for 1 hour
- * 
+ *
  * @export
  * @returns {Promise<Array>} Extensions array
  */
@@ -98,15 +98,15 @@ export default async function loadExtensions() {
     // Cache miss - fetch from server
     return new Promise((resolve, reject) => {
         const startTime = performance.now();
-        
+
         return fetch('/extensions.json', {
-            cache: 'default' // Use browser cache if available
+            cache: 'default', // Use browser cache if available
         })
             .then((resp) => resp.json())
             .then((extensions) => {
                 const endTime = performance.now();
                 debug(`[load-extensions] Fetched from server in ${(endTime - startTime).toFixed(2)}ms`);
-                
+
                 // Cache the result
                 setCachedExtensions(extensions);
                 resolve(extensions);

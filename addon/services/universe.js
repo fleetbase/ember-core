@@ -4,22 +4,22 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/application';
-import { A, isArray } from '@ember/array';
+import { A } from '@ember/array';
 import MenuItem from '../contracts/menu-item';
 
 /**
  * UniverseService (Refactored)
- * 
+ *
  * This is the new UniverseService that acts as a facade to the specialized sub-services.
  * It maintains backward compatibility with the old API while delegating to the new architecture.
- * 
+ *
  * The service decomposition provides:
  * - ExtensionManager: Handles lazy loading of engines
  * - RegistryService: Manages all registries using Ember's container
  * - MenuService: Manages menu items and panels
  * - WidgetService: Manages dashboard widgets
  * - HookService: Manages application hooks
- * 
+ *
  * @class UniverseService
  * @extends Service
  */
@@ -42,13 +42,13 @@ export default class UniverseService extends Service.extend(Evented) {
      * Set the application instance on this service and cascade to RegistryService
      * Called by the instance initializer to ensure both services have access
      * to the root application container
-     * 
+     *
      * @method setApplicationInstance
      * @param {Application} application The root application instance
      */
     setApplicationInstance(application) {
         this.applicationInstance = application;
-        
+
         // Cascade to all child services
         if (this.registryService) {
             this.registryService.setApplicationInstance(application);
@@ -70,7 +70,7 @@ export default class UniverseService extends Service.extend(Evented) {
     /**
      * Get a service by name
      * Convenience method for extensions to access specialized services
-     * 
+     *
      * @method getService
      * @param {String} serviceName Service name (e.g., 'universe/menu-service')
      * @returns {Service} The service instance
@@ -86,7 +86,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Ensure an engine is loaded
-     * 
+     *
      * @method ensureEngineLoaded
      * @param {String} engineName Engine name
      * @returns {Promise<EngineInstance>} Engine instance
@@ -97,7 +97,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Get an engine instance
-     * 
+     *
      * @method getEngineInstance
      * @param {String} engineName Engine name
      * @returns {EngineInstance|null} Engine instance or null
@@ -108,7 +108,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Register an extension
-     * 
+     *
      * @method registerExtension
      * @param {String} name Extension name
      * @param {Object} metadata Extension metadata
@@ -121,7 +121,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * Listen for a specific engine to be loaded
      * Note: This uses event listeners and will NOT run if the engine is already loaded.
      * Use whenEngineLoaded() if you want to handle both cases.
-     * 
+     *
      * @method onEngineLoaded
      * @param {String} engineName The engine name to listen for
      * @param {Function} callback Function to call when the engine loads, receives engineInstance as parameter
@@ -142,9 +142,9 @@ export default class UniverseService extends Service.extend(Evented) {
      * Execute a callback when an engine is loaded
      * If the engine is already loaded, the callback runs immediately
      * Otherwise, it's stored and runs when the engine loads
-     * 
+     *
      * This is the recommended way to handle engine-dependent setup.
-     * 
+     *
      * @method whenEngineLoaded
      * @param {String} engineName The engine name
      * @param {Function} callback Function to call, receives (engineInstance, universe, appInstance)
@@ -158,7 +158,7 @@ export default class UniverseService extends Service.extend(Evented) {
      *         doSomething(engine);
      *     });
      * }
-     * 
+     *
      * // With this simpler pattern:
      * universe.whenEngineLoaded('@fleetbase/fleetops-engine', (engine) => {
      *     doSomething(engine);
@@ -170,7 +170,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Get the application instance
-     * 
+     *
      * @method getApplicationInstance
      * @returns {ApplicationInstance} The application instance
      */
@@ -180,7 +180,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Get a service from a specific engine
-     * 
+     *
      * @method getServiceFromEngine
      * @param {String} engineName The engine name
      * @param {String} serviceName The service name
@@ -215,7 +215,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Create a new registry
-     * 
+     *
      * @method createRegistry
      * @param {String} name Registry name
      * @returns {Array} The created registry
@@ -226,7 +226,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Create multiple registries
-     * 
+     *
      * @method createRegistries
      * @param {Array} names Array of registry names
      */
@@ -236,7 +236,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Get a registry
-     * 
+     *
      * @method getRegistry
      * @param {String} name Registry name
      * @returns {Array} Registry items
@@ -247,7 +247,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Register an item to a registry
-     * 
+     *
      * @method registerInRegistry
      * @param {String} registryName Registry name
      * @param {String} key Item key
@@ -259,7 +259,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Lookup an item from a registry
-     * 
+     *
      * @method lookupFromRegistry
      * @param {String} registryName Registry name
      * @param {String} key Item key
@@ -297,15 +297,13 @@ export default class UniverseService extends Service.extend(Evented) {
         this.registryService.registerService(name, serviceClass, options);
     }
 
-
-
     // ============================================================================
     // Menu Management (delegates to MenuService)
     // ============================================================================
 
     /**
      * Register a header menu item
-     * 
+     *
      * @method registerHeaderMenuItem
      * @param {MenuItem|String} menuItemOrTitle MenuItem instance or title
      * @param {String} route Optional route
@@ -317,7 +315,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Register an organization menu item
-     * 
+     *
      * @method registerOrganizationMenuItem
      * @param {MenuItem|String} menuItemOrTitle MenuItem instance or title
      * @param {Object} options Optional options
@@ -328,7 +326,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Register a user menu item
-     * 
+     *
      * @method registerUserMenuItem
      * @param {MenuItem|String} menuItemOrTitle MenuItem instance or title
      * @param {Object} options Optional options
@@ -339,7 +337,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Register an admin menu panel
-     * 
+     *
      * @method registerAdminMenuPanel
      * @param {MenuPanel|String} panelOrTitle MenuPanel instance or title
      * @param {Array} items Optional items
@@ -351,7 +349,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Register a settings menu item
-     * 
+     *
      * @method registerSettingsMenuItem
      * @param {MenuItem|String} menuItemOrTitle MenuItem instance or title
      * @param {Object} options Optional options
@@ -362,7 +360,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Register a menu item to a custom registry
-     * 
+     *
      * @method registerMenuItem
      * @param {String} registryName Registry name
      * @param {MenuItem|String} menuItemOrTitle MenuItem instance or title
@@ -375,7 +373,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Get header menu items
-     * 
+     *
      * @computed headerMenuItems
      * @returns {Array} Header menu items
      */
@@ -385,7 +383,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Get organization menu items
-     * 
+     *
      * @computed organizationMenuItems
      * @returns {Array} Organization menu items
      */
@@ -395,7 +393,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Get user menu items
-     * 
+     *
      * @computed userMenuItems
      * @returns {Array} User menu items
      */
@@ -405,7 +403,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Get admin menu items
-     * 
+     *
      * @computed adminMenuItems
      * @returns {Array} Admin menu items
      */
@@ -415,7 +413,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Get admin menu panels
-     * 
+     *
      * @computed adminMenuPanels
      * @returns {Array} Admin menu panels
      */
@@ -429,7 +427,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Register default dashboard widgets
-     * 
+     *
      * @method registerDefaultDashboardWidgets
      * @param {Array<Widget>} widgets Array of widgets
      */
@@ -439,7 +437,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Register dashboard widgets
-     * 
+     *
      * @method registerDashboardWidgets
      * @param {Array<Widget>} widgets Array of widgets
      */
@@ -449,7 +447,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Register a dashboard
-     * 
+     *
      * @method registerDashboard
      * @param {String} name Dashboard name
      * @param {Object} options Dashboard options
@@ -460,14 +458,14 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Get dashboard widgets
-     * 
+     *
      * @computed dashboardWidgets
      * @returns {Object} Dashboard widgets object
      */
     get dashboardWidgets() {
         return {
             defaultWidgets: this.widgetService.getDefaultWidgets(),
-            widgets: this.widgetService.getWidgets()
+            widgets: this.widgetService.getWidgets(),
         };
     }
 
@@ -477,7 +475,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Register a hook
-     * 
+     *
      * @method registerHook
      * @param {Hook|String} hookOrName Hook instance or name
      * @param {Function} handler Optional handler
@@ -489,7 +487,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Execute hooks
-     * 
+     *
      * @method executeHook
      * @param {String} hookName Hook name
      * @param {...*} args Arguments to pass to hooks
@@ -501,7 +499,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Get hooks
-     * 
+     *
      * @computed hooks
      * @returns {Object} Hooks object
      */
@@ -515,7 +513,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Get view from transition
-     * 
+     *
      * @method getViewFromTransition
      * @param {Object} transition Transition object
      * @returns {String|null} View parameter
@@ -528,7 +526,7 @@ export default class UniverseService extends Service.extend(Evented) {
     /**
      * Virtual route redirect
      * Handles redirecting to menu items based on URL slug
-     * 
+     *
      * @method virtualRouteRedirect
      * @param {Object} transition Transition object
      * @param {String} registryName Registry name
@@ -541,7 +539,7 @@ export default class UniverseService extends Service.extend(Evented) {
         const slug = window.location.pathname.replace('/', '');
         const queryParams = this.urlSearchParams.all();
         const menuItem = this.lookupMenuItemFromRegistry(registryName, slug, view);
-        
+
         if (menuItem && transition.from === null) {
             return this.transitionMenuItem(route, menuItem, { queryParams }).then((transition) => {
                 if (options && options.restoreQueryParams === true) {
@@ -555,7 +553,7 @@ export default class UniverseService extends Service.extend(Evented) {
     /**
      * Transition to a menu item
      * Handles section, slug, and view parameters for virtual routes
-     * 
+     *
      * @method transitionMenuItem
      * @param {String} route Route name
      * @param {Object} menuItem Menu item object with slug, view, and optional section
@@ -582,7 +580,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Register a boot callback
-     * 
+     *
      * @method onBoot
      * @param {Function} callback Callback function
      */
@@ -594,7 +592,7 @@ export default class UniverseService extends Service.extend(Evented) {
 
     /**
      * Execute boot callbacks
-     * 
+     *
      * @method executeBootCallbacks
      */
     async executeBootCallbacks() {
@@ -605,7 +603,7 @@ export default class UniverseService extends Service.extend(Evented) {
                 console.error('Error executing boot callback:', error);
             }
         }
-        
+
         // Mark boot as complete
         this.extensionManager.finishBoot();
     }
@@ -617,7 +615,7 @@ export default class UniverseService extends Service.extend(Evented) {
     /**
      * Get menu items from a registry
      * Backward compatibility facade
-     * 
+     *
      * @method getMenuItemsFromRegistry
      * @param {String} registryName Registry name
      * @returns {Array} Menu items
@@ -629,7 +627,7 @@ export default class UniverseService extends Service.extend(Evented) {
     /**
      * Get menu panels from a registry
      * Backward compatibility facade
-     * 
+     *
      * @method getMenuPanelsFromRegistry
      * @param {String} registryName Registry name
      * @returns {Array} Menu panels
@@ -641,7 +639,7 @@ export default class UniverseService extends Service.extend(Evented) {
     /**
      * Lookup a menu item from a registry
      * Backward compatibility facade
-     * 
+     *
      * @method lookupMenuItemFromRegistry
      * @param {String} registryName Registry name
      * @param {String} slug Menu item slug
@@ -651,7 +649,7 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     lookupMenuItemFromRegistry(registryName, slug, view = null, section = null) {
         const items = this.getMenuItemsFromRegistry(registryName);
-        return items.find(item => {
+        return items.find((item) => {
             const slugMatch = item.slug === slug;
             const viewMatch = !view || item.view === view;
             const sectionMatch = !section || item.section === section;
@@ -662,7 +660,7 @@ export default class UniverseService extends Service.extend(Evented) {
     /**
      * Create a registry event
      * Backward compatibility facade
-     * 
+     *
      * @method createRegistryEvent
      * @param {String} registryName Registry name
      * @param {String} eventName Event name
@@ -675,7 +673,7 @@ export default class UniverseService extends Service.extend(Evented) {
     /**
      * Register after boot callback
      * Backward compatibility facade
-     * 
+     *
      * @method afterBoot
      * @param {Function} callback Callback function
      */
@@ -686,7 +684,7 @@ export default class UniverseService extends Service.extend(Evented) {
     /**
      * Create a menu item (internal helper)
      * Backward compatibility helper
-     * 
+     *
      * @method _createMenuItem
      * @param {String} title Menu item title
      * @param {String} route Menu item route
@@ -695,7 +693,7 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     _createMenuItem(title, route = null, options = {}) {
         const menuItem = new MenuItem(title, route);
-        
+
         if (options.icon) menuItem.withIcon(options.icon);
         if (options.component) menuItem.withComponent(options.component);
         if (options.slug) menuItem.withSlug(options.slug);
@@ -705,19 +703,19 @@ export default class UniverseService extends Service.extend(Evented) {
         if (options.wrapperClass) menuItem.withWrapperClass(options.wrapperClass);
         if (options.queryParams) menuItem.withQueryParams(options.queryParams);
         if (options.onClick) menuItem.onClick(options.onClick);
-        
+
         return menuItem.toObject();
     }
 
     /**
      * Register a renderable component for cross-engine rendering
      * Facade method - delegates to RegistryService
-     * 
+     *
      * @method registerRenderableComponent
      * @param {String} registryName Registry name (slot identifier)
      * @param {Object|Class|Array} component ExtensionComponent definition, component class, or array of either
      * @param {Object} options Optional configuration
-     * 
+     *
      * @example
      * // ExtensionComponent definition with path (lazy loading)
      * universe.registerRenderableComponent(
@@ -732,7 +730,7 @@ export default class UniverseService extends Service.extend(Evented) {
     /**
      * Get renderable components from a registry
      * Backward compatibility method - delegates to RegistryService
-     * 
+     *
      * @method getRenderableComponentsFromRegistry
      * @param {String} registryName Registry name
      * @returns {Array} Array of component definitions/classes
@@ -745,17 +743,17 @@ export default class UniverseService extends Service.extend(Evented) {
      * Register a helper to the application container
      * Makes the helper available globally to all engines and the host app
      * Facade method - delegates to RegistryService
-     * 
+     *
      * @method registerHelper
      * @param {String} helperName The helper name (e.g., 'calculate-delivery-fee')
      * @param {Function|Class|TemplateHelper} helperClassOrTemplateHelper Helper function, class, or TemplateHelper instance
      * @param {Object} options Registration options
      * @returns {Promise<void>}
-     * 
+     *
      * @example
      * // Direct function registration
      * await universe.registerHelper('calculate-delivery-fee', calculateDeliveryFeeHelper);
-     * 
+     *
      * @example
      * // Lazy loading from engine (ensures engine is loaded first)
      * import TemplateHelper from '@fleetbase/ember-core/contracts/template-helper';
@@ -771,7 +769,7 @@ export default class UniverseService extends Service.extend(Evented) {
     /**
      * Legacy method for registering components in engines
      * Maintained for backward compatibility
-     * 
+     *
      * @method registerComponentInEngine
      * @param {String} engineName Engine name
      * @param {*} componentClass Component class
@@ -779,12 +777,12 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     async registerComponentInEngine(engineName, componentClass, options = {}) {
         const engineInstance = await this.ensureEngineLoaded(engineName);
-        
+
         if (engineInstance && componentClass && typeof componentClass.name === 'string') {
             const dasherized = componentClass.name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
             engineInstance.register(`component:${componentClass.name}`, componentClass);
             engineInstance.register(`component:${dasherized}`, componentClass);
-            
+
             if (options.registerAs) {
                 engineInstance.register(`component:${options.registerAs}`, componentClass);
             }

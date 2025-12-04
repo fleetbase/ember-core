@@ -6,10 +6,10 @@ import HookRegistry from '../../contracts/hook-registry';
 
 /**
  * HookService
- * 
+ *
  * Manages application lifecycle hooks and custom event hooks.
  * Allows extensions to inject logic at specific points in the application.
- * 
+ *
  * @class HookService
  * @extends Service
  */
@@ -24,7 +24,7 @@ export default class HookService extends Service {
 
     /**
      * Set the application instance
-     * 
+     *
      * @method setApplicationInstance
      * @param {Application} application The root application instance
      */
@@ -35,27 +35,27 @@ export default class HookService extends Service {
     /**
      * Initialize shared hook registry singleton
      * Ensures all HookService instances share the same hooks
-     * 
+     *
      * @private
      * @returns {HookRegistry}
      */
     #initializeHookRegistry() {
         const registryKey = 'registry:hooks';
         const application = this.#getApplication();
-        
+
         if (!application.hasRegistration(registryKey)) {
-            application.register(registryKey, new HookRegistry(), { 
-                instantiate: false 
+            application.register(registryKey, new HookRegistry(), {
+                instantiate: false,
             });
         }
-        
+
         return application.resolveRegistration(registryKey);
     }
 
     /**
      * Get the application instance
      * Tries multiple fallback methods to find the root application
-     * 
+     *
      * @private
      * @returns {Application}
      */
@@ -69,13 +69,13 @@ export default class HookService extends Service {
         if (typeof window !== 'undefined' && window.Fleetbase) {
             return window.Fleetbase;
         }
-        
+
         // Third priority: try to get application from owner
         const owner = getOwner(this);
         if (owner && owner.application) {
             return owner.application;
         }
-        
+
         // Last resort: return owner itself (might be EngineInstance)
         return owner;
     }
@@ -94,7 +94,7 @@ export default class HookService extends Service {
 
     /**
      * Find a specific hook
-     * 
+     *
      * @private
      * @method #findHook
      * @param {String} hookName Hook name
@@ -103,12 +103,12 @@ export default class HookService extends Service {
      */
     #findHook(hookName, hookId) {
         const hookList = this.hooks[hookName] || [];
-        return hookList.find(h => h.id === hookId) || null;
+        return hookList.find((h) => h.id === hookId) || null;
     }
 
     /**
      * Normalize a hook input to a plain object
-     * 
+     *
      * @private
      * @method #normalizeHook
      * @param {Hook|String} input Hook instance or hook name
@@ -123,7 +123,7 @@ export default class HookService extends Service {
 
         if (typeof input === 'string') {
             const hook = new Hook(input, handler);
-            
+
             if (options.priority !== undefined) hook.withPriority(options.priority);
             if (options.once) hook.once();
             if (options.id) hook.withId(options.id);
@@ -137,7 +137,7 @@ export default class HookService extends Service {
 
     /**
      * Register a hook
-     * 
+     *
      * @method registerHook
      * @param {Hook|String} hookOrName Hook instance or hook name
      * @param {Function} handler Optional handler (if first param is string)
@@ -151,14 +151,14 @@ export default class HookService extends Service {
         }
 
         this.hooks[hook.name].push(hook);
-        
+
         // Sort by priority (lower numbers first)
         this.hooks[hook.name].sort((a, b) => a.priority - b.priority);
     }
 
     /**
      * Execute all hooks for a given name
-     * 
+     *
      * @method execute
      * @param {String} hookName Hook name
      * @param {...*} args Arguments to pass to hook handlers
@@ -193,7 +193,7 @@ export default class HookService extends Service {
 
     /**
      * Execute hooks synchronously
-     * 
+     *
      * @method executeSync
      * @param {String} hookName Hook name
      * @param {...*} args Arguments to pass to hook handlers
@@ -227,20 +227,20 @@ export default class HookService extends Service {
 
     /**
      * Remove a specific hook
-     * 
+     *
      * @method removeHook
      * @param {String} hookName Hook name
      * @param {String} hookId Hook ID
      */
     removeHook(hookName, hookId) {
         if (this.hooks[hookName]) {
-            this.hooks[hookName] = this.hooks[hookName].filter(h => h.id !== hookId);
+            this.hooks[hookName] = this.hooks[hookName].filter((h) => h.id !== hookId);
         }
     }
 
     /**
      * Remove all hooks for a given name
-     * 
+     *
      * @method removeAllHooks
      * @param {String} hookName Hook name
      */
@@ -252,7 +252,7 @@ export default class HookService extends Service {
 
     /**
      * Get all hooks for a given name
-     * 
+     *
      * @method getHooks
      * @param {String} hookName Hook name
      * @returns {Array} Array of hooks
@@ -263,7 +263,7 @@ export default class HookService extends Service {
 
     /**
      * Check if a hook exists
-     * 
+     *
      * @method hasHook
      * @param {String} hookName Hook name
      * @returns {Boolean} True if hook exists
@@ -274,7 +274,7 @@ export default class HookService extends Service {
 
     /**
      * Enable a hook
-     * 
+     *
      * @method enableHook
      * @param {String} hookName Hook name
      * @param {String} hookId Hook ID
@@ -288,7 +288,7 @@ export default class HookService extends Service {
 
     /**
      * Disable a hook
-     * 
+     *
      * @method disableHook
      * @param {String} hookName Hook name
      * @param {String} hookId Hook ID
@@ -299,6 +299,4 @@ export default class HookService extends Service {
             hook.enabled = false;
         }
     }
-
-
 }

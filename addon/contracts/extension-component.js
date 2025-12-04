@@ -2,17 +2,17 @@ import BaseContract from './base-contract';
 
 /**
  * Represents a lazy-loadable component from an engine
- * 
+ *
  * This contract defines a component that will be loaded on-demand from an engine,
  * preserving lazy loading capabilities while allowing cross-engine component usage.
- * 
+ *
  * @class ExtensionComponent
  * @extends BaseContract
- * 
+ *
  * @example
  * // Simple usage
  * new ExtensionComponent('@fleetbase/fleetops-engine', 'components/admin/navigator-app')
- * 
+ *
  * @example
  * // With options
  * new ExtensionComponent('@fleetbase/fleetops-engine', {
@@ -20,7 +20,7 @@ import BaseContract from './base-contract';
  *   loadingComponent: 'loading-spinner',
  *   errorComponent: 'error-display'
  * })
- * 
+ *
  * @example
  * // With method chaining
  * new ExtensionComponent('@fleetbase/fleetops-engine', 'components/widget/metrics')
@@ -31,7 +31,7 @@ import BaseContract from './base-contract';
 export default class ExtensionComponent extends BaseContract {
     /**
      * Create a new ExtensionComponent
-     * 
+     *
      * @constructor
      * @param {String} engineName The name of the engine (e.g., '@fleetbase/fleetops-engine')
      * @param {String|Function|Object} pathClassOrOptions Component path, component class, or options object
@@ -43,9 +43,9 @@ export default class ExtensionComponent extends BaseContract {
             super({
                 engine: engineName,
                 class: componentClass,
-                name: componentClass.name
+                name: componentClass.name,
             });
-            
+
             this.engine = engineName;
             this.class = componentClass;
             this.name = componentClass.name;
@@ -55,15 +55,13 @@ export default class ExtensionComponent extends BaseContract {
             this.errorComponent = null;
             return;
         }
-        
+
         // Handle string path or options object
-        const options = typeof pathClassOrOptions === 'string' 
-            ? { path: pathClassOrOptions }
-            : pathClassOrOptions;
+        const options = typeof pathClassOrOptions === 'string' ? { path: pathClassOrOptions } : pathClassOrOptions;
 
         super({
             engine: engineName,
-            ...options
+            ...options,
         });
 
         this.engine = engineName;
@@ -77,7 +75,7 @@ export default class ExtensionComponent extends BaseContract {
 
     /**
      * Validate the component definition
-     * 
+     *
      * @method validate
      * @throws {Error} If engine name or path/class is missing
      */
@@ -92,7 +90,7 @@ export default class ExtensionComponent extends BaseContract {
 
     /**
      * Set a custom loading component to display while the engine loads
-     * 
+     *
      * @method withLoadingComponent
      * @param {String} componentName Name of the loading component
      * @returns {ExtensionComponent} This instance for chaining
@@ -105,7 +103,7 @@ export default class ExtensionComponent extends BaseContract {
 
     /**
      * Set a custom error component to display if loading fails
-     * 
+     *
      * @method withErrorComponent
      * @param {String} componentName Name of the error component
      * @returns {ExtensionComponent} This instance for chaining
@@ -118,7 +116,7 @@ export default class ExtensionComponent extends BaseContract {
 
     /**
      * Add custom data to pass to the component when it renders
-     * 
+     *
      * @method withData
      * @param {Object} data Custom data object
      * @returns {ExtensionComponent} This instance for chaining
@@ -130,7 +128,7 @@ export default class ExtensionComponent extends BaseContract {
 
     /**
      * Set a timeout for loading the component
-     * 
+     *
      * @method withTimeout
      * @param {Number} milliseconds Timeout in milliseconds
      * @returns {ExtensionComponent} This instance for chaining
@@ -142,7 +140,7 @@ export default class ExtensionComponent extends BaseContract {
 
     /**
      * Get the plain object representation
-     * 
+     *
      * @method toObject
      * @returns {Object} Plain object with all component definition properties
      */
@@ -155,13 +153,13 @@ export default class ExtensionComponent extends BaseContract {
             isClass: this.isClass,
             loadingComponent: this.loadingComponent,
             errorComponent: this.errorComponent,
-            ...this._options
+            ...this._options,
         };
     }
 
     /**
      * Get the string representation
-     * 
+     *
      * @method toString
      * @returns {String} Plain string component definition properties
      */
