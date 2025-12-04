@@ -3,7 +3,7 @@ import Evented from '@ember/object/evented';
 import { tracked } from '@glimmer/tracking';
 import { A } from '@ember/array';
 import { getOwner } from '@ember/application';
-import { assert, debug } from '@ember/debug';
+import { assert, debug, warn } from '@ember/debug';
 import { next } from '@ember/runloop';
 import loadExtensions from '@fleetbase/ember-core/utils/load-extensions';
 import loadInstalledExtensions from '@fleetbase/ember-core/utils/load-installed-extensions';
@@ -310,6 +310,8 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         let engineInstance = engineInstances[name][instanceId];
 
         if (!engineInstance) {
+            const engineStartTime = performance.now();
+            
             engineInstance = application.buildChildEngineInstance(name, {
                 routable: true,
                 mountPoint: mountPoint,
@@ -319,6 +321,10 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             engineInstances[name][instanceId] = engineInstance;
 
             return engineInstance.boot().then(() => {
+                const engineEndTime = performance.now();
+                const loadTime = (engineEndTime - engineStartTime).toFixed(2);
+                debug(`[ExtensionManager] Engine '${name}' loaded in ${loadTime}ms`);
+                
                 // Only trigger if not already triggered (prevent double execution)
                 if (!engineInstance._hooksTriggered) {
                     // Fire event for universe.onEngineLoaded() API
@@ -740,6 +746,8 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      * @returns {Promise<Array>} Array of loaded extension names
      */
     async loadExtensions(application) {
+        const startTime = performance.now();
+        
         try {
             // Get admin-configured extensions from config
             const additionalCoreExtensions = config.APP?.extensions ?? [];
@@ -749,6 +757,9 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
 
             application.extensions = extensions;
             application.engines = mapEngines(extensions);
+
+            const endTime = performance.now();
+            debug(`[ExtensionManager] Loaded ${extensions.length} extensions in ${(endTime - startTime).toFixed(2)}ms`);
 
             // Mark extensions as loaded
             this.finishLoadingExtensions();
@@ -799,19 +810,15 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             const loader = getExtensionLoader(extensionName);
 
             if (!loader) {
-                console.warn(`[ExtensionManager] No loader registered for ${extensionName}. ` + 'Ensure addon/extension.js exists and prebuild generated the mapping.');
+                warn(`[ExtensionManager] No loader registered for ${extensionName}. Ensure addon/extension.js exists and prebuild generated the mapping.`, false, { id: 'ember-core.extension-manager.no-loader' });
                 continue;
             }
 
             try {
-                
-                const loadStartTime = performance.now();
                 // Use dynamic import() via the loader function
                 const module = await loader();
-                const loadEndTime = performance.now();
 
                 const setup = module.default ?? module;
-                const execStartTime = performance.now();
                 let executed = false;
 
                 // Handle function export
@@ -834,8 +841,12 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
                     }
                 }
 
+                const extEndTime = performance.now();
+                const totalTime = (extEndTime - extStartTime).toFixed(2);
+                debug(`[ExtensionManager] ${extensionName} setup completed in ${totalTime}ms`);
+
                 if (!executed) {
-                    console.warn(`[ExtensionManager] ${extensionName}/extension did not export a function or valid object with setupExtension/onEngineLoaded.`);
+                    warn(`[ExtensionManager] ${extensionName}/extension did not export a function or valid object with setupExtension/onEngineLoaded.`, false, { id: 'ember-core.extension-manager.invalid-export' });
                 }
             } catch (error) {
                 console.error(`[ExtensionManager] Failed to load or run extension.js for ${extensionName}:`, error);
@@ -844,6 +855,10 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
 
         // Execute boot callbacks and mark boot as complete
         await universe.executeBootCallbacks();
+        
+        const setupEndTime = performance.now();
+        const totalTime = (setupEndTime - setupStartTime).toFixed(2);
+        debug(`[ExtensionManager] All ${extensions.length} extensions setup completed in ${totalTime}ms`);
     }
 
     /**
@@ -861,7 +876,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         const engineInstance = this.getEngineInstance(engineName);
 
         if (!engineInstance) {
-            console.warn(`[ExtensionManager] Cannot register service '${serviceName}' - engine '${engineName}' not loaded`);
+            warn(`[ExtensionManager] Cannot register service '${serviceName}' - engine '${engineName}' not loaded`, false, { id: 'ember-core.extension-manager.engine-not-loaded' });
             return false;
         }
 
@@ -889,7 +904,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         const engineInstance = this.getEngineInstance(engineName);
 
         if (!engineInstance) {
-            console.warn(`[ExtensionManager] Cannot register component '${componentName}' - engine '${engineName}' not loaded`);
+            warn(`[ExtensionManager] Cannot register component '${componentName}' - engine '${engineName}' not loaded`, false, { id: 'ember-core.extension-manager.engine-not-loaded' });
             return false;
         }
 
