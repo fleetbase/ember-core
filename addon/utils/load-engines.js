@@ -3,7 +3,7 @@ import hostServices from '../exports/host-services';
 
 export default async function loadEngines(appInstance, withServices = []) {
     return new Promise((resolve, reject) => {
-        return fetch('extensions.json')
+        return fetch('extensions.json', { cache: 'default' })
             .then((resp) => resp.json())
             .then((extensions) => {
                 const engines = {};

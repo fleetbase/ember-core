@@ -1,4 +1,4 @@
-const hostServices = [
+export const hostServices = [
     'store',
     'session',
     'current-user',

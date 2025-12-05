@@ -1,4 +1,5 @@
-const services = [
+export const externalRoutes = ['console', 'extensions'];
+export const services = [
     'store',
     'session',
     'current-user',
