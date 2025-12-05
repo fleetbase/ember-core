@@ -17,9 +17,15 @@ import MenuPanel from '../../contracts/menu-panel';
  * @extends Service
  */
 export default class MenuService extends Service.extend(Evented) {
-    @service('universe/registry') registry;
+    @service('universe/registry-service') registry;
     @service universe;
-    @tracked applicationInstance;
+
+    /**
+     * Reference to the root Ember Application Instance.
+     * Used for registering components/services to the application container
+     * for cross-engine sharing.
+     */
+    @tracked applicationInstance = null;
 
     /**
      * Set the application instance (for consistency with other services)

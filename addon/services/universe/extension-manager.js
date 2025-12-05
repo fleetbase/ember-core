@@ -22,8 +22,17 @@ import ExtensionBootState from '../../contracts/extension-boot-state';
  * @extends Service
  */
 export default class ExtensionManagerService extends Service.extend(Evented) {
+    /**
+     * Reference to the root Ember Application Instance.
+     * Used for registering components/services to the application container
+     * for cross-engine sharing.
+     */
     @tracked applicationInstance = null;
 
+    /**
+     * Creates an instance of ExtensionManagerService.
+     * @memberof ExtensionManagerService
+     */
     constructor() {
         super(...arguments);
         // Initialize shared boot state

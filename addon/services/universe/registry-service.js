@@ -63,8 +63,8 @@ export default class RegistryService extends Service {
      * @method setApplicationInstance
      * @param {Object} appInstance
      */
-    setApplicationInstance(appInstance) {
-        this.applicationInstance = appInstance;
+    setApplicationInstance(application) {
+        this.applicationInstance = application;
     }
 
     /**

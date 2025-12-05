@@ -14,8 +14,17 @@ import HookRegistry from '../../contracts/hook-registry';
  * @extends Service
  */
 export default class HookService extends Service {
+    /**
+     * Reference to the root Ember Application Instance.
+     * Used for registering components/services to the application container
+     * for cross-engine sharing.
+     */
     @tracked applicationInstance = null;
 
+    /**
+     * Creates an instance of HookService.
+     * @memberof HookService
+     */
     constructor() {
         super(...arguments);
         // Initialize shared hook registry

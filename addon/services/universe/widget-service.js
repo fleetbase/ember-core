@@ -24,8 +24,14 @@ import isObject from '../../utils/is-object';
  * @extends Service
  */
 export default class WidgetService extends Service {
-    @service('universe/registry') registry;
-    @tracked applicationInstance;
+    @service('universe/registry-service') registry;
+
+    /**
+     * Reference to the root Ember Application Instance.
+     * Used for registering components/services to the application container
+     * for cross-engine sharing.
+     */
+    @tracked applicationInstance = null;
 
     /**
      * Set the application instance (for consistency with other services)

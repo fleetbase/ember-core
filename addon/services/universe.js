@@ -70,7 +70,7 @@ export default class UniverseService extends Service.extend(Evented) {
     /**
      * Get a service by name
      * Convenience method for extensions to access specialized services
-     * 
+     *
      * Supports multiple naming patterns:
      * - "universe/menu-service" -> universe/menu-service
      * - "menu-service" -> universe/menu-service
@@ -91,24 +91,22 @@ export default class UniverseService extends Service.extend(Evented) {
         // Normalize the service name
         if (!/\//.test(serviceName)) {
             // No slash, might be camelCase or short name
-            const kebabCase = serviceName
-                .replace(/([a-z])([A-Z])/g, '$1-$2')
-                .toLowerCase();
-            
+            const kebabCase = serviceName.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+
             // Map short names and variations to full service names
             const nameMapping = {
-                'hook': 'hook-service',
-                'hooks': 'hook-service',
+                hook: 'hook-service',
+                hooks: 'hook-service',
                 'hook-service': 'hook-service',
-                'menu': 'menu-service',
+                menu: 'menu-service',
                 'menu-service': 'menu-service',
-                'widget': 'widget-service',
-                'widgets': 'widget-service',
+                widget: 'widget-service',
+                widgets: 'widget-service',
                 'widget-service': 'widget-service',
-                'registry': 'registry-service',
+                registry: 'registry-service',
                 'registry-service': 'registry-service',
             };
-            
+
             const mappedName = nameMapping[kebabCase] || kebabCase;
             resolvedName = `universe/${mappedName}`;
         } else if (serviceName.startsWith('universe/')) {
