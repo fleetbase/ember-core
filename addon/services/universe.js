@@ -26,10 +26,10 @@ import MenuItem from '../contracts/menu-item';
 export default class UniverseService extends Service.extend(Evented) {
     // Inject specialized services
     @service('universe/extension-manager') extensionManager;
-    @service('universe/registry-service') registryService;
-    @service('universe/menu-service') menuService;
-    @service('universe/widget-service') widgetService;
-    @service('universe/hook-service') hookService;
+    @service('universe/registry') registry;
+    @service('universe/menu-manager') menuManager;
+    @service('universe/widget-manager') widgetManager;
+    @service('universe/hook-manager') hookManager;
     @service router;
     @service intl;
     @service urlSearchParams;
@@ -50,34 +50,75 @@ export default class UniverseService extends Service.extend(Evented) {
         this.applicationInstance = application;
 
         // Cascade to all child services
-        if (this.registryService) {
-            this.registryService.setApplicationInstance(application);
+        if (this.registry) {
+            this.registry.setApplicationInstance(application);
         }
         if (this.extensionManager) {
             this.extensionManager.setApplicationInstance(application);
         }
-        if (this.menuService) {
-            this.menuService.setApplicationInstance(application);
+        if (this.menuManager) {
+            this.menuManager.setApplicationInstance(application);
         }
-        if (this.widgetService) {
-            this.widgetService.setApplicationInstance(application);
+        if (this.widgetManager) {
+            this.widgetManager.setApplicationInstance(application);
         }
-        if (this.hookService) {
-            this.hookService.setApplicationInstance(application);
+        if (this.hookManager) {
+            this.hookManager.setApplicationInstance(application);
         }
     }
 
     /**
      * Get a service by name
      * Convenience method for extensions to access specialized services
+     * 
+     * Supports multiple naming patterns:
+     * - "universe/menu-service" -> universe/menu-manager
+     * - "menu-manager" -> universe/menu-manager
+     * - "menu-service" -> universe/menu-service (compat)
+     * - "menuManager" -> universe/menu-manager
+     * - "menuService" -> universe/menu-manager
      *
      * @method getService
-     * @param {String} serviceName Service name (e.g., 'universe/menu-service')
+     * @param {String} serviceName Service name in various formats
      * @returns {Service} The service instance
      */
     getService(serviceName) {
         const owner = getOwner(this);
-        return owner.lookup(`service:${serviceName}`);
+        let resolvedName = serviceName;
+
+        // Normalize the service name
+        // Handle camelCase to kebab-case conversion
+        if (!/\//.test(serviceName)) {
+            // No slash, might be camelCase or short name
+            const kebabCase = serviceName
+                .replace(/([a-z])([A-Z])/g, '$1-$2')
+                .toLowerCase();
+            
+            // Map old -service names to new -manager names
+            const nameMapping = {
+                'hook-service': 'hook-manager',
+                'menu-service': 'menu-manager',
+                'registry-service': 'registry',
+                'widget-service': 'widget-manager',
+            };
+            
+            const mappedName = nameMapping[kebabCase] || kebabCase;
+            resolvedName = `universe/${mappedName}`;
+        } else if (serviceName.startsWith('universe/')) {
+            // Already has universe/ prefix, just map old names to new
+            const shortName = serviceName.replace('universe/', '');
+            const nameMapping = {
+                'hook-service': 'hook-manager',
+                'menu-service': 'menu-manager',
+                'registry-service': 'registry',
+                'widget-service': 'widget-manager',
+            };
+            
+            const mappedName = nameMapping[shortName] || shortName;
+            resolvedName = `universe/${mappedName}`;
+        }
+
+        return owner.lookup(`service:${resolvedName}`);
     }
 
     // ============================================================================
@@ -221,7 +262,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Array} The created registry
      */
     createRegistry(name) {
-        return this.registryService.createRegistry(name);
+        return this.registry.createRegistry(name);
     }
 
     /**
@@ -231,7 +272,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Array} names Array of registry names
      */
     createRegistries(names) {
-        this.registryService.createRegistries(names);
+        this.registry.createRegistries(names);
     }
 
     /**
@@ -242,7 +283,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Array} Registry items
      */
     getRegistry(name) {
-        return this.registryService.getRegistry(name);
+        return this.registry.getRegistry(name);
     }
 
     /**
@@ -254,7 +295,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {*} value Item value
      */
     registerInRegistry(registryName, key, value) {
-        this.registryService.register(registryName, key, value);
+        this.registry.register(registryName, key, value);
     }
 
     /**
@@ -266,7 +307,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {*} The registered item
      */
     lookupFromRegistry(registryName, key) {
-        return this.registryService.lookup(registryName, key);
+        return this.registry.lookup(registryName, key);
     }
 
     // ============================================================================
@@ -282,7 +323,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Object} options Registration options
      */
     registerComponent(name, componentClass, options = {}) {
-        this.registryService.registerComponent(name, componentClass, options);
+        this.registry.registerComponent(name, componentClass, options);
     }
 
     /**
@@ -294,7 +335,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Object} options Registration options
      */
     registerService(name, serviceClass, options = {}) {
-        this.registryService.registerService(name, serviceClass, options);
+        this.registry.registerService(name, serviceClass, options);
     }
 
     // ============================================================================
@@ -310,7 +351,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Object} options Optional options
      */
     registerHeaderMenuItem(menuItemOrTitle, route = null, options = {}) {
-        this.menuService.registerHeaderMenuItem(menuItemOrTitle, route, options);
+        this.menuManager.registerHeaderMenuItem(menuItemOrTitle, route, options);
     }
 
     /**
@@ -321,7 +362,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Object} options Optional options
      */
     registerOrganizationMenuItem(menuItemOrTitle, options = {}) {
-        this.menuService.registerOrganizationMenuItem(menuItemOrTitle, options);
+        this.menuManager.registerOrganizationMenuItem(menuItemOrTitle, options);
     }
 
     /**
@@ -332,7 +373,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Object} options Optional options
      */
     registerUserMenuItem(menuItemOrTitle, options = {}) {
-        this.menuService.registerUserMenuItem(menuItemOrTitle, options);
+        this.menuManager.registerUserMenuItem(menuItemOrTitle, options);
     }
 
     /**
@@ -344,7 +385,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Object} options Optional options
      */
     registerAdminMenuPanel(panelOrTitle, items = [], options = {}) {
-        this.menuService.registerAdminMenuPanel(panelOrTitle, items, options);
+        this.menuManager.registerAdminMenuPanel(panelOrTitle, items, options);
     }
 
     /**
@@ -355,7 +396,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Object} options Optional options
      */
     registerSettingsMenuItem(menuItemOrTitle, options = {}) {
-        this.menuService.registerSettingsMenuItem(menuItemOrTitle, options);
+        this.menuManager.registerSettingsMenuItem(menuItemOrTitle, options);
     }
 
     /**
@@ -368,7 +409,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Object} options Optional options
      */
     registerMenuItem(registryName, menuItemOrTitle, routeOrOptions = {}, options = {}) {
-        this.menuService.registerMenuItem(registryName, menuItemOrTitle, routeOrOptions, options);
+        this.menuManager.registerMenuItem(registryName, menuItemOrTitle, routeOrOptions, options);
     }
 
     /**
@@ -378,7 +419,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Array} Header menu items
      */
     get headerMenuItems() {
-        return this.menuService.getHeaderMenuItems();
+        return this.menuManager.getHeaderMenuItems();
     }
 
     /**
@@ -388,7 +429,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Array} Organization menu items
      */
     get organizationMenuItems() {
-        return this.menuService.getOrganizationMenuItems();
+        return this.menuManager.getOrganizationMenuItems();
     }
 
     /**
@@ -398,7 +439,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Array} User menu items
      */
     get userMenuItems() {
-        return this.menuService.getUserMenuItems();
+        return this.menuManager.getUserMenuItems();
     }
 
     /**
@@ -408,7 +449,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Array} Admin menu items
      */
     get adminMenuItems() {
-        return this.menuService.getAdminMenuItems();
+        return this.menuManager.getAdminMenuItems();
     }
 
     /**
@@ -418,7 +459,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Array} Admin menu panels
      */
     get adminMenuPanels() {
-        return this.menuService.getAdminMenuPanels();
+        return this.menuManager.getAdminMenuPanels();
     }
 
     // ============================================================================
@@ -432,7 +473,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Array<Widget>} widgets Array of widgets
      */
     registerDefaultDashboardWidgets(widgets) {
-        this.widgetService.registerDefaultDashboardWidgets(widgets);
+        this.widgetManager.registerDefaultDashboardWidgets(widgets);
     }
 
     /**
@@ -442,7 +483,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Array<Widget>} widgets Array of widgets
      */
     registerDashboardWidgets(widgets) {
-        this.widgetService.registerDashboardWidgets(widgets);
+        this.widgetManager.registerDashboardWidgets(widgets);
     }
 
     /**
@@ -453,7 +494,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Object} options Dashboard options
      */
     registerDashboard(name, options = {}) {
-        this.widgetService.registerDashboard(name, options);
+        this.widgetManager.registerDashboard(name, options);
     }
 
     /**
@@ -464,8 +505,8 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     get dashboardWidgets() {
         return {
-            defaultWidgets: this.widgetService.getDefaultWidgets(),
-            widgets: this.widgetService.getWidgets(),
+            defaultWidgets: this.widgetManager.getDefaultWidgets(),
+            widgets: this.widgetManager.getWidgets(),
         };
     }
 
@@ -482,7 +523,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {Object} options Optional options
      */
     registerHook(hookOrName, handler = null, options = {}) {
-        this.hookService.registerHook(hookOrName, handler, options);
+        this.hookManager.registerHook(hookOrName, handler, options);
     }
 
     /**
@@ -494,7 +535,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Promise<Array>} Array of hook results
      */
     async executeHook(hookName, ...args) {
-        return this.hookService.execute(hookName, ...args);
+        return this.hookManager.execute(hookName, ...args);
     }
 
     /**
@@ -504,7 +545,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Object} Hooks object
      */
     get hooks() {
-        return this.hookService.hooks;
+        return this.hookManager.hooks;
     }
 
     // ============================================================================
@@ -621,7 +662,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Array} Menu items
      */
     getMenuItemsFromRegistry(registryName) {
-        return this.registryService.getRegistry(registryName) || A([]);
+        return this.registry.getRegistry(registryName) || A([]);
     }
 
     /**
@@ -633,7 +674,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Array} Menu panels
      */
     getMenuPanelsFromRegistry(registryName) {
-        return this.registryService.getRegistry(`${registryName}:panels`) || A([]);
+        return this.registry.getRegistry(`${registryName}:panels`) || A([]);
     }
 
     /**
@@ -724,7 +765,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * );
      */
     registerRenderableComponent(registryName, component, options = {}) {
-        return this.registryService.registerRenderableComponent(registryName, component, options);
+        return this.registry.registerRenderableComponent(registryName, component, options);
     }
 
     /**
@@ -736,7 +777,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Array} Array of component definitions/classes
      */
     getRenderableComponentsFromRegistry(registryName) {
-        return this.registryService.getRenderableComponents(registryName);
+        return this.registry.getRenderableComponents(registryName);
     }
 
     /**
@@ -763,7 +804,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * );
      */
     async registerHelper(helperName, helperClassOrTemplateHelper, options = {}) {
-        return await this.registryService.registerHelper(helperName, helperClassOrTemplateHelper, options);
+        return await this.registry.registerHelper(helperName, helperClassOrTemplateHelper, options);
     }
 
     /**
