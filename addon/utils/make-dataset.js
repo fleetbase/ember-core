@@ -2,13 +2,15 @@ import groupBy from './group-by';
 import { _range } from './range';
 import { format, startOfMonth, endOfMonth, addDays } from 'date-fns';
 
-function randomInt(min, max) {
+export { _range as range };
+
+export function randomInt(min, max) {
     min = Math.ceil(min);
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min) + min);
 }
 
-function randomDateThisMonth() {
+export function randomDateThisMonth() {
     const now = new Date();
     const startDate = startOfMonth(now);
     const endDate = endOfMonth(now);
@@ -16,7 +18,7 @@ function randomDateThisMonth() {
     return addDays(startDate, randomInt(0, diffInDays));
 }
 
-function makeMockDataset(start, end, dateProperty = 'created_at') {
+export function makeMockDataset(start, end, dateProperty = 'created_at') {
     const data = _range(start, end).map(() => {
         return {
             created_at: randomDateThisMonth(),
@@ -29,15 +31,13 @@ function makeMockDataset(start, end, dateProperty = 'created_at') {
 
     for (let day in grouped) {
         dataset.pushObject({
-            t: new Date(`${day} 00:00:00`),
+            x: new Date(`${day} 00:00:00`),
             y: grouped[day].length,
         });
     }
 
     return dataset.sortBy('t');
 }
-
-export { makeMockDataset, randomInt, randomDateThisMonth, _range as range };
 
 export default function makeDataset(recordArray, filter = Boolean, dateProperty = 'created_at') {
     const filteredData = recordArray.filter(filter);
@@ -48,7 +48,7 @@ export default function makeDataset(recordArray, filter = Boolean, dateProperty 
 
     for (let day in grouped) {
         dataset.pushObject({
-            t: new Date(`${day} 00:00:00`),
+            x: new Date(`${day} 00:00:00`),
             y: grouped[day].length,
         });
     }

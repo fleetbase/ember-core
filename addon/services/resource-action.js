@@ -119,6 +119,10 @@ export default class ResourceActionService extends Service {
         this.bulkDeleteOptions = { ...this.bulkDeleteOptions, ...(options.bulkDeleteOptions ?? {}) };
         this.importOptions = { ...this.importOptions, ...(options.importOptions ?? {}) };
         this.exportOptions = { ...this.exportOptions, ...(options.exportOptions ?? {}) };
+        this.fetchOptions = { ...this.fetchOptions, ...(options.fetchOptions ?? {}) };
+        this.importTemplateName = options.importTemplateName ?? this.importTemplateName;
+        this.importTemplatePath = options.importTemplatePath ?? this.importTemplatePath;
+        this.baseAssetUrl = options.baseAssetUrl ?? this.baseAssetUrl;
         this.permissionPrefix = options.permissionPrefix ?? 'fleet-ops';
         this.mountPrefix = options.mountPrefix ?? `console.${this.permissionPrefix}`;
 
