@@ -7,7 +7,7 @@ import Widget from '../../contracts/widget';
 import isObject from '../../utils/is-object';
 
 /**
- * WidgetService
+ * WidgetManagerService
  *
  * Manages dashboard widgets and widget registrations.
  *
@@ -20,11 +20,11 @@ import isObject from '../../utils/is-object';
  * - Widgets: 'dashboard:widgets' section, 'widget' list
  * - Default Widgets: 'dashboard:widgets' section, 'default-widget' list
  *
- * @class WidgetService
+ * @class WidgetManagerService
  * @extends Service
  */
-export default class WidgetService extends Service {
-    @service('universe/registry-service') registryService;
+export default class WidgetManagerService extends Service {
+    @service('universe/registry') registry;
     @tracked applicationInstance;
 
     /**
@@ -82,7 +82,7 @@ export default class WidgetService extends Service {
         };
 
         // Register to 'dashboards' section, 'dashboard' list
-        this.registryService.register('dashboards', 'dashboard', name, dashboard);
+        this.registry.register('dashboards', 'dashboard', name, dashboard);
     }
 
     /**
@@ -104,11 +104,11 @@ export default class WidgetService extends Service {
 
             // Register widget to 'dashboard:widgets' section, 'widget' list
             // Key format: dashboardName#widgetId
-            this.registryService.register('dashboard:widgets', 'widget', `${dashboardName}#${normalized.id}`, normalized);
+            this.registry.register('dashboard:widgets', 'widget', `${dashboardName}#${normalized.id}`, normalized);
 
             // If marked as default, also register to default widget list
             if (normalized.default === true) {
-                this.registryService.register('dashboard:widgets', 'default-widget', `${dashboardName}#${normalized.id}`, normalized);
+                this.registry.register('dashboard:widgets', 'default-widget', `${dashboardName}#${normalized.id}`, normalized);
             }
         });
     }
@@ -131,7 +131,7 @@ export default class WidgetService extends Service {
 
             // Register to 'dashboard:widgets' section, 'default-widget' list
             // Key format: dashboardName#widgetId
-            this.registryService.register('dashboard:widgets', 'default-widget', `${dashboardName}#${normalized.id}`, normalized);
+            this.registry.register('dashboard:widgets', 'default-widget', `${dashboardName}#${normalized.id}`, normalized);
         });
     }
 
@@ -149,7 +149,7 @@ export default class WidgetService extends Service {
         }
 
         // Get all widgets from 'dashboard:widgets' section, 'widget' list
-        const registry = this.registryService.getRegistry('dashboard:widgets', 'widget');
+        const registry = this.registry.getRegistry('dashboard:widgets', 'widget');
 
         // Filter widgets by registration key prefix
         const prefix = `${dashboardName}#`;
@@ -176,7 +176,7 @@ export default class WidgetService extends Service {
         }
 
         // Get all default widgets from 'dashboard:widgets' section, 'default-widget' list
-        const registry = this.registryService.getRegistry('dashboard:widgets', 'default-widget');
+        const registry = this.registry.getRegistry('dashboard:widgets', 'default-widget');
 
         // Filter widgets by registration key prefix
         const prefix = `${dashboardName}#`;
@@ -198,7 +198,7 @@ export default class WidgetService extends Service {
      * @returns {Object|null} Widget or null
      */
     getWidget(dashboardName, widgetId) {
-        return this.registryService.lookup('dashboard:widgets', 'widget', `${dashboardName}#${widgetId}`);
+        return this.registry.lookup('dashboard:widgets', 'widget', `${dashboardName}#${widgetId}`);
     }
 
     /**
@@ -208,7 +208,7 @@ export default class WidgetService extends Service {
      * @returns {Array} All dashboards
      */
     getDashboards() {
-        return this.registryService.getRegistry('dashboards', 'dashboard');
+        return this.registry.getRegistry('dashboards', 'dashboard');
     }
 
     /**
@@ -219,7 +219,7 @@ export default class WidgetService extends Service {
      * @returns {Object|null} Dashboard or null
      */
     getDashboard(name) {
-        return this.registryService.lookup('dashboards', 'dashboard', name);
+        return this.registry.lookup('dashboards', 'dashboard', name);
     }
 
     /**

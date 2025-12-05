@@ -8,16 +8,16 @@ import MenuItem from '../../contracts/menu-item';
 import MenuPanel from '../../contracts/menu-panel';
 
 /**
- * MenuService
+ * MenuManagerService
  *
  * Manages all menu items and panels in the application.
- * Uses RegistryService for storage, providing cross-engine access.
+ * Uses Registry for storage, providing cross-engine access.
  *
- * @class MenuService
+ * @class MenuManagerService
  * @extends Service
  */
-export default class MenuService extends Service.extend(Evented) {
-    @service('universe/registry-service') registryService;
+export default class MenuManagerService extends Service.extend(Evented) {
+    @service('universe/registry') registry;
     @service universe;
     @tracked applicationInstance;
 
@@ -145,7 +145,7 @@ export default class MenuService extends Service.extend(Evented) {
      */
     registerHeaderMenuItem(itemOrTitle, route = null, options = {}) {
         const menuItem = this.#normalizeMenuItem(itemOrTitle, route, options);
-        this.registryService.register('header', 'menu-item', menuItem.slug, menuItem);
+        this.registry.register('header', 'menu-item', menuItem.slug, menuItem);
 
         // Trigger event for backward compatibility
         this.trigger('menuItem.registered', menuItem, 'header');
@@ -161,7 +161,7 @@ export default class MenuService extends Service.extend(Evented) {
      */
     registerAdminMenuItem(itemOrTitle, route = null, options = {}) {
         const menuItem = this.#normalizeMenuItem(itemOrTitle, route, options);
-        this.registryService.register('console:admin', 'menu-item', menuItem.slug, menuItem);
+        this.registry.register('console:admin', 'menu-item', menuItem.slug, menuItem);
 
         // Trigger event for backward compatibility
         this.trigger('menuItem.registered', menuItem, 'console:admin');
@@ -181,7 +181,7 @@ export default class MenuService extends Service.extend(Evented) {
             menuItem.section = 'settings';
         }
 
-        this.registryService.register('console:account', 'menu-item', `organization:${menuItem.slug}`, menuItem);
+        this.registry.register('console:account', 'menu-item', `organization:${menuItem.slug}`, menuItem);
     }
 
     /**
@@ -198,7 +198,7 @@ export default class MenuService extends Service.extend(Evented) {
             menuItem.section = 'account';
         }
 
-        this.registryService.register('console:account', 'menu-item', `user:${menuItem.slug}`, menuItem);
+        this.registry.register('console:account', 'menu-item', `user:${menuItem.slug}`, menuItem);
     }
 
     /**
@@ -211,7 +211,7 @@ export default class MenuService extends Service.extend(Evented) {
      */
     registerAdminMenuPanel(panelOrTitle, items = [], options = {}) {
         const panel = this.#normalizeMenuPanel(panelOrTitle, items, options);
-        this.registryService.register('console:admin', 'menu-panel', panel.slug, panel);
+        this.registry.register('console:admin', 'menu-panel', panel.slug, panel);
 
         // The PDF states: "Additionally registering menu panels should also register there items."
         // We assume the items are passed in the panel object or items array.
@@ -235,7 +235,7 @@ export default class MenuService extends Service.extend(Evented) {
                 menuItem._panelSlug = panel.slug;
 
                 // Register with the item slug as key (for lookup)
-                this.registryService.register('console:admin', 'menu-item', itemSlug, menuItem);
+                this.registry.register('console:admin', 'menu-item', itemSlug, menuItem);
 
                 // Trigger event for backward compatibility
                 this.trigger('menuItem.registered', menuItem, 'console:admin');
@@ -259,7 +259,7 @@ export default class MenuService extends Service.extend(Evented) {
     registerSettingsMenuItem(menuItemOrTitle, options = {}) {
         const menuItem = this.#normalizeMenuItem(menuItemOrTitle, options.route || 'console.settings.virtual', options);
 
-        this.registryService.register('console:settings', 'menu-item', menuItem.slug, menuItem);
+        this.registry.register('console:settings', 'menu-item', menuItem.slug, menuItem);
     }
 
     /**
@@ -302,7 +302,7 @@ export default class MenuService extends Service.extend(Evented) {
         }
 
         // Register the menu item
-        this.registryService.register(registryName, 'menu-item', menuItem.slug || menuItem.title, menuItem);
+        this.registry.register(registryName, 'menu-item', menuItem.slug || menuItem.title, menuItem);
 
         // Trigger event
         this.trigger('menuItem.registered', menuItem, registryName);
@@ -320,7 +320,7 @@ export default class MenuService extends Service.extend(Evented) {
      * @returns {Array} Menu items
      */
     getMenuItems(registryName) {
-        return this.registryService.getRegistry(registryName, 'menu-item');
+        return this.registry.getRegistry(registryName, 'menu-item');
     }
 
     /**
@@ -331,7 +331,7 @@ export default class MenuService extends Service.extend(Evented) {
      * @returns {Array} Menu panels
      */
     getMenuPanels(registryName) {
-        return this.registryService.getRegistry(registryName, 'menu-panel');
+        return this.registry.getRegistry(registryName, 'menu-panel');
     }
 
     /**
@@ -375,7 +375,7 @@ export default class MenuService extends Service.extend(Evented) {
      * @returns {Array} Header menu items sorted by priority
      */
     getHeaderMenuItems() {
-        const items = this.registryService.getRegistry('header', 'menu-item');
+        const items = this.registry.getRegistry('header', 'menu-item');
         return A(items).sortBy('priority');
     }
 
@@ -386,7 +386,7 @@ export default class MenuService extends Service.extend(Evented) {
      * @returns {Array} Organization menu items
      */
     getOrganizationMenuItems() {
-        return this.registryService.getRegistry('console:account', 'menu-item');
+        return this.registry.getRegistry('console:account', 'menu-item');
     }
 
     /**
@@ -396,7 +396,7 @@ export default class MenuService extends Service.extend(Evented) {
      * @returns {Array} User menu items
      */
     getUserMenuItems() {
-        return this.registryService.getRegistry('console:account', 'menu-item');
+        return this.registry.getRegistry('console:account', 'menu-item');
     }
 
     /**
@@ -406,7 +406,7 @@ export default class MenuService extends Service.extend(Evented) {
      * @returns {Array} Admin panels sorted by priority
      */
     getAdminMenuPanels() {
-        const panels = this.registryService.getRegistry('console:admin', 'menu-panel');
+        const panels = this.registry.getRegistry('console:admin', 'menu-panel');
         return A(panels).sortBy('priority');
     }
 
@@ -428,7 +428,7 @@ export default class MenuService extends Service.extend(Evented) {
      * @returns {Array} Admin menu items (excluding panel items)
      */
     getAdminMenuItems() {
-        const items = this.registryService.getRegistry('console:admin', 'menu-item');
+        const items = this.registry.getRegistry('console:admin', 'menu-item');
         // Filter out panel items to prevent duplication in the UI
         return items.filter((item) => !item._isPanelItem);
     }
@@ -441,7 +441,7 @@ export default class MenuService extends Service.extend(Evented) {
      * @returns {Array} Menu items belonging to the panel
      */
     getMenuItemsFromPanel(panelSlug) {
-        const items = this.registryService.getRegistry('console:admin', 'menu-item');
+        const items = this.registry.getRegistry('console:admin', 'menu-item');
         return items.filter((item) => item._panelSlug === panelSlug);
     }
 
@@ -452,7 +452,7 @@ export default class MenuService extends Service.extend(Evented) {
      * @returns {Array} Settings menu items
      */
     getSettingsMenuItems() {
-        return this.registryService.getRegistry('console:settings', 'menu-item');
+        return this.registry.getRegistry('console:settings', 'menu-item');
     }
 
     /**
@@ -462,7 +462,7 @@ export default class MenuService extends Service.extend(Evented) {
      * @returns {Array} Settings menu panels
      */
     getSettingsMenuPanels() {
-        const panels = this.registryService.getRegistry('console:settings', 'menu-panel');
+        const panels = this.registry.getRegistry('console:settings', 'menu-panel');
         return A(panels).sortBy('priority');
     }
     // ============================================================================

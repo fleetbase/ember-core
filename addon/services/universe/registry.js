@@ -28,10 +28,10 @@ import UniverseRegistry from '../../contracts/universe-registry';
  * const panel = registryService.lookup('console:admin', 'menu-panels', 'fleet-ops');
  * ```
  *
- * @class RegistryService
+ * @class Registry
  * @extends Service
  */
-export default class RegistryService extends Service {
+export default class Registry extends Service {
     @service('universe/extension-manager') extensionManager;
 
     /**

@@ -5,15 +5,15 @@ import Hook from '../../contracts/hook';
 import HookRegistry from '../../contracts/hook-registry';
 
 /**
- * HookService
+ * HookManagerService
  *
  * Manages application lifecycle hooks and custom event hooks.
  * Allows extensions to inject logic at specific points in the application.
  *
- * @class HookService
+ * @class HookManagerService
  * @extends Service
  */
-export default class HookService extends Service {
+export default class HookManagerService extends Service {
     @tracked applicationInstance = null;
 
     constructor() {
