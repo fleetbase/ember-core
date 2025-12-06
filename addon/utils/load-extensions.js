@@ -24,7 +24,7 @@ function getCachedExtensions() {
 
         // Application version has changed
         if (cachedVersion !== config.APP.version) {
-            debug(`[Runtime Config] Version mismatch (cached: ${cachedVersion}, current: ${config.APP.version})`);
+            debug(`[loadExtensions] Version mismatch (cached: ${cachedVersion}, current: ${config.APP.version})`);
             return null;
         }
 
@@ -33,14 +33,14 @@ function getCachedExtensions() {
 
         // Check if cache is still valid (within TTL)
         if (cacheAge > CACHE_TTL) {
-            debug('[load-extensions] Cache expired');
+            debug('[loadExtensions] Cache expired');
             return null;
         }
 
-        debug(`[load-extensions] Using cached extensions list (age: ${Math.round(cacheAge / 1000)}s)`);
+        debug(`[loadExtensions] Using cached extensions list (age: ${Math.round(cacheAge / 1000)}s)`);
         return cacheData.extensions;
     } catch (e) {
-        debug(`[load-extensions] Failed to read cache: ${e.message}`);
+        debug(`[loadExtensions] Failed to read cache: ${e.message}`);
         return null;
     }
 }
@@ -58,9 +58,9 @@ function setCachedExtensions(extensions) {
         };
         localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
         localStorage.setItem(CACHE_VERSION_KEY, config.APP.version);
-        debug('[load-extensions] Extensions list cached to localStorage');
+        debug('[loadExtensions] Extensions list cached to localStorage');
     } catch (e) {
-        debug(`[load-extensions] Failed to cache extensions: ${e.message}`);
+        debug(`[loadExtensions] Failed to cache extensions: ${e.message}`);
     }
 }
 
@@ -73,9 +73,9 @@ export function clearExtensionsCache() {
     try {
         localStorage.removeItem(CACHE_KEY);
         localStorage.removeItem(CACHE_VERSION_KEY);
-        debug('[load-extensions] Cache cleared');
+        debug('[loadExtensions] Cache cleared');
     } catch (e) {
-        debug(`[load-extensions] Failed to clear cache: ${e.message}`);
+        debug(`[loadExtensions] Failed to clear cache: ${e.message}`);
     }
 }
 
@@ -111,7 +111,7 @@ export default async function loadExtensions() {
             .then((resp) => resp.json())
             .then((extensions) => {
                 const endTime = performance.now();
-                debug(`[load-extensions] Fetched from server in ${(endTime - startTime).toFixed(2)}ms`);
+                debug(`[loadExtensions] Fetched from server in ${(endTime - startTime).toFixed(2)}ms`);
 
                 // Cache the result
                 setCachedExtensions(extensions);
