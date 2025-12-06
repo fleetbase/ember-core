@@ -6,7 +6,7 @@ import config from 'ember-get-config';
  */
 const CACHE_KEY = 'fleetbase_extensions_list';
 const CACHE_VERSION_KEY = 'fleetbase_extensions_version';
-const CACHE_TTL = 1000 * 60 * 30; // 30 mins
+const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 
 /**
  * Get cached extensions from localStorage
@@ -51,7 +51,7 @@ function setCachedExtensions(extensions) {
             timestamp: Date.now(),
         };
         localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-        localStorage.setItem(CACHE_VERSION_KEY, '1');
+        localStorage.setItem(CACHE_VERSION_KEY, config.APP.version);
         debug('[load-extensions] Extensions list cached to localStorage');
     } catch (e) {
         debug(`[load-extensions] Failed to cache extensions: ${e.message}`);
