@@ -22,6 +22,12 @@ function getCachedExtensions() {
             return null;
         }
 
+        // Application version has changed
+        if (cachedVersion !== config.APP.version) {
+            debug(`[Runtime Config] Version mismatch (cached: ${cachedVersion}, current: ${config.APP.version})`);
+            return null;
+        }
+
         const cacheData = JSON.parse(cached);
         const cacheAge = Date.now() - cacheData.timestamp;
 
