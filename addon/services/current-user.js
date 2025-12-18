@@ -26,6 +26,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
     @tracked locale = 'en-us';
 
     @storageFor('user-options') options;
+    @storageFor('local-cache') cache;
     @alias('userSnapshot.id') id;
     @alias('userSnapshot.name') name;
     @alias('userSnapshot.phone') phone;
@@ -260,6 +261,11 @@ export default class CurrentUserService extends Service.extend(Evented) {
         const whois = this.getOption('whois');
 
         if (!whois || typeof whois !== 'object') {
+            // Fallback to lookup/whois in local-cache
+            const cachedWhois = this.cache.get('lookup/whois');
+            if (cachedWhois) {
+                return get(cachedWhois, prop);
+            }
             return null;
         }
 

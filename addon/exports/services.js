@@ -23,6 +23,7 @@ export const services = [
     'universe',
     'intl',
     'abilities',
+    'language',
 ];
 
 export default services;

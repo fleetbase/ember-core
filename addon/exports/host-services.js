@@ -21,6 +21,7 @@ export const hostServices = [
     'universe',
     'intl',
     'abilities',
+    'language',
     { hostRouter: 'router' },
 ];
 
