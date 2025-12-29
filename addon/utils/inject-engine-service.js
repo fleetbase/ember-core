@@ -35,7 +35,7 @@ function automaticServiceResolution(service, target, owner) {
 }
 
 function _getOwner(target) {
-    return window.Fleetbase ?? getOwner(target);
+    return getOwner(target);
 }
 
 export default function injectEngineService(target, engineName, serviceName, options = {}) {

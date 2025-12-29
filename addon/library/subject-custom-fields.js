@@ -242,7 +242,7 @@ export default class SubjectCustomFields {
         let existingMany = subject.hasMany?.('custom_field_values')?.value?.() ?? null;
 
         // If asked or not loaded, fetch from API (scoped to subject)
-        if (reloadExisting || !existingMany) {
+        if ((reloadExisting || !existingMany) && subjectId) {
             try {
                 existingMany = await this.store.query('custom-field-value', {
                     subject_uuid: subjectId,

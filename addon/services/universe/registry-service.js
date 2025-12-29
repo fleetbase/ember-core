@@ -82,21 +82,16 @@ export default class RegistryService extends Service {
         let application = this.applicationInstance;
 
         if (!application) {
-            // Second priority: window.Fleetbase
-            if (typeof window !== 'undefined' && window.Fleetbase) {
-                application = window.Fleetbase;
+            // Second priority: try to get from owner
+            const owner = getOwner(this);
+            if (owner && owner.application) {
+                application = owner.application;
             } else {
-                // Third priority: try to get from owner
-                const owner = getOwner(this);
-                if (owner && owner.application) {
-                    application = owner.application;
-                } else {
-                    warn('[RegistryService] Could not find application instance for registry initialization', {
-                        id: 'registry-service.no-application',
-                    });
-                    // Return a new instance as fallback (won't be shared)
-                    return new UniverseRegistry();
-                }
+                warn('[RegistryService] Could not find application instance for registry initialization', {
+                    id: 'registry-service.no-application',
+                });
+                // Return a new instance as fallback (won't be shared)
+                return new UniverseRegistry();
             }
         }
 
@@ -489,7 +484,7 @@ export default class RegistryService extends Service {
      * );
      */
     async registerHelper(helperName, helperClassOrTemplateHelper, options = {}) {
-        const owner = this.applicationInstance || (typeof window !== 'undefined' && window.Fleetbase) || getOwner(this);
+        const owner = this.applicationInstance || getOwner(this);
 
         if (!owner) {
             warn('No owner available for helper registration. Cannot register helper.', {
@@ -539,7 +534,7 @@ export default class RegistryService extends Service {
      * @returns {Promise<Function|Class|null>} The loaded helper or null if failed
      */
     async #loadHelperFromEngine(templateHelper) {
-        const owner = this.applicationInstance || (typeof window !== 'undefined' && window.Fleetbase) || getOwner(this);
+        const owner = this.applicationInstance || getOwner(this);
 
         if (!owner) {
             return null;

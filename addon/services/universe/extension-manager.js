@@ -1,4 +1,4 @@
-import Service from '@ember/service';
+import Service, { inject as service } from '@ember/service';
 import Evented from '@ember/object/evented';
 import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/application';
@@ -22,6 +22,7 @@ import ExtensionBootState from '../../contracts/extension-boot-state';
  * @extends Service
  */
 export default class ExtensionManagerService extends Service.extend(Evented) {
+    @service universe;
     /**
      * Reference to the root Ember Application Instance.
      * Used for registering components/services to the application container
@@ -84,14 +85,14 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
      * @returns {Application}
      */
     #getApplication() {
-        // First priority: use applicationInstance if set
-        if (this.applicationInstance) {
-            return this.applicationInstance;
+        // First priority use the universe application instance
+        if (this.universe.applicationInstance) {
+            return this.universe.applicationInstance;
         }
 
-        // Second priority: window.Fleetbase
-        if (typeof window !== 'undefined' && window.Fleetbase) {
-            return window.Fleetbase;
+        // Second priority: use applicationInstance if set
+        if (this.applicationInstance) {
+            return this.applicationInstance;
         }
 
         // Third priority: try to get application from owner
