@@ -155,7 +155,6 @@ export default class LegacyUniverseService extends Service.extend(Evented) {
      * @return {void}
      */
     setApplicationInstance(instance) {
-        window.Fleetbase = instance;
         this.applicationInstance = instance;
     }
 
