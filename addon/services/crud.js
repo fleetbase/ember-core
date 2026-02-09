@@ -236,6 +236,11 @@ export default class CrudService extends Service {
                         }
                     )
                     .then(() => {
+                        // Trigger export event
+                        this.universe.trigger('resource.exported', modelName, format, exportParams);
+                        const specificModelName = dasherize(modelName).replace(/-/g, '_');
+                        this.universe.trigger(`${specificModelName}.exported`, format, exportParams);
+                        
                         later(
                             this,
                             () => {
