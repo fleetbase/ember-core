@@ -17,6 +17,7 @@ export default class CrudService extends Service {
     @service notifications;
     @service store;
     @service currentUser;
+    @service universe;
 
     /**
      * Generic deletion modal with options
@@ -43,6 +44,10 @@ export default class CrudService extends Service {
                 try {
                     const response = await model.destroyRecord();
                     this.notifications.success(successNotification);
+                    
+                    // Trigger analytics events
+                    this._triggerResourceEvent('deleted', model);
+                    
                     if (typeof options.onSuccess === 'function') {
                         options.onSuccess(model);
                     }
@@ -161,6 +166,13 @@ export default class CrudService extends Service {
                     );
 
                     this.notifications.success(response.message ?? successMessage);
+                    
+                    // Trigger bulk action event
+                    if (verb === 'delete') {
+                        selected.forEach(model => this._triggerResourceEvent('deleted', model));
+                    }
+                    this.universe.trigger('resource.bulk_action', verb, selected, firstModel);
+                    
                     if (typeof options.onSuccess === 'function') {
                         options.onSuccess(selected);
                     }
@@ -248,6 +260,25 @@ export default class CrudService extends Service {
      * @param {Object} [options={}]
      * @memberof CrudService
      */
+    /**
+     * Helper method to trigger both generic and specific resource events
+     *
+     * @private
+     * @param {String} action - The action performed (created, updated, deleted, etc.)
+     * @param {Model} model - The Ember Data model
+     */
+    _triggerResourceEvent(action, model) {
+        // Trigger generic resource event
+        this.universe.trigger(`resource.${action}`, model);
+        
+        // Trigger specific model event (e.g., order.created, vehicle.updated)
+        const modelName = getModelName(model);
+        if (modelName) {
+            const specificModelName = dasherize(modelName).replace(/-/g, '_');
+            this.universe.trigger(`${specificModelName}.${action}`, model);
+        }
+    }
+
     @action import(modelName, options = {}) {
         // always lowercase modelname
         modelName = modelName.toLowerCase();
@@ -337,6 +368,12 @@ export default class CrudService extends Service {
 
                 try {
                     const response = await this.fetch.post(importEndpoint, { files }, fetchOptions);
+                    
+                    // Trigger import event
+                    this.universe.trigger('resource.imported', modelName, response, files);
+                    const specificModelName = dasherize(modelName).replace(/-/g, '_');
+                    this.universe.trigger(`${specificModelName}.imported`, response, files);
+                    
                     if (typeof options.onImportCompleted === 'function') {
                         options.onImportCompleted(response, files);
                     }

@@ -10,6 +10,7 @@ export default class SessionService extends SimpleAuthSessionService {
     @service currentUser;
     @service fetch;
     @service notifications;
+    @service universe;
 
     /**
      * Set where to transition to
@@ -17,6 +18,13 @@ export default class SessionService extends SimpleAuthSessionService {
      * @var {String}
      */
     @tracked redirectTo = 'console';
+
+    /**
+     * Track session start time for duration calculation
+     *
+     * @var {Date}
+     */
+    @tracked sessionStartTime = null;
 
     /**
      * If session is onboarding a user.
@@ -89,6 +97,10 @@ export default class SessionService extends SimpleAuthSessionService {
                 return this.invalidateWithLoader('Session authentication failed...');
             }
 
+            // Track session initialization
+            this.sessionStartTime = new Date();
+            this.universe.trigger('session.initialized', user, user.organization);
+
             return user;
         } catch (error) {
             await this.invalidateWithLoader(getWithDefault(error, 'message', 'Session authentication failed...'));
@@ -155,6 +167,10 @@ export default class SessionService extends SimpleAuthSessionService {
      * @return {Promise}
      */
     invalidateWithLoader(loadingMessage = 'Ending session...') {
+        // Track session termination
+        const sessionDuration = this.sessionStartTime ? Math.round((new Date() - this.sessionStartTime) / 1000) : null;
+        this.universe.trigger('session.terminated', this.currentUser.user, sessionDuration);
+
         // if loader node is open already just invalidate
         if (this.isLoaderNodeOpen === true) {
             return this.session.invalidate();
