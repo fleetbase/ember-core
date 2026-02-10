@@ -447,7 +447,7 @@ export default class ResourceActionService extends Service {
     _triggerResourceEvent(action, record) {
         // Trigger generic resource event
         this.universe.trigger(`resource.${action}`, record);
-        
+
         // Trigger specific model event using the service's modelName
         if (this.modelName) {
             const specificModelName = this.modelName.replace(/-/g, '_');
