@@ -16,6 +16,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
     @service theme;
     @service notifications;
     @service intl;
+    @service events;
 
     @tracked user = { id: 'anon' };
     @tracked userSnapshot = { id: 'anon' };
@@ -65,14 +66,9 @@ export default class CurrentUserService extends Service.extend(Evented) {
     async load() {
         if (this.session.isAuthenticated) {
             const user = await this.store.findRecord('user', 'me');
-            const snapshot = await this.getUserSnapshot(user);
 
-            this.set('user', user);
-            this.set('userSnapshot', snapshot);
-            this.trigger('user.loaded', user);
-
-            // Set permissions
-            this.permissions = this.getUserPermissions(user);
+            // set user
+            this.setUser(user);
 
             // Load preferences
             await this.loadPreferences();
@@ -91,25 +87,9 @@ export default class CurrentUserService extends Service.extend(Evented) {
 
         try {
             const user = await this.store.queryRecord('user', { me: true });
-            const snapshot = await this.getUserSnapshot(user);
 
-            // Set current user
-            this.set('user', user);
-            this.set('userSnapshot', snapshot);
-            this.trigger('user.loaded', user);
-
-            // Set permissions
-            this.permissions = this.getUserPermissions(user);
-
-            // Set environment from user option
-            this.theme.setEnvironment();
-
-            // Set locale
-            if (user.locale) {
-                this.setLocale(user.locale);
-            } else {
-                await this.loadLocale();
-            }
+            // set user
+            this.setUser(user);
 
             // Load user whois data
             await this.loadWhois();
@@ -308,5 +288,27 @@ export default class CurrentUserService extends Service.extend(Evented) {
         }
 
         return defaultValue;
+    }
+
+    async setUser(user) {
+        const snapshot = await this.getUserSnapshot(user);
+
+        // Set current user
+        this.set('user', user);
+        this.set('userSnapshot', snapshot);
+        this.trigger('user.loaded', user);
+
+        // Set permissions
+        this.permissions = this.getUserPermissions(user);
+
+        // Set environment from user option
+        this.theme.setEnvironment();
+
+        // Set locale
+        if (user.locale) {
+            this.setLocale(user.locale);
+        } else {
+            await this.loadLocale();
+        }
     }
 }
