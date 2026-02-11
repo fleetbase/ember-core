@@ -442,8 +442,6 @@ export default class ResourceActionService extends Service {
         }
     }
 
-
-
     /**
      * Searches for records with debouncing.
      * Uses ember-concurrency for async handling with restartable behavior.

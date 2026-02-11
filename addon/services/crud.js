@@ -262,7 +262,6 @@ export default class CrudService extends Service {
      * @memberof CrudService
      */
 
-
     @action import(modelName, options = {}) {
         // always lowercase modelname
         modelName = modelName.toLowerCase();
