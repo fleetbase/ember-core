@@ -1,4 +1,5 @@
 import Service, { inject as service } from '@ember/service';
+import Evented from '@ember/object/evented';
 import { getOwner } from '@ember/application';
 import config from 'ember-get-config';
 
@@ -12,7 +13,7 @@ import config from 'ember-get-config';
  * @class AnalyticsService
  * @extends Service
  */
-export default class AnalyticsService extends Service {
+export default class AnalyticsService extends Service.extend(Evented) {
     @service universe;
     @service currentUser;
 
@@ -190,7 +191,11 @@ export default class AnalyticsService extends Service {
     // =========================================================================
 
     /**
-     * Triggers an event on the universe service
+     * Triggers an event on both the analytics service and universe service
+     * 
+     * This dual event system allows listeners to subscribe to events on either:
+     * - this.analytics.on('event.name', handler) - Local listeners
+     * - this.universe.on('event.name', handler) - Cross-engine listeners
      * 
      * @private
      * @param {String} eventName - The event name
@@ -201,17 +206,20 @@ export default class AnalyticsService extends Service {
             return;
         }
 
-        if (!this.universe) {
-            console.warn('[Analytics] Universe service not available');
-            return;
-        }
-
         // Debug logging if enabled
         if (config?.analytics?.debug) {
             console.log(`[Analytics] ${eventName}`, args);
         }
 
-        this.universe.trigger(eventName, ...args);
+        // Trigger on analytics service (local listeners)
+        this.trigger(eventName, ...args);
+
+        // Trigger on universe service (cross-engine listeners)
+        if (this.universe) {
+            this.universe.trigger(eventName, ...args);
+        } else {
+            console.warn('[Analytics] Universe service not available');
+        }
     }
 
     /**

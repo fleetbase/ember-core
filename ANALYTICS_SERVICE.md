@@ -14,22 +14,30 @@ The analytics service is designed to:
 
 ## Architecture
 
+The analytics service implements a **dual event system**, firing events on both the analytics service itself and the universe service:
+
 ```
 Service/Component
       ↓
 analytics.trackResourceCreated(order)
       ↓
-Analytics Service
+Analytics Service (extends Evented)
   - Enriches with metadata
   - Formats payload
-      ↓
-universe.trigger('resource.created', ...)
-universe.trigger('order.created', ...)
-      ↓
-Internals (or other engines)
-  - Listens via universe.on()
-  - Translates to PostHog/etc
+  - Fires on TWO event buses:
+      ↓                    ↓
+analytics.trigger()   universe.trigger()
+      ↓                    ↓
+Local Listeners      Cross-Engine Listeners
+(same app/engine)    (internals, other engines)
 ```
+
+### Dual Event System Benefits
+
+1. **Local listeners** - Components can listen directly on `analytics.on()`
+2. **Cross-engine listeners** - Engines listen on `universe.on()`
+3. **Flexible** - Choose the right event bus for your use case
+4. **Follows patterns** - Like `current-user` service which also extends `Evented`
 
 ## Installation
 
@@ -345,7 +353,11 @@ export default class OrderFormComponent extends Component {
 }
 ```
 
-### Listening to Events (in Engines)
+### Listening to Events
+
+#### Option 1: Listen on Universe (Cross-Engine)
+
+Use this approach in engines (like `internals`) to listen to events from other parts of the application:
 
 ```javascript
 // In an engine's instance-initializer
@@ -367,6 +379,44 @@ export function initialize(owner) {
     });
 }
 ```
+
+#### Option 2: Listen on Analytics Service (Local)
+
+Use this approach for local listeners within the same app/engine:
+
+```javascript
+import Component from '@glimmer/component';
+import { inject as service } from '@ember/service';
+
+export default class DashboardComponent extends Component {
+    @service analytics;
+    
+    constructor() {
+        super(...arguments);
+        
+        // Listen to order creation events locally
+        this.analytics.on('order.created', (order, properties) => {
+            console.log('Order created:', order.id);
+            this.refreshDashboard();
+        });
+    }
+    
+    willDestroy() {
+        super.willDestroy();
+        // Clean up listeners
+        this.analytics.off('order.created');
+    }
+}
+```
+
+#### Which Event Bus to Use?
+
+| Use Case | Event Bus | Example |
+|----------|-----------|----------|
+| Cross-engine tracking (PostHog, etc.) | `universe` | Internals listening to core events |
+| Local UI updates | `analytics` | Dashboard refreshing on data changes |
+| Debugging/logging | `analytics` | Development tools |
+| Testing | `analytics` | Unit tests mocking events |
 
 ## Best Practices
 
