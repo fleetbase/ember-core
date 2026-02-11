@@ -30,7 +30,7 @@ export default class ResourceActionService extends Service {
     @service tableContext;
     @service resourceContextPanel;
     @service universe;
-    @service analytics;
+    @service events;
 
     /**
      * Getter for router, attempt to use hostRouter if from engine
@@ -302,7 +302,7 @@ export default class ResourceActionService extends Service {
             );
 
             // Track creation event
-            this.analytics.trackResourceCreated(record);
+            this.events.trackResourceCreated(record);
 
             if (options.refresh) {
                 this.refresh();
@@ -335,7 +335,7 @@ export default class ResourceActionService extends Service {
             );
 
             // Track update event
-            this.analytics.trackResourceUpdated(record);
+            this.events.trackResourceUpdated(record);
 
             if (options.refresh) {
                 this.refresh();
@@ -372,9 +372,9 @@ export default class ResourceActionService extends Service {
 
             // Track save event (create or update)
             if (isNew) {
-                this.analytics.trackResourceCreated(record);
+                this.events.trackResourceCreated(record);
             } else {
-                this.analytics.trackResourceUpdated(record);
+                this.events.trackResourceUpdated(record);
             }
 
             if (options.refresh) {
@@ -425,7 +425,7 @@ export default class ResourceActionService extends Service {
             );
 
             // Track deletion event
-            this.analytics.trackResourceDeleted(record);
+            this.events.trackResourceDeleted(record);
 
             if (options.refresh) {
                 this.refresh();

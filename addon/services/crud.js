@@ -18,7 +18,7 @@ export default class CrudService extends Service {
     @service store;
     @service currentUser;
     @service universe;
-    @service analytics;
+    @service events;
 
     /**
      * Generic deletion modal with options
@@ -47,7 +47,7 @@ export default class CrudService extends Service {
                     this.notifications.success(successNotification);
 
                     // Track deletion event
-                    this.analytics.trackResourceDeleted(model);
+                    this.events.trackResourceDeleted(model);
 
                     if (typeof options.onSuccess === 'function') {
                         options.onSuccess(model);
@@ -169,7 +169,7 @@ export default class CrudService extends Service {
                     this.notifications.success(response.message ?? successMessage);
 
                     // Track bulk action event
-                    this.analytics.trackBulkAction(verb, selected);
+                    this.events.trackBulkAction(verb, selected);
 
                     if (typeof options.onSuccess === 'function') {
                         options.onSuccess(selected);
@@ -235,7 +235,7 @@ export default class CrudService extends Service {
                     )
                     .then(() => {
                         // Track export event
-                        this.analytics.trackResourceExported(modelName, format, exportParams);
+                        this.events.trackResourceExported(modelName, format, exportParams);
 
                         later(
                             this,
@@ -355,7 +355,7 @@ export default class CrudService extends Service {
 
                     // Track import event
                     const importCount = response?.imported?.length || response?.count || files.length;
-                    this.analytics.trackResourceImported(modelName, importCount);
+                    this.events.trackResourceImported(modelName, importCount);
 
                     if (typeof options.onImportCompleted === 'function') {
                         options.onImportCompleted(response, files);

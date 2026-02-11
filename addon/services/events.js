@@ -4,16 +4,16 @@ import { getOwner } from '@ember/application';
 import config from 'ember-get-config';
 
 /**
- * Analytics Service
+ * Events Service
  * 
- * Provides a centralized, analytics-agnostic event tracking system for Fleetbase.
- * This service emits standardized events via the universe service's event bus,
- * allowing engines (like internals) to subscribe and implement their own analytics.
+ * Provides a centralized event tracking system for Fleetbase.
+ * This service emits standardized events on both its own event bus and the universe service,
+ * allowing components, services, and engines to subscribe and react to application events.
  * 
- * @class AnalyticsService
+ * @class EventsService
  * @extends Service
  */
-export default class AnalyticsService extends Service.extend(Evented) {
+export default class EventsService extends Service.extend(Evented) {
     @service universe;
     @service currentUser;
 
@@ -177,13 +177,13 @@ export default class AnalyticsService extends Service.extend(Evented) {
     }
 
     /**
-     * Checks if analytics tracking is enabled
+     * Checks if event tracking is enabled
      * 
      * @returns {Boolean}
      */
     isEnabled() {
-        const analyticsConfig = config?.analytics || {};
-        return analyticsConfig.enabled !== false; // Enabled by default
+        const eventsConfig = config?.events || {};
+        return eventsConfig.enabled !== false; // Enabled by default
     }
 
     // =========================================================================
@@ -191,10 +191,10 @@ export default class AnalyticsService extends Service.extend(Evented) {
     // =========================================================================
 
     /**
-     * Triggers an event on both the analytics service and universe service
+     * Triggers an event on both the events service and universe service
      * 
      * This dual event system allows listeners to subscribe to events on either:
-     * - this.analytics.on('event.name', handler) - Local listeners
+     * - this.events.on('event.name', handler) - Local listeners
      * - this.universe.on('event.name', handler) - Cross-engine listeners
      * 
      * @private
@@ -207,18 +207,18 @@ export default class AnalyticsService extends Service.extend(Evented) {
         }
 
         // Debug logging if enabled
-        if (config?.analytics?.debug) {
-            console.log(`[Analytics] ${eventName}`, args);
+        if (config?.events?.debug) {
+            console.log(`[Events] ${eventName}`, args);
         }
 
-        // Trigger on analytics service (local listeners)
+        // Trigger on events service (local listeners)
         this.trigger(eventName, ...args);
 
         // Trigger on universe service (cross-engine listeners)
         if (this.universe) {
             this.universe.trigger(eventName, ...args);
         } else {
-            console.warn('[Analytics] Universe service not available');
+            console.warn('[Events] Universe service not available');
         }
     }
 
@@ -274,8 +274,8 @@ export default class AnalyticsService extends Service.extend(Evented) {
      * @returns {Object} Enriched properties
      */
     #enrichProperties(props = {}) {
-        const analyticsConfig = config?.analytics || {};
-        const enrichConfig = analyticsConfig.enrich || {};
+        const eventsConfig = config?.events || {};
+        const enrichConfig = eventsConfig.enrich || {};
         const enriched = { ...props };
 
         // Add user context if enabled

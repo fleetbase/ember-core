@@ -1,10 +1,10 @@
-# Analytics Service
+# Events Service
 
 The `analytics` service provides a centralized, analytics-agnostic event tracking system for Fleetbase. It emits standardized events via the `universe` service's event bus, allowing engines (like `internals`) to subscribe and implement their own analytics integrations.
 
 ## Overview
 
-The analytics service is designed to:
+The events service is designed to:
 
 - **Centralize event emission** - Single source of truth for all analytics events
 - **Remain analytics-agnostic** - No vendor-specific code (PostHog, Google Analytics, etc.)
@@ -14,19 +14,19 @@ The analytics service is designed to:
 
 ## Architecture
 
-The analytics service implements a **dual event system**, firing events on both the analytics service itself and the universe service:
+The events service implements a **dual event system**, firing events on both the events service itself and the universe service:
 
 ```
 Service/Component
       ↓
-analytics.trackResourceCreated(order)
+events.trackResourceCreated(order)
       ↓
-Analytics Service (extends Evented)
+Events Service (extends Evented)
   - Enriches with metadata
   - Formats payload
   - Fires on TWO event buses:
       ↓                    ↓
-analytics.trigger()   universe.trigger()
+events.trigger()   universe.trigger()
       ↓                    ↓
 Local Listeners      Cross-Engine Listeners
 (same app/engine)    (internals, other engines)
@@ -34,14 +34,14 @@ Local Listeners      Cross-Engine Listeners
 
 ### Dual Event System Benefits
 
-1. **Local listeners** - Components can listen directly on `analytics.on()`
+1. **Local listeners** - Components can listen directly on `events.on()`
 2. **Cross-engine listeners** - Engines listen on `universe.on()`
 3. **Flexible** - Choose the right event bus for your use case
 4. **Follows patterns** - Like `current-user` service which also extends `Evented`
 
 ## Installation
 
-The analytics service is automatically available in all engines and the console application. It's exported globally via `host-services` and `services`.
+The events service is automatically available in all engines and the console application. It's exported globally via `host-services` and `services`.
 
 ### Injection
 
@@ -49,11 +49,11 @@ The analytics service is automatically available in all engines and the console 
 import { inject as service } from '@ember/service';
 
 export default class MyService extends Service {
-    @service analytics;
+    @service events;
     
     async createOrder(orderData) {
         const order = await this.store.createRecord('order', orderData).save();
-        this.analytics.trackResourceCreated(order);
+        this.events.trackResourceCreated(order);
         return order;
     }
 }
@@ -77,7 +77,7 @@ Tracks the creation of a new resource.
 
 **Example:**
 ```javascript
-this.analytics.trackResourceCreated(order);
+this.events.trackResourceCreated(order);
 // Emits: resource.created, order.created
 ```
 
@@ -95,7 +95,7 @@ Tracks the update of an existing resource.
 
 **Example:**
 ```javascript
-this.analytics.trackResourceUpdated(driver);
+this.events.trackResourceUpdated(driver);
 // Emits: resource.updated, driver.updated
 ```
 
@@ -113,7 +113,7 @@ Tracks the deletion of a resource.
 
 **Example:**
 ```javascript
-this.analytics.trackResourceDeleted(vehicle);
+this.events.trackResourceDeleted(vehicle);
 // Emits: resource.deleted, vehicle.deleted
 ```
 
@@ -131,7 +131,7 @@ Tracks a bulk import of resources.
 
 **Example:**
 ```javascript
-this.analytics.trackResourceImported('contact', 50);
+this.events.trackResourceImported('contact', 50);
 // Emits: resource.imported with count: 50
 ```
 
@@ -151,7 +151,7 @@ Tracks a resource export.
 
 **Example:**
 ```javascript
-this.analytics.trackResourceExported('order', 'csv', { status: 'completed' });
+this.events.trackResourceExported('order', 'csv', { status: 'completed' });
 // Emits: resource.exported, order.exported
 ```
 
@@ -169,7 +169,7 @@ Tracks a bulk action on multiple resources.
 
 **Example:**
 ```javascript
-this.analytics.trackBulkAction('delete', selectedOrders);
+this.events.trackBulkAction('delete', selectedOrders);
 // Emits: resource.bulk_action with count and action
 ```
 
@@ -189,7 +189,7 @@ Tracks when the current user is loaded (session initialized).
 
 **Example:**
 ```javascript
-this.analytics.trackUserLoaded(user, organization);
+this.events.trackUserLoaded(user, organization);
 // Emits: user.loaded
 ```
 
@@ -206,7 +206,7 @@ Tracks when a user session ends.
 
 **Example:**
 ```javascript
-this.analytics.trackSessionTerminated(3600);
+this.events.trackSessionTerminated(3600);
 // Emits: session.terminated with duration
 ```
 
@@ -225,7 +225,7 @@ Tracks a generic custom event.
 
 **Example:**
 ```javascript
-this.analytics.trackEvent('chat.message.sent', { length: 140 });
+this.events.trackEvent('chat.message.sent', { length: 140 });
 // Emits: chat.message.sent
 ```
 
@@ -239,14 +239,14 @@ Checks if analytics tracking is enabled.
 
 **Example:**
 ```javascript
-if (this.analytics.isEnabled()) {
+if (this.events.isEnabled()) {
     // Tracking is enabled
 }
 ```
 
 ## Configuration
 
-The analytics service can be configured via `config/environment.js`:
+The events service can be configured via `config/environment.js`:
 
 ```javascript
 // config/environment.js
@@ -305,14 +305,14 @@ import Service, { inject as service } from '@ember/service';
 
 export default class OrderService extends Service {
     @service store;
-    @service analytics;
+    @service events;
     
     async createOrder(orderData) {
         const order = this.store.createRecord('order', orderData);
         await order.save();
         
         // Track the creation
-        this.analytics.trackResourceCreated(order);
+        this.events.trackResourceCreated(order);
         
         return order;
     }
@@ -322,7 +322,7 @@ export default class OrderService extends Service {
         await order.save();
         
         // Track the update
-        this.analytics.trackResourceUpdated(order);
+        this.events.trackResourceUpdated(order);
         
         return order;
     }
@@ -337,7 +337,7 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 
 export default class OrderFormComponent extends Component {
-    @service analytics;
+    @service events;
     
     @action
     async saveOrder() {
@@ -345,9 +345,9 @@ export default class OrderFormComponent extends Component {
         
         // Track the save
         if (this.args.order.isNew) {
-            this.analytics.trackResourceCreated(this.args.order);
+            this.events.trackResourceCreated(this.args.order);
         } else {
-            this.analytics.trackResourceUpdated(this.args.order);
+            this.events.trackResourceUpdated(this.args.order);
         }
     }
 }
@@ -380,7 +380,7 @@ export function initialize(owner) {
 }
 ```
 
-#### Option 2: Listen on Analytics Service (Local)
+#### Option 2: Listen on Events Service (Local)
 
 Use this approach for local listeners within the same app/engine:
 
@@ -389,13 +389,13 @@ import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 
 export default class DashboardComponent extends Component {
-    @service analytics;
+    @service events;
     
     constructor() {
         super(...arguments);
         
         // Listen to order creation events locally
-        this.analytics.on('order.created', (order, properties) => {
+        this.events.on('order.created', (order, properties) => {
             console.log('Order created:', order.id);
             this.refreshDashboard();
         });
@@ -404,7 +404,7 @@ export default class DashboardComponent extends Component {
     willDestroy() {
         super.willDestroy();
         // Clean up listeners
-        this.analytics.off('order.created');
+        this.events.off('order.created');
     }
 }
 ```
@@ -429,7 +429,7 @@ export default class DashboardComponent extends Component {
 
 ## Testing
 
-To stub the analytics service in tests:
+To stub the events service in tests:
 
 ```javascript
 import { module, test } from 'qunit';
@@ -466,10 +466,10 @@ this.universe.trigger('order.created', model);
 
 **After:**
 ```javascript
-this.analytics.trackResourceCreated(model);
+this.events.trackResourceCreated(model);
 // Automatically emits both events
 ```
 
 ## Support
 
-For questions or issues with the analytics service, please refer to the Fleetbase documentation or contact the development team.
+For questions or issues with the events service, please refer to the Fleetbase documentation or contact the development team.
