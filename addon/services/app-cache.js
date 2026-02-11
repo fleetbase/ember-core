@@ -13,7 +13,8 @@ export default class AppCacheService extends Service {
 
     get cachePrefix() {
         const userId = this.currentUser.id ?? 'anon';
-        return `${userId}:${this.currentUser.companyId}:`;
+        const companyId = this.currentUser.companyId ?? 'no-org';
+        return `${userId}:${companyId}:`;
     }
 
     @action setEmberData(key, value, except = []) {
