@@ -29,6 +29,8 @@ export default class ResourceActionService extends Service {
     @service abilities;
     @service tableContext;
     @service resourceContextPanel;
+    @service universe;
+    @service events;
 
     /**
      * Getter for router, attempt to use hostRouter if from engine
@@ -299,6 +301,9 @@ export default class ResourceActionService extends Service {
                 })
             );
 
+            // Track creation event
+            this.events.trackResourceCreated(record);
+
             if (options.refresh) {
                 this.refresh();
             }
@@ -328,6 +333,9 @@ export default class ResourceActionService extends Service {
                     resourceName: this.getRecordName(record),
                 })
             );
+
+            // Track update event
+            this.events.trackResourceUpdated(record);
 
             if (options.refresh) {
                 this.refresh();
@@ -361,6 +369,13 @@ export default class ResourceActionService extends Service {
                     action: isNew ? 'created' : 'updated',
                 })
             );
+
+            // Track save event (create or update)
+            if (isNew) {
+                this.events.trackResourceCreated(record);
+            } else {
+                this.events.trackResourceUpdated(record);
+            }
 
             if (options.refresh) {
                 this.refresh();
@@ -409,6 +424,9 @@ export default class ResourceActionService extends Service {
                 })
             );
 
+            // Track deletion event
+            this.events.trackResourceDeleted(record);
+
             if (options.refresh) {
                 this.refresh();
             }
@@ -423,6 +441,8 @@ export default class ResourceActionService extends Service {
             throw error;
         }
     }
+
+
 
     /**
      * Searches for records with debouncing.

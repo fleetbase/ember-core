@@ -16,6 +16,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
     @service theme;
     @service notifications;
     @service intl;
+    @service events;
 
     @tracked user = { id: 'anon' };
     @tracked userSnapshot = { id: 'anon' };

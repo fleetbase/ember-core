@@ -17,6 +17,8 @@ export default class CrudService extends Service {
     @service notifications;
     @service store;
     @service currentUser;
+    @service universe;
+    @service events;
 
     /**
      * Generic deletion modal with options
@@ -43,6 +45,10 @@ export default class CrudService extends Service {
                 try {
                     const response = await model.destroyRecord();
                     this.notifications.success(successNotification);
+
+                    // Track deletion event
+                    this.events.trackResourceDeleted(model);
+
                     if (typeof options.onSuccess === 'function') {
                         options.onSuccess(model);
                     }
@@ -161,6 +167,10 @@ export default class CrudService extends Service {
                     );
 
                     this.notifications.success(response.message ?? successMessage);
+
+                    // Track bulk action event
+                    this.events.trackBulkAction(verb, selected);
+
                     if (typeof options.onSuccess === 'function') {
                         options.onSuccess(selected);
                     }
@@ -224,6 +234,9 @@ export default class CrudService extends Service {
                         }
                     )
                     .then(() => {
+                        // Track export event
+                        this.events.trackResourceExported(modelName, format, exportParams);
+
                         later(
                             this,
                             () => {
@@ -248,6 +261,8 @@ export default class CrudService extends Service {
      * @param {Object} [options={}]
      * @memberof CrudService
      */
+
+
     @action import(modelName, options = {}) {
         // always lowercase modelname
         modelName = modelName.toLowerCase();
@@ -337,6 +352,11 @@ export default class CrudService extends Service {
 
                 try {
                     const response = await this.fetch.post(importEndpoint, { files }, fetchOptions);
+
+                    // Track import event
+                    const importCount = response?.imported?.length || response?.count || files.length;
+                    this.events.trackResourceImported(modelName, importCount);
+
                     if (typeof options.onImportCompleted === 'function') {
                         options.onImportCompleted(response, files);
                     }

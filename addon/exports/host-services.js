@@ -19,6 +19,7 @@ export const hostServices = [
     'sidebar',
     'dashboard',
     'universe',
+    'events',
     'intl',
     'abilities',
     'language',
