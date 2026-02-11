@@ -30,6 +30,7 @@ export default class ResourceActionService extends Service {
     @service tableContext;
     @service resourceContextPanel;
     @service universe;
+    @service analytics;
 
     /**
      * Getter for router, attempt to use hostRouter if from engine
@@ -300,8 +301,8 @@ export default class ResourceActionService extends Service {
                 })
             );
 
-            // Trigger analytics events
-            this._triggerResourceEvent('created', record);
+            // Track creation event
+            this.analytics.trackResourceCreated(record);
 
             if (options.refresh) {
                 this.refresh();
@@ -333,8 +334,8 @@ export default class ResourceActionService extends Service {
                 })
             );
 
-            // Trigger analytics events
-            this._triggerResourceEvent('updated', record);
+            // Track update event
+            this.analytics.trackResourceUpdated(record);
 
             if (options.refresh) {
                 this.refresh();
@@ -369,8 +370,12 @@ export default class ResourceActionService extends Service {
                 })
             );
 
-            // Trigger analytics events
-            this._triggerResourceEvent(isNew ? 'created' : 'updated', record);
+            // Track save event (create or update)
+            if (isNew) {
+                this.analytics.trackResourceCreated(record);
+            } else {
+                this.analytics.trackResourceUpdated(record);
+            }
 
             if (options.refresh) {
                 this.refresh();
@@ -419,8 +424,8 @@ export default class ResourceActionService extends Service {
                 })
             );
 
-            // Trigger analytics events
-            this._triggerResourceEvent('deleted', record);
+            // Track deletion event
+            this.analytics.trackResourceDeleted(record);
 
             if (options.refresh) {
                 this.refresh();
@@ -437,23 +442,7 @@ export default class ResourceActionService extends Service {
         }
     }
 
-    /**
-     * Helper method to trigger both generic and specific resource events
-     *
-     * @private
-     * @param {String} action - The action performed (created, updated, deleted, etc.)
-     * @param {Model} record - The Ember Data model
-     */
-    _triggerResourceEvent(action, record) {
-        // Trigger generic resource event
-        this.universe.trigger(`resource.${action}`, record);
 
-        // Trigger specific model event using the service's modelName
-        if (this.modelName) {
-            const specificModelName = this.modelName.replace(/-/g, '_');
-            this.universe.trigger(`${specificModelName}.${action}`, record);
-        }
-    }
 
     /**
      * Searches for records with debouncing.

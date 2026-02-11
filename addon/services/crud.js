@@ -18,6 +18,7 @@ export default class CrudService extends Service {
     @service store;
     @service currentUser;
     @service universe;
+    @service analytics;
 
     /**
      * Generic deletion modal with options
@@ -45,8 +46,8 @@ export default class CrudService extends Service {
                     const response = await model.destroyRecord();
                     this.notifications.success(successNotification);
 
-                    // Trigger analytics events
-                    this._triggerResourceEvent('deleted', model);
+                    // Track deletion event
+                    this.analytics.trackResourceDeleted(model);
 
                     if (typeof options.onSuccess === 'function') {
                         options.onSuccess(model);
@@ -167,11 +168,8 @@ export default class CrudService extends Service {
 
                     this.notifications.success(response.message ?? successMessage);
 
-                    // Trigger bulk action event
-                    if (verb === 'delete') {
-                        selected.forEach((model) => this._triggerResourceEvent('deleted', model));
-                    }
-                    this.universe.trigger('resource.bulk_action', verb, selected, firstModel);
+                    // Track bulk action event
+                    this.analytics.trackBulkAction(verb, selected);
 
                     if (typeof options.onSuccess === 'function') {
                         options.onSuccess(selected);
@@ -236,10 +234,8 @@ export default class CrudService extends Service {
                         }
                     )
                     .then(() => {
-                        // Trigger export event
-                        this.universe.trigger('resource.exported', modelName, format, exportParams);
-                        const specificModelName = dasherize(modelName).replace(/-/g, '_');
-                        this.universe.trigger(`${specificModelName}.exported`, format, exportParams);
+                        // Track export event
+                        this.analytics.trackResourceExported(modelName, format, exportParams);
 
                         later(
                             this,
@@ -265,24 +261,7 @@ export default class CrudService extends Service {
      * @param {Object} [options={}]
      * @memberof CrudService
      */
-    /**
-     * Helper method to trigger both generic and specific resource events
-     *
-     * @private
-     * @param {String} action - The action performed (created, updated, deleted, etc.)
-     * @param {Model} model - The Ember Data model
-     */
-    _triggerResourceEvent(action, model) {
-        // Trigger generic resource event
-        this.universe.trigger(`resource.${action}`, model);
 
-        // Trigger specific model event (e.g., order.created, vehicle.updated)
-        const modelName = getModelName(model);
-        if (modelName) {
-            const specificModelName = dasherize(modelName).replace(/-/g, '_');
-            this.universe.trigger(`${specificModelName}.${action}`, model);
-        }
-    }
 
     @action import(modelName, options = {}) {
         // always lowercase modelname
@@ -374,10 +353,9 @@ export default class CrudService extends Service {
                 try {
                     const response = await this.fetch.post(importEndpoint, { files }, fetchOptions);
 
-                    // Trigger import event
-                    this.universe.trigger('resource.imported', modelName, response, files);
-                    const specificModelName = dasherize(modelName).replace(/-/g, '_');
-                    this.universe.trigger(`${specificModelName}.imported`, response, files);
+                    // Track import event
+                    const importCount = response?.imported?.length || response?.count || files.length;
+                    this.analytics.trackResourceImported(modelName, importCount);
 
                     if (typeof options.onImportCompleted === 'function') {
                         options.onImportCompleted(response, files);

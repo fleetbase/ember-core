@@ -16,6 +16,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
     @service theme;
     @service notifications;
     @service intl;
+    @service analytics;
 
     @tracked user = { id: 'anon' };
     @tracked userSnapshot = { id: 'anon' };
@@ -71,6 +72,9 @@ export default class CurrentUserService extends Service.extend(Evented) {
             this.set('userSnapshot', snapshot);
             this.trigger('user.loaded', user);
 
+            // Track user loaded event
+            this.analytics.trackUserLoaded(user, user.company);
+
             // Set permissions
             this.permissions = this.getUserPermissions(user);
 
@@ -97,6 +101,9 @@ export default class CurrentUserService extends Service.extend(Evented) {
             this.set('user', user);
             this.set('userSnapshot', snapshot);
             this.trigger('user.loaded', user);
+
+            // Track user loaded event
+            this.analytics.trackUserLoaded(user, user.company);
 
             // Set permissions
             this.permissions = this.getUserPermissions(user);

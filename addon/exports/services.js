@@ -21,6 +21,7 @@ export const services = [
     'sidebar',
     'dashboard',
     'universe',
+    'analytics',
     'intl',
     'abilities',
     'language',
