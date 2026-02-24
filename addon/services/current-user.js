@@ -8,6 +8,7 @@ import { isBlank } from '@ember/utils';
 import { alias } from '@ember/object/computed';
 import { storageFor } from 'ember-local-storage';
 import { debug } from '@ember/debug';
+import lookupUserIp from '../utils/lookup-user-ip';
 
 export default class CurrentUserService extends Service.extend(Evented) {
     @service session;
@@ -139,23 +140,34 @@ export default class CurrentUserService extends Service.extend(Evented) {
     }
 
     async loadWhois() {
-        this.fetch.shouldResetCache();
-
         try {
-            const whois = await this.fetch.cachedGet(
-                'lookup/whois',
-                {},
-                {
-                    expirationInterval: 60,
-                    expirationIntervalUnit: 'minutes',
-                }
-            );
+            // Use frontend IP lookup to get accurate user location
+            // This avoids the issue of server-side lookup returning server IP instead of user IP
+            const whois = await lookupUserIp({
+                timeout: 5000,
+                cache: true,
+            });
+
             this.setOption('whois', whois);
             this.whoisData = whois;
 
             return whois;
         } catch (error) {
-            this.notifications.serverError(error);
+            console.error('[currentUser] Failed to load whois:', error);
+            this.notifications.warning('Unable to detect your location. Some features may use default settings.');
+
+            // Return fallback data with browser timezone
+            const fallback = {
+                city: null,
+                country_code: null,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                _source: 'fallback',
+            };
+
+            this.setOption('whois', fallback);
+            this.whoisData = fallback;
+
+            return fallback;
         }
     }
 
