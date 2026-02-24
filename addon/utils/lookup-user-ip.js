@@ -1,5 +1,3 @@
-import { isBlank } from '@ember/utils';
-
 /**
  * Lookup user's IP address and geolocation information using geoiplookup.io
  *
