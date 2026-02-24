@@ -33,7 +33,6 @@ export default class UniverseService extends Service.extend(Evented) {
     @service router;
     @service intl;
     @service urlSearchParams;
-
     @tracked applicationInstance;
     @tracked initialLocation = { ...window.location };
     @tracked bootCallbacks = A([]);
