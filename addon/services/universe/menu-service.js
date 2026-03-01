@@ -153,6 +153,32 @@ export default class MenuService extends Service.extend(Evented) {
         const menuItem = this.#normalizeMenuItem(itemOrTitle, route, options);
         this.registry.register('header', 'menu-item', menuItem.slug, menuItem);
 
+        // Auto-register each shortcut as a first-class header menu item so that
+        // they appear in the customiser's "All Extensions" list and can be found
+        // by id in allItems when pinned to the bar.
+        if (Array.isArray(menuItem.shortcuts)) {
+            for (const sc of menuItem.shortcuts) {
+                const scId = sc.id ?? dasherize(menuItem.id + '-sc-' + sc.title);
+                const scSlug = sc.slug ?? scId;
+                const scItem = {
+                    id: scId,
+                    slug: scSlug,
+                    title: sc.title,
+                    route: sc.route ?? menuItem.route,
+                    icon: sc.icon ?? menuItem.icon,
+                    iconPrefix: sc.iconPrefix ?? menuItem.iconPrefix,
+                    description: sc.description ?? null,
+                    _isShortcut: true,
+                    _parentTitle: menuItem.title,
+                    _parentId: menuItem.id,
+                    priority: (menuItem.priority ?? 0) + 1,
+                    _isMenuItem: true,
+                };
+                this.registry.register('header', 'menu-item', scSlug, scItem);
+                this.trigger('menuItem.registered', scItem, 'header');
+            }
+        }
+
         // Trigger event for backward compatibility
         this.trigger('menuItem.registered', menuItem, 'header');
     }
