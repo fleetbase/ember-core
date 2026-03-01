@@ -123,6 +123,11 @@ export default class MenuItem extends BaseContract {
             // plain object with at minimum { title, route } and optionally
             // { icon, iconPrefix, id }.  Optional – defaults to null.
             this.shortcuts = definition.shortcuts || null;
+
+            // An array of string tags used to improve search discoverability in
+            // the overflow dropdown.  e.g. ['logistics', 'tracking', 'fleet'].
+            // Optional – defaults to null.
+            this.tags = Array.isArray(definition.tags) ? definition.tags : (definition.tags ? [definition.tags] : null);
         } else {
             // Handle string title with optional route (chaining pattern)
             this.title = titleOrDefinition;
@@ -178,6 +183,7 @@ export default class MenuItem extends BaseContract {
             // ── Phase 2 additions ──────────────────────────────────────────
             this.description = null;
             this.shortcuts = null;
+            this.tags = null;
         }
 
         // Call setup() to trigger validation after properties are set
@@ -415,6 +421,26 @@ export default class MenuItem extends BaseContract {
     }
 
     /**
+     * Set an array of string tags for this menu item.
+     * Tags are matched against the search query in the overflow dropdown,
+     * making items discoverable even when the query doesn't match the title
+     * or description.
+     *
+     * @method withTags
+     * @param {String|String[]} tags One tag string or an array of tag strings
+     * @returns {MenuItem} This instance for chaining
+     *
+     * @example
+     * new MenuItem('Fleet-Ops', 'console.fleet-ops')
+     *   .withTags(['logistics', 'tracking', 'fleet', 'drivers'])
+     */
+    withTags(tags) {
+        this.tags = Array.isArray(tags) ? tags : (tags ? [tags] : null);
+        this._options.tags = this.tags;
+        return this;
+    }
+
+    /**
      * Add a single shortcut to the existing shortcuts array.
      * Creates the array if it does not yet exist.
      *
@@ -501,6 +527,9 @@ export default class MenuItem extends BaseContract {
 
             // Optional array of shortcut sub-links shown inside the extension card
             shortcuts: this.shortcuts,
+
+            // Optional array of string tags for search discoverability
+            tags: this.tags,
 
             // Indicator flag
             _isMenuItem: true,
