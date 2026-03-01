@@ -35,6 +35,16 @@ import isObject from '../utils/is-object';
  *   .onClick((menuItem, router) => {
  *     router.transitionTo('virtual', menuItem.slug);
  *   })
+ *
+ * @example
+ * // Menu item with description and shortcuts (Phase 2)
+ * new MenuItem('Fleet-Ops', 'console.fleet-ops')
+ *   .withIcon('route')
+ *   .withDescription('Manage fleets, drivers, and live orders')
+ *   .withShortcuts([
+ *     { title: 'Scheduler', route: 'console.fleet-ops.scheduler', icon: 'calendar' },
+ *     { title: 'Order Config', route: 'console.fleet-ops.order-configs', icon: 'gear' },
+ *   ])
  */
 export default class MenuItem extends BaseContract {
     /**
@@ -102,6 +112,17 @@ export default class MenuItem extends BaseContract {
 
             // Nested items
             this.items = definition.items || null;
+
+            // ── Phase 2 additions ──────────────────────────────────────────
+            // A short human-readable description of the extension shown in the
+            // overflow dropdown.  Optional – defaults to null.
+            this.description = definition.description || null;
+
+            // An array of shortcut items (sub-menu links) displayed beneath the
+            // extension name in the multi-column dropdown.  Each shortcut is a
+            // plain object with at minimum { title, route } and optionally
+            // { icon, iconPrefix, id }.  Optional – defaults to null.
+            this.shortcuts = definition.shortcuts || null;
         } else {
             // Handle string title with optional route (chaining pattern)
             this.title = titleOrDefinition;
@@ -153,6 +174,10 @@ export default class MenuItem extends BaseContract {
 
             // Nested items
             this.items = null;
+
+            // ── Phase 2 additions ──────────────────────────────────────────
+            this.description = null;
+            this.shortcuts = null;
         }
 
         // Call setup() to trigger validation after properties are set
@@ -342,6 +367,75 @@ export default class MenuItem extends BaseContract {
         return this;
     }
 
+    // ── Phase 2 builder methods ────────────────────────────────────────────
+
+    /**
+     * Set a short human-readable description for the extension.
+     * Displayed beneath the extension title in the overflow dropdown.
+     *
+     * @method withDescription
+     * @param {String} description Short description text
+     * @returns {MenuItem} This instance for chaining
+     *
+     * @example
+     * new MenuItem('Fleet-Ops', 'console.fleet-ops')
+     *   .withDescription('Manage fleets, drivers, and live orders')
+     */
+    withDescription(description) {
+        this.description = description;
+        this._options.description = description;
+        return this;
+    }
+
+    /**
+     * Set an array of shortcut items displayed beneath the extension in the
+     * multi-column overflow dropdown.  Each shortcut is a plain object:
+     *
+     *   { title, route, icon?, iconPrefix?, id? }
+     *
+     * Shortcuts are purely navigational – they do not support onClick handlers.
+     * They are rendered as compact links inside the extension card in the
+     * dropdown and can be individually pinned to the navigation bar.
+     *
+     * @method withShortcuts
+     * @param {Array<Object>} shortcuts Array of shortcut definition objects
+     * @returns {MenuItem} This instance for chaining
+     *
+     * @example
+     * new MenuItem('Fleet-Ops', 'console.fleet-ops')
+     *   .withShortcuts([
+     *     { title: 'Scheduler', route: 'console.fleet-ops.scheduler', icon: 'calendar' },
+     *     { title: 'Order Config', route: 'console.fleet-ops.order-configs', icon: 'gear' },
+     *   ])
+     */
+    withShortcuts(shortcuts) {
+        this.shortcuts = Array.isArray(shortcuts) ? shortcuts : null;
+        this._options.shortcuts = this.shortcuts;
+        return this;
+    }
+
+    /**
+     * Add a single shortcut to the existing shortcuts array.
+     * Creates the array if it does not yet exist.
+     *
+     * @method addShortcut
+     * @param {Object} shortcut Shortcut definition object { title, route, icon?, iconPrefix?, id? }
+     * @returns {MenuItem} This instance for chaining
+     *
+     * @example
+     * new MenuItem('Fleet-Ops', 'console.fleet-ops')
+     *   .addShortcut({ title: 'Scheduler', route: 'console.fleet-ops.scheduler' })
+     *   .addShortcut({ title: 'Order Config', route: 'console.fleet-ops.order-configs' })
+     */
+    addShortcut(shortcut) {
+        if (!Array.isArray(this.shortcuts)) {
+            this.shortcuts = [];
+        }
+        this.shortcuts = [...this.shortcuts, shortcut];
+        this._options.shortcuts = this.shortcuts;
+        return this;
+    }
+
     /**
      * Get the plain object representation
      *
@@ -400,6 +494,13 @@ export default class MenuItem extends BaseContract {
 
             // Nested items
             items: this.items,
+
+            // ── Phase 2 additions ──────────────────────────────────────────
+            // Optional short description shown in the overflow dropdown card
+            description: this.description,
+
+            // Optional array of shortcut sub-links shown inside the extension card
+            shortcuts: this.shortcuts,
 
             // Indicator flag
             _isMenuItem: true,
