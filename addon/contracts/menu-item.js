@@ -128,7 +128,7 @@ export default class MenuItem extends BaseContract {
             // An array of string tags used to improve search discoverability in
             // the overflow dropdown.  e.g. ['logistics', 'tracking', 'fleet'].
             // Optional – defaults to null.
-            this.tags = isArray(definition.tags) ? definition.tags : (definition.tags ? [definition.tags] : null);
+            this.tags = isArray(definition.tags) ? definition.tags : definition.tags ? [definition.tags] : null;
         } else {
             // Handle string title with optional route (chaining pattern)
             this.title = titleOrDefinition;
@@ -473,7 +473,7 @@ export default class MenuItem extends BaseContract {
      *   .withTags(['logistics', 'tracking', 'fleet', 'drivers'])
      */
     withTags(tags) {
-        this.tags = isArray(tags) ? tags : (tags ? [tags] : null);
+        this.tags = isArray(tags) ? tags : tags ? [tags] : null;
         this._options.tags = this.tags;
         return this;
     }

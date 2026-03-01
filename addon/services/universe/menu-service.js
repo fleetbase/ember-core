@@ -192,7 +192,7 @@ export default class MenuService extends Service.extend(Evented) {
                     description: sc.description ?? null,
                     // Shortcuts inherit parent tags so they surface under the
                     // same search terms; shortcut-specific tags take precedence.
-                    tags: isArray(sc.tags) ? sc.tags : (isArray(menuItem.tags) ? menuItem.tags : null),
+                    tags: isArray(sc.tags) ? sc.tags : isArray(menuItem.tags) ? menuItem.tags : null,
 
                     // ── Behaviour ─────────────────────────────────────────────
                     onClick: sc.onClick ?? null,
