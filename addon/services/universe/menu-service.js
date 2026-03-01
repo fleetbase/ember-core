@@ -160,17 +160,52 @@ export default class MenuService extends Service.extend(Evented) {
             for (const sc of menuItem.shortcuts) {
                 const scId = sc.id ?? dasherize(menuItem.id + '-sc-' + sc.title);
                 const scSlug = sc.slug ?? scId;
+
+                // Build a first-class item that supports the full MenuItem
+                // property surface.  Each property falls back to the parent's
+                // value so shortcuts inherit sensible defaults without the
+                // consumer having to repeat them.
                 const scItem = {
+                    // ── Identity ──────────────────────────────────────────────
                     id: scId,
                     slug: scSlug,
                     title: sc.title,
+                    text: sc.text ?? sc.title,
+                    label: sc.label ?? sc.title,
+                    view: sc.view ?? scId,
+
+                    // ── Routing ───────────────────────────────────────────────
                     route: sc.route ?? menuItem.route,
+                    section: sc.section ?? null,
+                    queryParams: sc.queryParams ?? {},
+                    routeParams: sc.routeParams ?? [],
+
+                    // ── Icons (full surface) ──────────────────────────────────
                     icon: sc.icon ?? menuItem.icon,
                     iconPrefix: sc.iconPrefix ?? menuItem.iconPrefix,
+                    iconSize: sc.iconSize ?? menuItem.iconSize ?? null,
+                    iconClass: sc.iconClass ?? menuItem.iconClass ?? null,
+                    iconComponent: sc.iconComponent ?? null,
+                    iconComponentOptions: sc.iconComponentOptions ?? {},
+
+                    // ── Metadata ──────────────────────────────────────────────
                     description: sc.description ?? null,
-                    // Inherit parent tags and merge with any shortcut-specific tags
-                    // so that shortcuts are discoverable via the same search terms.
+                    // Shortcuts inherit parent tags so they surface under the
+                    // same search terms; shortcut-specific tags take precedence.
                     tags: isArray(sc.tags) ? sc.tags : (isArray(menuItem.tags) ? menuItem.tags : null),
+
+                    // ── Behaviour ─────────────────────────────────────────────
+                    onClick: sc.onClick ?? null,
+                    disabled: sc.disabled ?? false,
+                    type: sc.type ?? 'default',
+                    buttonType: sc.buttonType ?? null,
+
+                    // ── Styling ───────────────────────────────────────────────
+                    class: sc.class ?? null,
+                    inlineClass: sc.inlineClass ?? null,
+                    wrapperClass: sc.wrapperClass ?? null,
+
+                    // ── Internal flags ────────────────────────────────────────
                     _isShortcut: true,
                     _parentTitle: menuItem.title,
                     _parentId: menuItem.id,
