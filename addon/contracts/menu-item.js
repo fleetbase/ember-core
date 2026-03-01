@@ -1,6 +1,7 @@
 import BaseContract from './base-contract';
 import ExtensionComponent from './extension-component';
 import { dasherize } from '@ember/string';
+import { isArray } from '@ember/array';
 import isObject from '../utils/is-object';
 
 /**
@@ -123,6 +124,11 @@ export default class MenuItem extends BaseContract {
             // plain object with at minimum { title, route } and optionally
             // { icon, iconPrefix, id }.  Optional – defaults to null.
             this.shortcuts = definition.shortcuts || null;
+
+            // An array of string tags used to improve search discoverability in
+            // the overflow dropdown.  e.g. ['logistics', 'tracking', 'fleet'].
+            // Optional – defaults to null.
+            this.tags = isArray(definition.tags) ? definition.tags : definition.tags ? [definition.tags] : null;
         } else {
             // Handle string title with optional route (chaining pattern)
             this.title = titleOrDefinition;
@@ -178,6 +184,7 @@ export default class MenuItem extends BaseContract {
             // ── Phase 2 additions ──────────────────────────────────────────
             this.description = null;
             this.shortcuts = null;
+            this.tags = null;
         }
 
         // Call setup() to trigger validation after properties are set
@@ -388,14 +395,40 @@ export default class MenuItem extends BaseContract {
     }
 
     /**
-     * Set an array of shortcut items displayed beneath the extension in the
-     * multi-column overflow dropdown.  Each shortcut is a plain object:
+     * Set an array of shortcut items displayed as independent sibling cards in
+     * the multi-column overflow dropdown (AWS Console style).  Each shortcut
+     * supports the full MenuItem property surface:
      *
-     *   { title, route, icon?, iconPrefix?, id? }
+     *   Required:
+     *     title    {String}   Display label
      *
-     * Shortcuts are purely navigational – they do not support onClick handlers.
-     * They are rendered as compact links inside the extension card in the
-     * dropdown and can be individually pinned to the navigation bar.
+     *   Routing:
+     *     route    {String}   Ember route name
+     *     queryParams {Object}
+     *     routeParams {Array}
+     *
+     *   Identity:
+     *     id       {String}   Explicit id (auto-dasherized from title if omitted)
+     *     slug     {String}   URL slug (falls back to id)
+     *
+     *   Icons:
+     *     icon            {String}   FontAwesome icon name
+     *     iconPrefix      {String}   FA prefix (e.g. 'far', 'fab')
+     *     iconSize        {String}   FA size string
+     *     iconClass       {String}   Extra CSS class on the icon element
+     *     iconComponent   {String}   Lazy-loaded engine component path
+     *     iconComponentOptions {Object}
+     *
+     *   Metadata:
+     *     description {String}   Short description shown in the card
+     *     tags        {String[]} Search tags
+     *
+     *   Behaviour:
+     *     onClick  {Function}  Click handler (receives the shortcut item)
+     *     disabled {Boolean}
+     *
+     * Shortcuts are registered as first-class header menu items at boot time
+     * and can be individually pinned to the navigation bar.
      *
      * @method withShortcuts
      * @param {Array<Object>} shortcuts Array of shortcut definition objects
@@ -404,13 +437,44 @@ export default class MenuItem extends BaseContract {
      * @example
      * new MenuItem('Fleet-Ops', 'console.fleet-ops')
      *   .withShortcuts([
-     *     { title: 'Scheduler', route: 'console.fleet-ops.scheduler', icon: 'calendar' },
-     *     { title: 'Order Config', route: 'console.fleet-ops.order-configs', icon: 'gear' },
+     *     {
+     *       title: 'Scheduler',
+     *       route: 'console.fleet-ops.scheduler',
+     *       icon: 'calendar',
+     *       description: 'Plan and visualise driver schedules',
+     *       tags: ['schedule', 'calendar'],
+     *     },
+     *     {
+     *       title: 'Live Map',
+     *       route: 'console.fleet-ops',
+     *       iconComponent: 'fleet-ops@components/live-map-icon',
+     *       description: 'Real-time vehicle tracking',
+     *     },
      *   ])
      */
     withShortcuts(shortcuts) {
-        this.shortcuts = Array.isArray(shortcuts) ? shortcuts : null;
+        this.shortcuts = isArray(shortcuts) ? shortcuts : null;
         this._options.shortcuts = this.shortcuts;
+        return this;
+    }
+
+    /**
+     * Set an array of string tags for this menu item.
+     * Tags are matched against the search query in the overflow dropdown,
+     * making items discoverable even when the query doesn't match the title
+     * or description.
+     *
+     * @method withTags
+     * @param {String|String[]} tags One tag string or an array of tag strings
+     * @returns {MenuItem} This instance for chaining
+     *
+     * @example
+     * new MenuItem('Fleet-Ops', 'console.fleet-ops')
+     *   .withTags(['logistics', 'tracking', 'fleet', 'drivers'])
+     */
+    withTags(tags) {
+        this.tags = isArray(tags) ? tags : tags ? [tags] : null;
+        this._options.tags = this.tags;
         return this;
     }
 
@@ -428,7 +492,7 @@ export default class MenuItem extends BaseContract {
      *   .addShortcut({ title: 'Order Config', route: 'console.fleet-ops.order-configs' })
      */
     addShortcut(shortcut) {
-        if (!Array.isArray(this.shortcuts)) {
+        if (!isArray(this.shortcuts)) {
             this.shortcuts = [];
         }
         this.shortcuts = [...this.shortcuts, shortcut];
@@ -501,6 +565,9 @@ export default class MenuItem extends BaseContract {
 
             // Optional array of shortcut sub-links shown inside the extension card
             shortcuts: this.shortcuts,
+
+            // Optional array of string tags for search discoverability
+            tags: this.tags,
 
             // Indicator flag
             _isMenuItem: true,
