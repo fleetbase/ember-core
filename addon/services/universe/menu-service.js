@@ -3,7 +3,7 @@ import Evented from '@ember/object/evented';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { dasherize } from '@ember/string';
-import { A } from '@ember/array';
+import { A, isArray } from '@ember/array';
 import MenuItem from '../../contracts/menu-item';
 import MenuPanel from '../../contracts/menu-panel';
 
@@ -156,7 +156,7 @@ export default class MenuService extends Service.extend(Evented) {
         // Auto-register each shortcut as a first-class header menu item so that
         // they appear in the customiser's "All Extensions" list and can be found
         // by id in allItems when pinned to the bar.
-        if (Array.isArray(menuItem.shortcuts)) {
+        if (isArray(menuItem.shortcuts)) {
             for (const sc of menuItem.shortcuts) {
                 const scId = sc.id ?? dasherize(menuItem.id + '-sc-' + sc.title);
                 const scSlug = sc.slug ?? scId;
@@ -168,6 +168,9 @@ export default class MenuService extends Service.extend(Evented) {
                     icon: sc.icon ?? menuItem.icon,
                     iconPrefix: sc.iconPrefix ?? menuItem.iconPrefix,
                     description: sc.description ?? null,
+                    // Inherit parent tags and merge with any shortcut-specific tags
+                    // so that shortcuts are discoverable via the same search terms.
+                    tags: isArray(sc.tags) ? sc.tags : (isArray(menuItem.tags) ? menuItem.tags : null),
                     _isShortcut: true,
                     _parentTitle: menuItem.title,
                     _parentId: menuItem.id,
