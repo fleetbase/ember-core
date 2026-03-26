@@ -5,11 +5,42 @@ import { later } from '@ember/runloop';
 import { debug } from '@ember/debug';
 import getWithDefault from '../utils/get-with-default';
 
+/**
+ * SessionService
+ *
+ * Extends ember-simple-auth's session service to add:
+ *
+ *   - Proper lifecycle event firing through the EventsService (which
+ *     re-broadcasts on both the events bus and the universe bus).
+ *   - Session start timestamp tracking for duration calculation.
+ *
+ * Session lifecycle events fired (via EventsService → universe bus):
+ *
+ *   session.authenticated   — fired after a successful login/session restore.
+ *                             Payload: (properties)
+ *
+ *   session.invalidated     — fired after the session is destroyed (logout).
+ *                             Payload: (duration_seconds, properties)
+ *
+ *   user.deauthenticated    — alias for session.invalidated, provided as a
+ *                             semantic convenience for integrations that want
+ *                             to react to the user identity being cleared
+ *                             (e.g. Intercom shutdown, PostHog reset).
+ *                             Payload: (duration_seconds, properties)
+ *
+ * All events are fired on both the EventsService Evented bus and the universe
+ * service, so listeners can use either:
+ *
+ *   this.events.on('session.authenticated', handler)
+ *   this.universe.on('session.authenticated', handler)   ← recommended for engines
+ */
 export default class SessionService extends SimpleAuthSessionService {
     @service router;
     @service currentUser;
     @service fetch;
     @service notifications;
+    @service events;
+    @service universe;
 
     /**
      * Set where to transition to
@@ -24,6 +55,14 @@ export default class SessionService extends SimpleAuthSessionService {
      * @var {String}
      */
     @tracked _isOnboarding = false;
+
+    /**
+     * Timestamp (ms) when the session was authenticated.
+     * Used to calculate session duration on invalidation.
+     *
+     * @var {Number|null}
+     */
+    @tracked _sessionStartedAt = null;
 
     /**
      * Set this as onboarding.
@@ -44,11 +83,20 @@ export default class SessionService extends SimpleAuthSessionService {
     }
 
     /**
-     * Overwrite the handle authentication method
+     * Overwrite the handle authentication method.
+     *
+     * Fires `session.authenticated` through the events service so that
+     * integrations (Intercom, PostHog, etc.) can react to a successful login.
      *
      * @void
      */
     async handleAuthentication() {
+        // Record session start time for duration tracking on logout
+        this._sessionStartedAt = Date.now();
+
+        // Fire session.authenticated event
+        this._fireSessionEvent('session.authenticated');
+
         if (this._isOnboarding) {
             return;
         }
@@ -74,6 +122,30 @@ export default class SessionService extends SimpleAuthSessionService {
         }
 
         removeLoaderNode();
+    }
+
+    /**
+     * Overwrite the handle invalidation method.
+     *
+     * Fires `session.invalidated` and `user.deauthenticated` through the
+     * events service so that integrations can cleanly shut down.
+     *
+     * @void
+     */
+    handleInvalidation() {
+        const durationSeconds = this._sessionStartedAt ? Math.round((Date.now() - this._sessionStartedAt) / 1000) : null;
+
+        // Fire session.invalidated — integrations can use this for cleanup
+        if (this.events) {
+            this.events.trackSessionTerminated(durationSeconds);
+        }
+
+        // Fire user.deauthenticated — semantic alias for integrations that
+        // want to react specifically to the user identity being cleared
+        this._fireSessionEvent('user.deauthenticated', { session_duration: durationSeconds });
+
+        // Reset start time
+        this._sessionStartedAt = null;
     }
 
     /**
@@ -216,5 +288,40 @@ export default class SessionService extends SimpleAuthSessionService {
         return this.fetch.get('two-fa/check', { identity }).catch((error) => {
             throw new Error(error.message);
         });
+    }
+
+    // =========================================================================
+    // Private helpers
+    // =========================================================================
+
+    /**
+     * Fires a named session lifecycle event on both the events service and
+     * directly on the universe service.
+     *
+     * Firing on universe directly (in addition to via events service) ensures
+     * that all engines and extensions receive the event on the shared framework-
+     * level bus regardless of whether the events service has fully initialised.
+     *
+     * Listeners can subscribe via:
+     *   this.universe.on('session.authenticated', handler)
+     *   this.universe.on('user.deauthenticated', handler)
+     *   this.events.on('session.authenticated', handler)
+     *
+     * @private
+     * @param {String} eventName
+     * @param {Object} [extraProps={}]
+     */
+    _fireSessionEvent(eventName, extraProps = {}) {
+        // 1. Fire through the events service (dual-broadcasts on events + universe bus)
+        if (this.events) {
+            this.events.trackEvent(eventName, extraProps);
+        }
+
+        // 2. Also trigger directly on universe for framework-level uniformity —
+        //    ensures the event reaches all engines even if events service is
+        //    not yet available or not injected in a given engine context.
+        if (this.universe) {
+            this.universe.trigger(eventName, extraProps);
+        }
     }
 }
