@@ -125,26 +125,33 @@ export default class SessionService extends SimpleAuthSessionService {
     }
 
     /**
-     * Overwrite the handle invalidation method.
+     * Extends the parent handleInvalidation method.
      *
-     * Fires `session.invalidated` and `user.deauthenticated` through the
-     * events service so that integrations can cleanly shut down.
+     * IMPORTANT: super.handleInvalidation(routeAfterInvalidation) is called
+     * first to preserve the ember-simple-auth behaviour of redirecting the
+     * user to the login page (via handleSessionInvalidated). Our event
+     * firing happens after so it cannot interfere with the redirect.
      *
+     * @param {String} routeAfterInvalidation - Passed through from ember-simple-auth
      * @void
      */
-    handleInvalidation() {
+    handleInvalidation(routeAfterInvalidation) {
+        // 1. Always call super first — this performs the actual post-logout
+        //    redirect/reload that ember-simple-auth is responsible for.
+        super.handleInvalidation(routeAfterInvalidation);
+
         const durationSeconds = this._sessionStartedAt ? Math.round((Date.now() - this._sessionStartedAt) / 1000) : null;
 
-        // Fire session.invalidated — integrations can use this for cleanup
+        // 2. Fire session lifecycle events for integrations (Intercom, PostHog, etc.)
         if (this.events) {
             this.events.trackSessionTerminated(durationSeconds);
         }
 
-        // Fire user.deauthenticated — semantic alias for integrations that
-        // want to react specifically to the user identity being cleared
+        // 3. Fire user.deauthenticated directly on universe for framework-level
+        //    uniformity — engines can listen without needing the events service.
         this._fireSessionEvent('user.deauthenticated', { session_duration: durationSeconds });
 
-        // Reset start time
+        // Reset session start time
         this._sessionStartedAt = null;
     }
 
