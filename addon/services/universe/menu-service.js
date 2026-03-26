@@ -446,7 +446,14 @@ export default class MenuService extends Service.extend(Evented) {
      */
     getHeaderMenuItems() {
         const items = this.registry.getRegistry('header', 'menu-item');
-        return A(items).sortBy('priority');
+        // Sort extensions by priority first, then append shortcuts at the end.
+        // Shortcuts must never interleave with extensions in the sorted list
+        // because the default bar is built by slicing the first N items — if
+        // shortcuts sort between extensions (e.g. priority 1.1 between 1 and 2)
+        // they would displace real extensions from the default pinned bar.
+        const extensions = A(items).filter((i) => !i._isShortcut).sortBy('priority');
+        const shortcuts = A(items).filter((i) => i._isShortcut);
+        return A([...extensions, ...shortcuts]);
     }
 
     /**
