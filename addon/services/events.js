@@ -3,11 +3,66 @@ import Evented from '@ember/object/evented';
 import config from 'ember-get-config';
 
 /**
- * Events Service
+ * EventsService
  *
- * Provides a centralized event tracking system for Fleetbase.
- * This service emits standardized events on both its own event bus and the universe service,
- * allowing components, services, and engines to subscribe and react to application events.
+ * Provides a centralized, standardized event tracking system for Fleetbase.
+ *
+ * This service is the single source of truth for all application lifecycle
+ * events. It emits every event on two buses simultaneously:
+ *
+ *   1. Its own Evented bus — for direct service/component listeners:
+ *        this.events.on('user.loaded', handler)
+ *
+ *   2. The universe service bus — for cross-engine listeners (recommended
+ *      for use in Ember Engines / extensions):
+ *        this.universe.on('user.loaded', handler)
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Session Lifecycle Events
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ *   session.authenticated    Fired after a successful login or session restore.
+ *                            Payload: (properties)
+ *
+ *   session.invalidated      Fired after the session is destroyed (logout).
+ *                            Payload: (duration_seconds, properties)
+ *
+ *   session.terminated       Alias for session.invalidated — provided for
+ *                            backward compatibility and semantic clarity.
+ *                            Payload: (duration_seconds, properties)
+ *
+ *   user.loaded              Fired after the authenticated user record and
+ *                            organization have been fully loaded into the
+ *                            currentUser service. This is the canonical event
+ *                            for integrations to boot (Intercom, PostHog, etc.)
+ *                            Payload: (user, organization, properties)
+ *
+ *   user.updated             Fired when the user record is refreshed in-session
+ *                            (e.g. after a profile edit).
+ *                            Payload: (user, properties)
+ *
+ *   user.deauthenticated     Fired when the user identity is cleared on logout.
+ *                            Semantic alias for session.invalidated — use this
+ *                            to shut down integrations cleanly (Intercom, etc.)
+ *                            Payload: (duration_seconds, properties)
+ *
+ *   user.organization_switched  Fired when the user switches their active org.
+ *                            Payload: (organization, properties)
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Resource Events
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ *   resource.created         Generic resource creation.
+ *   resource.updated         Generic resource update.
+ *   resource.deleted         Generic resource deletion.
+ *   resource.imported        Bulk import.
+ *   resource.exported        Export.
+ *   resource.bulk_action     Bulk action (delete, archive, etc.)
+ *   {modelName}.created      Model-specific creation (e.g. order.created)
+ *   {modelName}.updated      Model-specific update.
+ *   {modelName}.deleted      Model-specific deletion.
+ *   {modelName}.exported     Model-specific export.
  *
  * @class EventsService
  * @extends Service
@@ -15,6 +70,108 @@ import config from 'ember-get-config';
 export default class EventsService extends Service.extend(Evented) {
     @service universe;
     @service currentUser;
+
+    // =========================================================================
+    // Session Lifecycle Tracking
+    // =========================================================================
+
+    /**
+     * Tracks a successful authentication (login or session restore).
+     *
+     * Called by SessionService.handleAuthentication().
+     *
+     * @param {Object} [props={}] - Additional properties to include
+     */
+    trackSessionAuthenticated(props = {}) {
+        const properties = this.#enrichProperties(props);
+        this.#trigger('session.authenticated', properties);
+    }
+
+    /**
+     * Tracks when a user session is terminated (logout).
+     *
+     * Called by SessionService.handleInvalidation(). Also fires the semantic
+     * `user.deauthenticated` event so integrations can react to the user
+     * identity being cleared without needing to know about session internals.
+     *
+     * @param {Number|null} duration - Session duration in seconds (null if unknown)
+     * @param {Object} [props={}] - Additional properties to include
+     */
+    trackSessionTerminated(duration, props = {}) {
+        const properties = this.#enrichProperties({
+            session_duration: duration,
+            ...props,
+        });
+
+        // Fire session.invalidated (technical event)
+        this.#trigger('session.invalidated', duration, properties);
+
+        // Fire session.terminated (backward-compatible alias)
+        this.#trigger('session.terminated', duration, properties);
+
+        // Fire user.deauthenticated (semantic event for integrations)
+        this.#trigger('user.deauthenticated', duration, properties);
+    }
+
+    /**
+     * Tracks when the current user is loaded (session initialized).
+     *
+     * Called by CurrentUserService.setUser() after a successful login or
+     * session restore. This is the canonical event for integrations to boot.
+     *
+     * @param {Object} user         - The authenticated user model
+     * @param {Object} organization - The user's active organization model
+     * @param {Object} [props={}]   - Additional properties to include
+     */
+    trackUserLoaded(user, organization, props = {}) {
+        const properties = this.#enrichProperties({
+            user_id: user?.id,
+            organization_id: organization?.id,
+            organization_name: organization?.name,
+            ...props,
+        });
+
+        this.#trigger('user.loaded', user, organization, properties);
+    }
+
+    /**
+     * Tracks when the user record is refreshed in-session (e.g. profile edit).
+     *
+     * Called by CurrentUserService.refreshUser().
+     *
+     * @param {Object} user       - The updated user model
+     * @param {Object} [props={}] - Additional properties to include
+     */
+    trackUserUpdated(user, props = {}) {
+        const properties = this.#enrichProperties({
+            user_id: user?.id,
+            ...props,
+        });
+
+        this.#trigger('user.updated', user, properties);
+    }
+
+    /**
+     * Tracks when the user switches their active organization.
+     *
+     * Called by CurrentUserService.switchOrganization().
+     *
+     * @param {Object} organization - The new active organization model
+     * @param {Object} [props={}]   - Additional properties to include
+     */
+    trackOrganizationSwitched(organization, props = {}) {
+        const properties = this.#enrichProperties({
+            organization_id: organization?.id,
+            organization_name: organization?.name,
+            ...props,
+        });
+
+        this.#trigger('user.organization_switched', organization, properties);
+    }
+
+    // =========================================================================
+    // Resource Event Tracking
+    // =========================================================================
 
     /**
      * Tracks the creation of a resource
@@ -131,38 +288,9 @@ export default class EventsService extends Service.extend(Evented) {
         this.#trigger('resource.bulk_action', verb, resources, firstResource, properties);
     }
 
-    /**
-     * Tracks when the current user is loaded (session initialized)
-     *
-     * @param {Object} user - The user object
-     * @param {Object} organization - The organization object
-     * @param {Object} [props={}] - Additional properties to include
-     */
-    trackUserLoaded(user, organization, props = {}) {
-        const properties = this.#enrichProperties({
-            user_id: user?.id,
-            organization_id: organization?.id,
-            organization_name: organization?.name,
-            ...props,
-        });
-
-        this.#trigger('user.loaded', user, organization, properties);
-    }
-
-    /**
-     * Tracks when a user session is terminated
-     *
-     * @param {Number} duration - Session duration in seconds
-     * @param {Object} [props={}] - Additional properties to include
-     */
-    trackSessionTerminated(duration, props = {}) {
-        const properties = this.#enrichProperties({
-            session_duration: duration,
-            ...props,
-        });
-
-        this.#trigger('session.terminated', duration, properties);
-    }
+    // =========================================================================
+    // Generic Event Tracking
+    // =========================================================================
 
     /**
      * Tracks a generic custom event
@@ -190,11 +318,11 @@ export default class EventsService extends Service.extend(Evented) {
     // =========================================================================
 
     /**
-     * Triggers an event on both the events service and universe service
+     * Triggers an event on both the events service and universe service.
      *
      * This dual event system allows listeners to subscribe to events on either:
-     * - this.events.on('event.name', handler) - Local listeners
-     * - this.universe.on('event.name', handler) - Cross-engine listeners
+     *   - this.events.on('event.name', handler)  — local listeners
+     *   - this.universe.on('event.name', handler) — cross-engine listeners
      *
      * @private
      * @param {String} eventName - The event name

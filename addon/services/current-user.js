@@ -10,6 +10,25 @@ import { storageFor } from 'ember-local-storage';
 import { debug } from '@ember/debug';
 import lookupUserIp from '../utils/lookup-user-ip';
 
+/**
+ * CurrentUserService
+ *
+ * Manages the authenticated user's identity and preferences. Extends Evented
+ * so that any service or component can subscribe to user lifecycle events
+ * directly on this service.
+ *
+ * Session lifecycle events emitted (on both this service and via EventsService
+ * which re-broadcasts them on the universe bus for cross-engine listeners):
+ *
+ *   user.loaded          — fired after a successful login or session restore.
+ *                          Payload: (user, organization, properties)
+ *
+ *   user.updated         — fired when the user record is refreshed in-session
+ *                          (e.g. profile edit). Payload: (user, properties)
+ *
+ *   user.organization_switched — fired when the user switches active org.
+ *                          Payload: (organization, properties)
+ */
 export default class CurrentUserService extends Service.extend(Evented) {
     @service session;
     @service store;
@@ -18,6 +37,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
     @service notifications;
     @service intl;
     @service events;
+    @service universe;
 
     @tracked user = { id: 'anon' };
     @tracked userSnapshot = { id: 'anon' };
@@ -302,13 +322,46 @@ export default class CurrentUserService extends Service.extend(Evented) {
         return defaultValue;
     }
 
+    /**
+     * Sets the current user and fires all user.loaded lifecycle events.
+     *
+     * This is the canonical place where the authenticated user identity is
+     * established. It fires:
+     *
+     *   1. `this.trigger('user.loaded', user)` — on the currentUser service
+     *      itself (Evented), for direct service-level listeners.
+     *
+     *   2. `this.events.trackUserLoaded(user, organization)` — on the events
+     *      service, which re-broadcasts on both the events bus and the universe
+     *      bus so cross-engine listeners (Intercom, PostHog, Attio, etc.) can
+     *      subscribe via `universe.on('user.loaded', handler)`.
+     *
+     * @param {Model} user
+     */
     async setUser(user) {
         const snapshot = await this.getUserSnapshot(user);
 
         // Set current user
         this.set('user', user);
         this.set('userSnapshot', snapshot);
+
+        // Resolve the organization for event payload
+        const organization = this.store.peekRecord('company', user.get('company_uuid'));
+
+        // 1. Trigger on the currentUser Evented bus (backward-compatible)
         this.trigger('user.loaded', user);
+
+        // 2. Fire through the events service — broadcasts on both events bus
+        //    and universe bus for cross-engine listeners
+        if (this.events) {
+            this.events.trackUserLoaded(user, organization);
+        }
+
+        // 3. Trigger directly on universe for framework-level uniformity —
+        //    guarantees delivery to all engines on the shared bus
+        if (this.universe) {
+            this.universe.trigger('user.loaded', user, organization);
+        }
 
         // Set permissions
         this.permissions = this.getUserPermissions(user);
@@ -321,6 +374,57 @@ export default class CurrentUserService extends Service.extend(Evented) {
             this.setLocale(user.locale);
         } else {
             await this.loadLocale();
+        }
+    }
+
+    /**
+     * Fires a user.updated event when the user record is refreshed in-session.
+     * Call this after any in-session profile update to keep integrations in sync.
+     *
+     * @param {Model} user
+     */
+    async refreshUser(user) {
+        const snapshot = await this.getUserSnapshot(user);
+        this.set('user', user);
+        this.set('userSnapshot', snapshot);
+
+        const organization = this.store.peekRecord('company', user.get('company_uuid'));
+
+        this.trigger('user.updated', user);
+
+        if (this.events) {
+            this.events.trackEvent('user.updated', {
+                user_id: user?.id,
+                organization_id: organization?.id,
+                organization_name: organization?.name,
+            });
+        }
+
+        if (this.universe) {
+            this.universe.trigger('user.updated', user, organization);
+        }
+    }
+
+    /**
+     * Fires a user.organization_switched event when the user changes their
+     * active organization. Call this after a successful org switch.
+     *
+     * @param {Model} organization
+     */
+    switchOrganization(organization) {
+        this.company = organization;
+
+        this.trigger('user.organization_switched', organization);
+
+        if (this.events) {
+            this.events.trackEvent('user.organization_switched', {
+                organization_id: organization?.id,
+                organization_name: organization?.name,
+            });
+        }
+
+        if (this.universe) {
+            this.universe.trigger('user.organization_switched', organization);
         }
     }
 }
