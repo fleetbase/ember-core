@@ -451,7 +451,9 @@ export default class MenuService extends Service.extend(Evented) {
         // because the default bar is built by slicing the first N items — if
         // shortcuts sort between extensions (e.g. priority 1.1 between 1 and 2)
         // they would displace real extensions from the default pinned bar.
-        const extensions = A(items).filter((i) => !i._isShortcut).sortBy('priority');
+        const extensions = A(items)
+            .filter((i) => !i._isShortcut)
+            .sortBy('priority');
         const shortcuts = A(items).filter((i) => i._isShortcut);
         return A([...extensions, ...shortcuts]);
     }
