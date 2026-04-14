@@ -84,6 +84,16 @@ export default class FetchService extends Service {
             headers['Access-Console-Sandbox-Key'] = testKey;
         }
 
+        // Multi-tenant hierarchy: inject active company context header when
+        // the user has selected a non-default company. Read from currentUser
+        // at request-assembly time (never cached) so reactivity works — a
+        // switcher updating `currentUser.activeCompanyContext` is reflected
+        // on the very next request.
+        const activeCompanyContext = this.currentUser?.activeCompanyContext;
+        if (activeCompanyContext) {
+            headers['X-Company-Context'] = activeCompanyContext;
+        }
+
         return headers;
     }
 

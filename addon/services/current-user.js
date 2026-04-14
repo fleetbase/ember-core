@@ -10,6 +10,21 @@ import { storageFor } from 'ember-local-storage';
 import { debug } from '@ember/debug';
 import lookupUserIp from '../utils/lookup-user-ip';
 
+// Single source of truth for the persisted active company context key.
+// Exported so tests and other services (e.g. the validate-company-context
+// instance initializer) can agree on the storage slot without duplication.
+export const ACTIVE_COMPANY_CONTEXT_STORAGE_KEY = 'fleetbase.activeCompanyContext';
+
+function readStoredActiveCompanyContext() {
+    try {
+        const value = window.localStorage.getItem(ACTIVE_COMPANY_CONTEXT_STORAGE_KEY);
+        return typeof value === 'string' && value.length > 0 ? value : null;
+    } catch (_e) {
+        // private browsing / storage disabled
+        return null;
+    }
+}
+
 /**
  * CurrentUserService
  *
@@ -46,6 +61,43 @@ export default class CurrentUserService extends Service.extend(Evented) {
     @tracked organizations = [];
     @tracked whoisData = {};
     @tracked locale = 'en-us';
+
+    /**
+     * Active company context UUID for multi-tenant hierarchy.
+     *
+     * Backed by localStorage; read-through on first access, write-through on
+     * set. A `null` value means "no header" — the backend falls back to the
+     * user's default company via `Auth::getCompany()`.
+     *
+     * This is the single source of truth the fetch service reads at request
+     * assembly time. Never cache the value off this getter — always re-read
+     * so reactivity works when a switcher updates it.
+     *
+     * @private
+     */
+    @tracked _activeCompanyContext = readStoredActiveCompanyContext();
+
+    get activeCompanyContext() {
+        return this._activeCompanyContext;
+    }
+
+    set activeCompanyContext(value) {
+        const normalized = typeof value === 'string' && value.length > 0 ? value : null;
+        this._activeCompanyContext = normalized;
+        try {
+            if (normalized) {
+                window.localStorage.setItem(ACTIVE_COMPANY_CONTEXT_STORAGE_KEY, normalized);
+            } else {
+                window.localStorage.removeItem(ACTIVE_COMPANY_CONTEXT_STORAGE_KEY);
+            }
+        } catch (_e) {
+            // private browsing / storage disabled — ignore, in-memory value still tracked
+        }
+    }
+
+    clearActiveCompanyContext() {
+        this.activeCompanyContext = null;
+    }
 
     @storageFor('user-options') options;
     @storageFor('local-cache') cache;
