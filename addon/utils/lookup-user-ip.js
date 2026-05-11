@@ -59,13 +59,14 @@ export default async function lookupUserIp(options = {}) {
 
             const data = await response.json();
             const normalized = api.normalize(data);
+            const normalizedWithTimezone = ensureWhoisTimezone(normalized);
 
             // Cache the result if enabled
             if (cache) {
-                cacheWhois(normalized);
+                cacheWhois(normalizedWithTimezone);
             }
 
-            return normalized;
+            return normalizedWithTimezone;
         } catch (error) {
             console.warn(`[lookupUserIp] ${api.url} failed:`, error.message);
             // Continue to next API
@@ -92,7 +93,7 @@ function normalizeGeoIPLookup(data) {
         latitude: data.latitude,
         longitude: data.longitude,
         postal_code: data.postal_code,
-        timezone: data.timezone_name,
+        timezone: data.timezone_name || getBrowserTimezone(),
         currency: {
             code: data.currency_code,
             name: data.currency_name,
@@ -128,7 +129,7 @@ function normalizeIPApi(data) {
         latitude: data.latitude,
         longitude: data.longitude,
         postal_code: data.postal,
-        timezone: data.timezone,
+        timezone: data.timezone || getBrowserTimezone(),
         currency: {
             code: data.currency,
             name: data.currency_name,
@@ -163,7 +164,12 @@ function getCachedWhois() {
             return null;
         }
 
-        return data;
+        const normalized = ensureWhoisTimezone(data);
+        if (normalized.timezone !== data.timezone) {
+            cacheWhois(normalized);
+        }
+
+        return normalized;
     } catch (error) {
         console.error('[getCachedWhois] Error reading cache:', error);
         return null;
@@ -187,7 +193,7 @@ function cacheWhois(data) {
 function getFallbackWhois() {
     // Try to get browser language and timezone as fallback
     const browserLang = navigator.language || 'en-US';
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const timezone = getBrowserTimezone();
 
     return {
         ip: null,
@@ -217,5 +223,22 @@ function getFallbackWhois() {
         connection_type: null,
         _source: 'fallback',
         _timestamp: Date.now(),
+    };
+}
+
+export function getBrowserTimezone() {
+    try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+    } catch (error) {
+        return null;
+    }
+}
+
+export function ensureWhoisTimezone(whois = {}) {
+    whois = whois || {};
+
+    return {
+        ...whois,
+        timezone: whois.timezone || getBrowserTimezone(),
     };
 }
