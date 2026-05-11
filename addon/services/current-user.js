@@ -8,7 +8,7 @@ import { isBlank } from '@ember/utils';
 import { alias } from '@ember/object/computed';
 import { storageFor } from 'ember-local-storage';
 import { debug } from '@ember/debug';
-import lookupUserIp from '../utils/lookup-user-ip';
+import lookupUserIp, { getBrowserTimezone } from '../utils/lookup-user-ip';
 
 /**
  * CurrentUserService
@@ -82,6 +82,10 @@ export default class CurrentUserService extends Service.extend(Evented) {
 
     get country() {
         return this.whois('country_code');
+    }
+
+    get timezone() {
+        return this.whois('timezone') || getBrowserTimezone();
     }
 
     async load() {
@@ -180,7 +184,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
             const fallback = {
                 city: null,
                 country_code: null,
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                timezone: getBrowserTimezone(),
                 _source: 'fallback',
             };
 

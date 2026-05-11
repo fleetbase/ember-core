@@ -64,7 +64,7 @@ export default class SubjectCustomFields {
         this.setFieldValue(value, customField);
 
         const fieldId = typeof customField === 'string' ? customField : customField?.id;
-        const valueType = typeof customField === 'string' ? null : customField?.valueType ?? customField?.value_type ?? null;
+        const valueType = typeof customField === 'string' ? null : (customField?.valueType ?? customField?.value_type ?? null);
         if (!fieldId || !resource) return;
 
         let rec = this.#getLocalValueRecord(resource, fieldId);
@@ -91,7 +91,7 @@ export default class SubjectCustomFields {
             let { value_type } = entry;
             if (!value_type) {
                 const cf = this.store.peekRecord?.('custom-field', fieldId);
-                value_type = cf ? cf.valueType ?? cf.value_type ?? null : null;
+                value_type = cf ? (cf.valueType ?? cf.value_type ?? null) : null;
             }
             next[fieldId] = { value, value_type };
         }
@@ -253,7 +253,7 @@ export default class SubjectCustomFields {
         }
 
         // Normalize to array
-        const existing = isArray(existingMany) ? existingMany : existingMany?.toArray?.() ?? [];
+        const existing = isArray(existingMany) ? existingMany : (existingMany?.toArray?.() ?? []);
 
         const byFieldId = new Map();
         for (let i = 0; i < existing.length; i++) {
