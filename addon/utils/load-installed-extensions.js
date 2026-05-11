@@ -11,6 +11,8 @@ export default async function loadInstalledExtensions(additionalCoreEngines = []
         '@fleetbase/iam-engine',
         '@fleetbase/ledger-engine',
         '@fleetbase/pallet-engine',
+        '@fleetbase/vroom-engine',
+        '@fleetbase/valhalla-engine',
         ...additionalCoreEngines,
     ];
     const INDEXED_ENGINES = await loadExtensions();
