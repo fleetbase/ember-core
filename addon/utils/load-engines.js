@@ -1,5 +1,6 @@
 import { dasherize } from '@ember/string';
 import hostServices from '../exports/host-services';
+import isPluginExtension from './is-plugin-extension';
 
 export default async function loadEngines(appInstance, withServices = []) {
     return new Promise((resolve, reject) => {
@@ -14,6 +15,9 @@ export default async function loadEngines(appInstance, withServices = []) {
 
                 for (let i = 0; i < extensions.length; i++) {
                     const extension = extensions[i];
+                    if (isPluginExtension(extension)) {
+                        continue;
+                    }
                     const path = dasherize(extension.extension);
 
                     externalRoutes[path] = `console.${path}`;
@@ -21,6 +25,9 @@ export default async function loadEngines(appInstance, withServices = []) {
 
                 for (let i = 0; i < extensions.length; i++) {
                     const extension = extensions[i];
+                    if (isPluginExtension(extension)) {
+                        continue;
+                    }
 
                     engines[extension.name] = {
                         dependencies: {

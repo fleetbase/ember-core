@@ -30,6 +30,7 @@ export default class UniverseService extends Service.extend(Evented) {
     @service('universe/menu-service') menuService;
     @service('universe/widget-service') widgetService;
     @service('universe/hook-service') hookService;
+    @service('universe/plugin-context') pluginContext;
     @service router;
     @service intl;
     @service urlSearchParams;
@@ -63,6 +64,9 @@ export default class UniverseService extends Service.extend(Evented) {
         }
         if (this.hookService) {
             this.hookService.setApplicationInstance(application);
+        }
+        if (this.pluginContext) {
+            this.pluginContext.setApplicationInstance(application);
         }
     }
 
