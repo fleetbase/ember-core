@@ -2,7 +2,6 @@ import Service from '@ember/service';
 import Evented from '@ember/object/evented';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { computed } from '@ember/object';
 import { dasherize } from '@ember/string';
 import { isArray } from '@ember/array';
 import { getOwner } from '@ember/application';
@@ -35,8 +34,8 @@ export default class ThemeService extends Service.extend(Evented) {
      *
      * @var {String}
      */
-    @computed('currentTheme', 'initialTheme') get activeTheme() {
-        const userSetTheme = this.currentUser.getOption(`theme`);
+    get activeTheme() {
+        const userSetTheme = this.currentUser.getOption('theme');
 
         if (userSetTheme) {
             return userSetTheme;
@@ -67,7 +66,7 @@ export default class ThemeService extends Service.extend(Evented) {
      *
      * @var {String}
      */
-    @tracked currentTheme = 'dark';
+    @tracked currentTheme = this.currentUser.getOption('theme', 'dark');
 
     /**
      * The initially set theme
@@ -131,7 +130,7 @@ export default class ThemeService extends Service.extend(Evented) {
      */
     initialize(options = {}) {
         this.initialTheme = options?.theme;
-        this.setTheme(this.activeTheme);
+        this.applyTheme(this.activeTheme, { persist: false });
         this.setEnvironment();
         this.resetScroll();
         this.setRoutebodyClassNames(options.bodyClassNames && isArray(options.bodyClassNames) ? options.bodyClassNames : []);
@@ -203,10 +202,32 @@ export default class ThemeService extends Service.extend(Evented) {
      * @void
      */
     setTheme(theme = 'light') {
+        this.applyTheme(theme);
+    }
+
+    /**
+     * Synchronize the active theme from the current user-scoped preference.
+     *
+     * @void
+     */
+    syncThemeFromCurrentUser() {
+        this.applyTheme(this.activeTheme, { persist: false });
+    }
+
+    /**
+     * Apply a theme consistently to service state and document body.
+     *
+     * @void
+     */
+    applyTheme(theme = 'light', options = {}) {
+        const persist = options.persist !== false;
+
         debug(`Theme was changed to: ${theme}`);
-        document.body.classList.remove(`${this.currentTheme}-theme`);
+        document.body.classList.remove('light-theme', 'dark-theme');
         document.body.classList.add(`${theme}-theme`);
-        this.currentUser.setOption('theme', theme);
+        if (persist) {
+            this.currentUser.setOption('theme', theme);
+        }
         this.activeTheme = theme;
         this.trigger('theme.changed', theme);
     }

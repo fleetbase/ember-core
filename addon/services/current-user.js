@@ -3,7 +3,7 @@ import Evented from '@ember/object/evented';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { dasherize } from '@ember/string';
-import { computed, get } from '@ember/object';
+import { get } from '@ember/object';
 import { isBlank } from '@ember/utils';
 import { alias } from '@ember/object/computed';
 import { storageFor } from 'ember-local-storage';
@@ -60,8 +60,29 @@ export default class CurrentUserService extends Service.extend(Evented) {
     @alias('userSnapshot.role_name') roleName;
     @alias('userSnapshot.role') role;
 
-    @computed('id') get optionsPrefix() {
-        return `${this.id}:`;
+    get authenticatedOptionOwnerId() {
+        const authenticatedUserId = this.session?.data?.authenticated?.user;
+
+        if (this.session?.isAuthenticated && authenticatedUserId) {
+            return authenticatedUserId;
+        }
+
+        try {
+            const localStorageSession = JSON.parse(window.localStorage.getItem('ember_simple_auth-session'));
+            const authenticatedSession = localStorageSession?.authenticated;
+
+            if (authenticatedSession?.token && authenticatedSession?.user) {
+                return authenticatedSession.user;
+            }
+        } catch (error) {
+            // Ignore malformed session storage and fall back to the current snapshot.
+        }
+
+        return null;
+    }
+
+    get optionsPrefix() {
+        return `${this.authenticatedOptionOwnerId || this.id || 'anon'}:`;
     }
 
     get latitude() {
@@ -93,7 +114,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
             const user = await this.store.findRecord('user', 'me');
 
             // set user
-            this.setUser(user);
+            await this.setUser(user);
 
             // Load preferences
             await this.loadPreferences();
@@ -114,7 +135,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
             const user = await this.store.queryRecord('user', { me: true });
 
             // set user
-            this.setUser(user);
+            await this.setUser(user);
 
             // Load user whois data
             await this.loadWhois();
@@ -348,6 +369,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
         // Set current user
         this.set('user', user);
         this.set('userSnapshot', snapshot);
+        this.theme.syncThemeFromCurrentUser();
 
         // Resolve the organization for event payload
         const organization = this.store.peekRecord('company', user.get('company_uuid'));

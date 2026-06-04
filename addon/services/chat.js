@@ -9,6 +9,7 @@ export default class ChatService extends Service.extend(Evented) {
     @service store;
     @service currentUser;
     @service appCache;
+    @service fetch;
     @tracked channels = [];
     @tracked openChannels = [];
 
@@ -72,7 +73,28 @@ export default class ChatService extends Service.extend(Evented) {
         return this.openChannels;
     }
 
-    createChatChannel(name) {
+    createChatChannel(name, participants = []) {
+        return this.fetch
+            .post(
+                'chat-channels',
+                {
+                    chatChannel: {
+                        name,
+                        participants,
+                    },
+                },
+                {
+                    normalizeToEmberData: true,
+                    normalizeModelType: 'chatChannel',
+                }
+            )
+            .then((chatChannelRecord) => {
+                this.trigger('chat.created', chatChannelRecord);
+                return chatChannelRecord;
+            });
+    }
+
+    createEmptyChatChannel(name) {
         const chatChannelRecord = this.store.createRecord('chat-channel', { name });
         return chatChannelRecord.save().finally(() => {
             this.trigger('chat.created', chatChannelRecord);
