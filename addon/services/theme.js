@@ -131,7 +131,7 @@ export default class ThemeService extends Service.extend(Evented) {
      */
     initialize(options = {}) {
         this.initialTheme = options?.theme;
-        this.setTheme(this.activeTheme);
+        this.applyTheme(this.activeTheme, { persist: false });
         this.setEnvironment();
         this.resetScroll();
         this.setRoutebodyClassNames(options.bodyClassNames && isArray(options.bodyClassNames) ? options.bodyClassNames : []);
@@ -203,10 +203,32 @@ export default class ThemeService extends Service.extend(Evented) {
      * @void
      */
     setTheme(theme = 'light') {
+        this.applyTheme(theme);
+    }
+
+    /**
+     * Synchronize the active theme from the current user-scoped preference.
+     *
+     * @void
+     */
+    syncThemeFromCurrentUser() {
+        this.applyTheme(this.activeTheme, { persist: false });
+    }
+
+    /**
+     * Apply a theme consistently to service state and document body.
+     *
+     * @void
+     */
+    applyTheme(theme = 'light', options = {}) {
+        const persist = options.persist !== false;
+
         debug(`Theme was changed to: ${theme}`);
-        document.body.classList.remove(`${this.currentTheme}-theme`);
+        document.body.classList.remove('light-theme', 'dark-theme');
         document.body.classList.add(`${theme}-theme`);
-        this.currentUser.setOption('theme', theme);
+        if (persist) {
+            this.currentUser.setOption('theme', theme);
+        }
         this.activeTheme = theme;
         this.trigger('theme.changed', theme);
     }

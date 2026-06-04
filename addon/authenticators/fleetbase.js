@@ -61,8 +61,8 @@ export default class FleetbaseAuthenticator extends Base {
      * @param {boolean} remember
      * @param {string} path
      */
-    authenticate(credentials = {}, remember = false, path = 'auth/login') {
-        return this.fetch.post(path, { ...credentials, remember }).then((response) => {
+    authenticate(credentials = {}, remember = false, path = 'auth/login', options = {}) {
+        return this.fetch.post(path, { ...credentials, remember }, options).then((response) => {
             if (response.errors) {
                 const errorMessage = getWithDefault(response.errors, '0', 'Authentication failed!');
                 const errorCode = getWithDefault(response, 'code');

@@ -348,6 +348,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
         // Set current user
         this.set('user', user);
         this.set('userSnapshot', snapshot);
+        this.theme.syncThemeFromCurrentUser();
 
         // Resolve the organization for event payload
         const organization = this.store.peekRecord('company', user.get('company_uuid'));
