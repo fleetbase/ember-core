@@ -3,7 +3,7 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { get, set } from '@ember/object';
 import { isBlank } from '@ember/utils';
-import { dasherize } from '@ember/string';
+import { dasherize, underscore } from '@ember/string';
 import { isArray } from '@ember/array';
 import { singularize, pluralize } from 'ember-inflector';
 import { task } from 'ember-concurrency';
@@ -186,9 +186,14 @@ export default class FetchService extends Service {
         }
 
         const type = dasherize(singularize(modelType));
+        const pluralizedModelType = pluralize(underscore(modelType));
 
         if (isArray(payload)) {
             return payload.map((instance) => this.store.push(this.store.normalize(type, instance)));
+        }
+
+        if (isArray(payload[pluralizedModelType])) {
+            return payload[pluralizedModelType].map((instance) => this.store.push(this.store.normalize(type, instance)));
         }
 
         if (isArray(payload[modelType])) {

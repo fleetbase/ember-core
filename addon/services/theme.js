@@ -2,7 +2,6 @@ import Service from '@ember/service';
 import Evented from '@ember/object/evented';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-import { computed } from '@ember/object';
 import { dasherize } from '@ember/string';
 import { isArray } from '@ember/array';
 import { getOwner } from '@ember/application';
@@ -35,8 +34,8 @@ export default class ThemeService extends Service.extend(Evented) {
      *
      * @var {String}
      */
-    @computed('currentTheme', 'initialTheme') get activeTheme() {
-        const userSetTheme = this.currentUser.getOption(`theme`);
+    get activeTheme() {
+        const userSetTheme = this.currentUser.getOption('theme');
 
         if (userSetTheme) {
             return userSetTheme;
@@ -67,7 +66,7 @@ export default class ThemeService extends Service.extend(Evented) {
      *
      * @var {String}
      */
-    @tracked currentTheme = 'dark';
+    @tracked currentTheme = this.currentUser.getOption('theme', 'dark');
 
     /**
      * The initially set theme
