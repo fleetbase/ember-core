@@ -20,6 +20,7 @@ export const services = [
     'fileQueue',
     'sidebar',
     'dashboard',
+    'docs-panel',
     'universe',
     'universe/menu-service',
     'universe/registry-service',

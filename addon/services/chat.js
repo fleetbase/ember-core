@@ -85,7 +85,7 @@ export default class ChatService extends Service.extend(Evented) {
                 },
                 {
                     normalizeToEmberData: true,
-                    normalizeModelType: 'chatChannel',
+                    normalizeModelType: 'chat_channel',
                 }
             )
             .then((chatChannelRecord) => {
