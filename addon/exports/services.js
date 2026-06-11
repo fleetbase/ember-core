@@ -26,6 +26,7 @@ export const services = [
     'universe/hook-service',
     'universe/widget-service',
     'universe/extension-manager',
+    'universe/plugin-context',
     'events',
     'intl',
     'abilities',

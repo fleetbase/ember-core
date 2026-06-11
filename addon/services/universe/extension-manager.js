@@ -6,8 +6,9 @@ import { assert, debug, warn } from '@ember/debug';
 import { next } from '@ember/runloop';
 import loadInstalledExtensions from '@fleetbase/ember-core/utils/load-installed-extensions';
 import mapEngines from '@fleetbase/ember-core/utils/map-engines';
+import isPluginExtension from '@fleetbase/ember-core/utils/is-plugin-extension';
 import config from 'ember-get-config';
-import { getExtensionLoader } from '@fleetbase/console/extensions';
+import * as extensionLoaders from '@fleetbase/console/extensions';
 import { isArray } from '@ember/array';
 import RSVP from 'rsvp';
 import ExtensionBootState from '../../contracts/extension-boot-state';
@@ -23,6 +24,7 @@ import ExtensionBootState from '../../contracts/extension-boot-state';
  */
 export default class ExtensionManagerService extends Service.extend(Evented) {
     @service universe;
+    @service('universe/plugin-context') pluginContext;
     /**
      * Reference to the root Ember Application Instance.
      * Used for registering components/services to the application container
@@ -782,15 +784,19 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             this.registerExtension(extensionName, extension);
         }
 
-        // Phase 2: Load and execute extension.js from each enabled extension
+        // Phase 2: Load and execute plugin files or extension.js from each enabled package
         for (const extension of extensions) {
             // Extension is an object with name, version, etc. from package.json
             const extensionName = extension.name || extension;
             const extStartTime = performance.now();
 
-            // Lookup the loader function from the build-time generated map
-            const loader = getExtensionLoader(extensionName);
+            if (isPluginExtension(extension)) {
+                await this.#setupPlugin(extension, appInstance, universe, extStartTime);
+                continue;
+            }
 
+            // Lookup the loader function from the build-time generated map
+            const loader = this.#getExtensionLoader(extensionName);
             if (!loader) {
                 warn(`[ExtensionManager] No loader registered for ${extensionName}. Ensure addon/extension.js exists and prebuild generated the mapping.`, false, {
                     id: 'ember-core.extension-manager.no-loader',
@@ -845,6 +851,57 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         const setupEndTime = performance.now();
         const totalTime = (setupEndTime - setupStartTime).toFixed(2);
         debug(`[ExtensionManager] All ${extensions.length} extensions setup completed in ${totalTime}ms`);
+    }
+
+    /**
+     * Load and execute a lightweight Fleetbase plugin.
+     *
+     * @private
+     * @param {Object} plugin Plugin manifest
+     * @param {ApplicationInstance} appInstance The application instance
+     * @param {Service} universe The universe service
+     * @param {Number} extStartTime Start time for debug logging
+     * @returns {Promise<void>}
+     */
+    async #setupPlugin(plugin, appInstance, universe, extStartTime) {
+        const pluginName = plugin.name || plugin.id || plugin;
+        const loader = this.#getPluginLoader(pluginName);
+
+        if (!loader) {
+            warn(`[ExtensionManager] No plugin loader registered for ${pluginName}. Ensure fleetbase.plugin.js is indexed by the generated plugin mapping.`, false, {
+                id: 'ember-core.extension-manager.no-plugin-loader',
+            });
+            return;
+        }
+
+        try {
+            const module = await loader();
+            const registerPlugin = module.default ?? module.registerPlugin ?? module;
+
+            if (typeof registerPlugin !== 'function') {
+                warn(`[ExtensionManager] ${pluginName} plugin did not export a register function.`, false, {
+                    id: 'ember-core.extension-manager.invalid-plugin-export',
+                });
+                return;
+            }
+
+            const context = this.pluginContext.create(plugin, appInstance, universe);
+            await registerPlugin(appInstance, context);
+
+            const extEndTime = performance.now();
+            const totalTime = (extEndTime - extStartTime).toFixed(2);
+            debug(`[ExtensionManager] ${pluginName} plugin setup completed in ${totalTime}ms`);
+        } catch (error) {
+            console.error(`[ExtensionManager] Failed to load or run plugin for ${pluginName}:`, error);
+        }
+    }
+
+    #getExtensionLoader(extensionName) {
+        return extensionLoaders.getExtensionLoader?.(extensionName);
+    }
+
+    #getPluginLoader(pluginName) {
+        return extensionLoaders.getPluginLoader?.(pluginName) ?? extensionLoaders.getExtensionLoader?.(pluginName);
     }
 
     /**
