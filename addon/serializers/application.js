@@ -4,6 +4,8 @@ import { underscore } from '@ember/string';
 import normalizePolymorphicTypeWithinHash from '../utils/serialize/normalize-polymorphic-type-within-hash';
 
 export default class ApplicationSerializer extends RESTSerializer {
+    readOnlyAttributes = ['slug'];
+
     /**
      * Default primary keys to uuid
      *
@@ -32,6 +34,8 @@ export default class ApplicationSerializer extends RESTSerializer {
     serialize(snapshot) {
         const json = super.serialize(...arguments);
 
+        this.removeReadOnlyAttributes(json);
+
         // for each relationship make sure the id is set
         snapshot.eachRelationship((key, relationship) => {
             const { kind } = relationship.meta;
@@ -47,6 +51,14 @@ export default class ApplicationSerializer extends RESTSerializer {
 
                 json[`${key}_uuid`] = relationSnapshot.id;
             }
+        });
+
+        return json;
+    }
+
+    removeReadOnlyAttributes(json = {}) {
+        this.readOnlyAttributes.forEach((attribute) => {
+            delete json[attribute];
         });
 
         return json;

@@ -20,4 +20,17 @@ module('Unit | Serializer | application', function (hooks) {
 
         assert.ok(serializedRecord);
     });
+
+    test('it removes read-only attributes from serialized payloads', function (assert) {
+        let store = this.owner.lookup('service:store');
+        let serializer = store.serializerFor('application');
+        let payload = {
+            name: 'Ron',
+            slug: '-1',
+        };
+
+        serializer.removeReadOnlyAttributes(payload);
+
+        assert.deepEqual(payload, { name: 'Ron' });
+    });
 });

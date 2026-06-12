@@ -24,7 +24,7 @@ module('Unit | Service | chat', function (hooks) {
                 });
                 assert.deepEqual(options, {
                     normalizeToEmberData: true,
-                    normalizeModelType: 'chatChannel',
+                    normalizeModelType: 'chat_channel',
                 });
 
                 return Promise.resolve({ id: 'chat-1' });

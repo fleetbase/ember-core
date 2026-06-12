@@ -135,7 +135,7 @@ export default class SubjectCustomFields {
 
         // If `fieldFor` is provided then we are fetching custom fields for resource and not an instance of something
         // this means custom fields can be tied to individual resource instances OR tied to the schema of a resource kind
-        const fieldsQp = fieldFor ? { for: fieldFor } : { subject_uuid: subjectId };
+        const fieldsQp = fieldFor ? { for: fieldFor, limit: -1 } : { subject_uuid: subjectId, limit: -1 };
         const fields = await this.store.query('custom-field', fieldsQp);
 
         // retain on instance for getGroups/getFields()
