@@ -493,6 +493,50 @@ export default class UniverseService extends Service.extend(Evented) {
     }
 
     /**
+     * Register a dashboard render slot.
+     *
+     * @method registerDashboardSlot
+     * @param {String} slotId Dashboard slot identifier
+     * @param {Object} options Slot options
+     */
+    registerDashboardSlot(slotId, options = {}) {
+        this.widgetService.registerDashboardSlot(slotId, options);
+    }
+
+    /**
+     * Register a system dashboard for a render slot.
+     *
+     * @method registerDashboardForSlot
+     * @param {String} slotId Dashboard slot identifier
+     * @param {String} dashboardName Dashboard widget namespace
+     * @param {Object} options Dashboard slot options
+     */
+    registerDashboardForSlot(slotId, dashboardName, options = {}) {
+        this.widgetService.registerDashboardForSlot(slotId, dashboardName, options);
+    }
+
+    /**
+     * Set the first system dashboard for a render slot.
+     *
+     * @method setDefaultDashboardForSlot
+     * @param {String} slotId Dashboard slot identifier
+     * @param {String} dashboardName Dashboard widget namespace
+     */
+    setDefaultDashboardForSlot(slotId, dashboardName) {
+        this.widgetService.setDefaultDashboardForSlot(slotId, dashboardName);
+    }
+
+    /**
+     * Set the dashboard that should load first on the console home.
+     *
+     * @method setConsoleDashboard
+     * @param {String} dashboardName Dashboard widget namespace
+     */
+    setConsoleDashboard(dashboardName) {
+        this.widgetService.setConsoleDashboard(dashboardName);
+    }
+
+    /**
      * Get dashboard widgets
      *
      * @computed dashboardWidgets

@@ -92,6 +92,106 @@ export default class WidgetService extends Service {
     }
 
     /**
+     * Register a dashboard render slot.
+     *
+     * Slots describe where dashboards render (for example `console.home`),
+     * while dashboard names continue to describe widget namespaces.
+     *
+     * @method registerDashboardSlot
+     * @param {String} slotId Slot identifier
+     * @param {Object} options Slot options
+     */
+    registerDashboardSlot(slotId, options = {}) {
+        const slot = {
+            id: slotId,
+            ...options,
+        };
+
+        this.registry.register('dashboard:slots', 'slot', slotId, slot);
+    }
+
+    /**
+     * Register a system dashboard that should be available in a render slot.
+     *
+     * @method registerDashboardForSlot
+     * @param {String} slotId Slot identifier
+     * @param {String} dashboardName Dashboard widget namespace
+     * @param {Object} options Dashboard slot options
+     */
+    registerDashboardForSlot(slotId, dashboardName, options = {}) {
+        this.registerDashboardSlot(slotId);
+        this.registerDashboard(dashboardName, options);
+
+        const dashboard = {
+            id: dashboardName,
+            dashboardId: dashboardName,
+            name: options.name ?? options.defaultDashboardName ?? dashboardName,
+            extension: options.extension ?? 'core',
+            priority: options.priority ?? 0,
+            ...options,
+        };
+
+        this.registry.register('dashboard:slots', 'dashboard', `${slotId}#${dashboardName}`, {
+            slotId,
+            ...dashboard,
+        });
+    }
+
+    /**
+     * Set the system dashboard that should load first for a render slot.
+     *
+     * @method setDefaultDashboardForSlot
+     * @param {String} slotId Slot identifier
+     * @param {String} dashboardName Dashboard widget namespace
+     */
+    setDefaultDashboardForSlot(slotId, dashboardName) {
+        this.registerDashboardSlot(slotId);
+        this.registry.register('dashboard:slots', 'default', slotId, {
+            slotId,
+            dashboardId: dashboardName,
+        });
+    }
+
+    /**
+     * Convenience alias for setting the console home dashboard.
+     *
+     * @method setConsoleDashboard
+     * @param {String} dashboardName Dashboard widget namespace
+     */
+    setConsoleDashboard(dashboardName) {
+        this.setDefaultDashboardForSlot('console.home', dashboardName);
+    }
+
+    /**
+     * Get system dashboards registered for a slot.
+     *
+     * @method getDashboardsForSlot
+     * @param {String} slotId Slot identifier
+     * @returns {Array} Slot dashboard registrations
+     */
+    getDashboardsForSlot(slotId) {
+        if (!slotId) {
+            return [];
+        }
+
+        const prefix = `${slotId}#`;
+        return [...this.registry.getRegistry('dashboard:slots', 'dashboard')]
+            .filter((dashboard) => dashboard?._registryKey?.startsWith(prefix))
+            .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+    }
+
+    /**
+     * Get the dashboard namespace that should load first for a slot.
+     *
+     * @method getDefaultDashboardForSlot
+     * @param {String} slotId Slot identifier
+     * @returns {String|null} Dashboard namespace
+     */
+    getDefaultDashboardForSlot(slotId) {
+        return this.registry.lookup('dashboard:slots', 'default', slotId)?.dashboardId ?? null;
+    }
+
+    /**
      * Register widgets to a specific dashboard
      * Makes these widgets available for selection on the dashboard
      * If a widget has `default: true`, it's also registered as a default widget
