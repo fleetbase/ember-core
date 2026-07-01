@@ -11,6 +11,7 @@ export default async function loadInstalledExtensions(additionalCoreEngines = []
         '@fleetbase/iam-engine',
         '@fleetbase/ledger-engine',
         '@fleetbase/pallet-engine',
+        '@fleetbase/ai-engine',
         '@fleetbase/customer-portal-engine',
         '@fleetbase/vroom-engine',
         '@fleetbase/valhalla-engine',

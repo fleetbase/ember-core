@@ -310,10 +310,11 @@ export default class RegistryService extends Service {
      *
      * @method createRegistry
      * @param {String} sectionName Section name
+     * @param {String} type Type of registry
      * @returns {Array} The default list array
      */
-    createRegistry(sectionName) {
-        return this.getOrCreateList(sectionName, 'menu-item');
+    createRegistry(sectionName, type = 'menu-item') {
+        return this.getOrCreateList(sectionName, type);
     }
 
     /**
