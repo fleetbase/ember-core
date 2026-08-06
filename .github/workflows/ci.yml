@@ -11,25 +11,35 @@ on:
 env:
   NODE_VERSION: 22.x
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+permissions:
+  contents: read
+
 jobs:
-  build:
+  test:
+    name: Lint, Test & Coverage
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Setup Node.js ${{ env.NODE_VERSION }}
-      uses: actions/setup-node@v2
-      with:
-        node-version: ${{ env.NODE_VERSION }}
+    - name: Checkout
+      uses: actions/checkout@v4
 
     - name: Setup pnpm
-      uses: pnpm/action-setup@v2.0.1
+      uses: pnpm/action-setup@v4
       with:
-        version: latest
+        version: 11
+
+    - name: Setup Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: pnpm
 
     - name: Install Dependencies
-      run: pnpm install
+      run: pnpm install --frozen-lockfile
 
     - name: Lint
       run: pnpm run lint
@@ -37,25 +47,44 @@ jobs:
     - name: Build
       run: pnpm run build
 
+    - name: Coverage gate self-tests
+      run: node --test scripts/
+
+    - name: Test with coverage (full suite)
+      run: pnpm run coverage
+
+    - name: Enforce 100% coverage gate
+      run: pnpm run coverage:check
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        files: coverage/lcov.info
+        flags: ember-core
+        fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}
+
   npm_publish:
-    needs: build
+    needs: test
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Setup Node.js ${{ env.NODE_VERSION }}
-      uses: actions/setup-node@v2
-      with:
-        node-version: ${{ env.NODE_VERSION }}
+    - name: Checkout
+      uses: actions/checkout@v4
 
     - name: Setup pnpm
-      uses: pnpm/action-setup@v2.0.1
+      uses: pnpm/action-setup@v4
       with:
-        version: latest
+        version: 11
+
+    - name: Setup Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: pnpm
 
     - name: Install Dependencies
-      run: pnpm install
+      run: pnpm install --frozen-lockfile
 
     - name: Build
       run: pnpm run build
@@ -67,24 +96,29 @@ jobs:
       run: npm publish --access public
 
   github_publish:
-    needs: build
+    needs: test
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: read
+      packages: write
     steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v2
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2.0.1
+        uses: pnpm/action-setup@v4
         with:
-          version: latest
+          version: 11
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
 
       - name: Install Dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm run build

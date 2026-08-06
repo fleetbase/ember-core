@@ -6,6 +6,14 @@ const path = require('path');
 module.exports = {
     name: require('./package').name,
 
+    // Instruments this addon's own `addon/` tree with istanbul when COVERAGE=true,
+    // so coverage reflects the addon source rather than only the dummy app.
+    options: {
+        babel: {
+            plugins: [...require('ember-cli-code-coverage').buildBabelPlugin()],
+        },
+    },
+
     isDevelopingAddon: function () {
         return true;
     },

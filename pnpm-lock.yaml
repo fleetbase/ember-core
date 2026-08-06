@@ -32,6 +32,9 @@ importers:
       ember-cli-notifications:
         specifier: ^9.0.0
         version: 9.1.0(@babel/core@7.29.0)(ember-source@5.4.1(@babel/core@7.29.0)(@glimmer/component@1.1.2(@babel/core@7.29.0))(rsvp@4.8.5)(webpack@5.106.2(postcss@8.5.14)))
+      ember-cli-string-helpers:
+        specifier: ^6.1.0
+        version: 6.1.0
       ember-concurrency:
         specifier: ^4.0.4
         version: 4.0.6(@babel/core@7.29.0)
@@ -72,6 +75,9 @@ importers:
       '@ember/optional-features':
         specifier: ^2.0.0
         version: 2.3.0
+      '@ember/string':
+        specifier: ^3.1.1
+        version: 3.1.1
       '@ember/test-helpers':
         specifier: ^3.2.0
         version: 3.3.1(@babel/core@7.29.0)(ember-source@5.4.1(@babel/core@7.29.0)(@glimmer/component@1.1.2(@babel/core@7.29.0))(rsvp@4.8.5)(webpack@5.106.2(postcss@8.5.14)))(webpack@5.106.2(postcss@8.5.14))
@@ -105,6 +111,9 @@ importers:
       ember-cli-clean-css:
         specifier: ^3.0.0
         version: 3.0.0
+      ember-cli-code-coverage:
+        specifier: ^3.1.0
+        version: 3.1.0
       ember-cli-dependency-checker:
         specifier: ^3.3.2
         version: 3.3.3(ember-cli@5.4.2(@babel/core@7.29.0)(@types/node@25.6.2)(handlebars@4.7.9)(underscore@1.13.8))
@@ -1174,6 +1183,14 @@ packages:
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
     engines: {node: '>=12'}
 
+  '@istanbuljs/load-nyc-config@1.1.0':
+    resolution: {integrity: sha512-VjeHSlIzpv/NyD3N0YuHfXOPDIixcA1q2ZV98wsMqcYlPmv2n3Yb2lYP9XMElnaFVXg5A7YLTeLu6V84uQDjmQ==}
+    engines: {node: '>=8'}
+
+  '@istanbuljs/schema@0.1.6':
+    resolution: {integrity: sha512-+Sg6GCR/wy1oSmQDFq4LQDAhm3ETKnorxN+y5nbLULOR3P0c14f2Wurzj3/xqPXtasLFfHd5iRFQ7AJt4KH2cw==}
+    engines: {node: '>=8'}
+
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
 
@@ -1553,6 +1570,9 @@ packages:
     resolution: {integrity: sha512-KMReFUr0B4t+D+OBkjR3KYqvocp2XaSzO55UcB6mgQMd3KbcE+mWTyvVV7D/zsdEbNnV6acZUutkiHQXvTr1Rw==}
     engines: {node: '>= 8'}
 
+  argparse@1.0.10:
+    resolution: {integrity: sha512-o5Roy6tNG4SL/FOkCAN6RzjiakZS25RLYFrcMttJqbdd8BWrnA+fGz57iN5Pb06pvBGvl5gQ0B48dJlslXvoTg==}
+
   argparse@2.0.1:
     resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
 
@@ -1707,6 +1727,10 @@ packages:
   babel-plugin-htmlbars-inline-precompile@5.3.1:
     resolution: {integrity: sha512-QWjjFgSKtSRIcsBhJmEwS2laIdrA6na8HAlc/pEAhjHgQsah/gMiBFRZvbQTy//hWxR4BMwV7/Mya7q5H8uHeA==}
     engines: {node: 10.* || >= 12.*}
+
+  babel-plugin-istanbul@6.1.1:
+    resolution: {integrity: sha512-Y1IQok9821cC9onCx5otgFfRm7Lm+I+wwxOx738M/WLPZ9Q42m4IG5W0FNX8WLL2gYMZo3JkuXIH2DOpWM+qwA==}
+    engines: {node: '>=8'}
 
   babel-plugin-module-resolver@3.2.0:
     resolution: {integrity: sha512-tjR0GvSndzPew/Iayf4uICWZqjBwnlMWjSx6brryfQ81F9rxBVqwDJtFCV8oOs0+vJeefK9TmdZtkIFdFe1UnA==}
@@ -2047,6 +2071,10 @@ packages:
   camelcase-keys@7.0.2:
     resolution: {integrity: sha512-Rjs1H+A9R+Ig+4E/9oyB66UC5Mj9Xq3N//vcLf2WzgdTi/3gUu3Z9KoqmlrEG4VuuLK8wJHofxzdQXz/knhiYg==}
     engines: {node: '>=12'}
+
+  camelcase@5.3.1:
+    resolution: {integrity: sha512-L28STB170nwWS63UjtlEOE3dldQApaJXZkOI1uMFfzf3rRuPegHaHesyee+YxQ+W6SvRDQV6UrdOdRiR153wJg==}
+    engines: {node: '>=6'}
 
   camelcase@6.3.0:
     resolution: {integrity: sha512-Gmy6FhYlCY7uOElZUSbxo2UCDH8owEk996gkbrpsgGtrJLM3J7jGxl9Ic7Qwwj4ivOE5AWZWRMecDdF7hqGjFA==}
@@ -2725,6 +2753,18 @@ packages:
     resolution: {integrity: sha512-BbveJCyRvzzkaTH1llLW+MpHe/yzA5zpHOpMIg2vp/3JD9mban9zUm7lphaB0TSpPuMuby9rAhTI8pgXq0ifIA==}
     engines: {node: 16.* || >= 18}
 
+  ember-cli-code-coverage@3.1.0:
+    resolution: {integrity: sha512-ODRYNClYaUglbGZX86iOhOTIZI86QDxmEgKVHqaPjQNKKhoBeJcfb9n4sRSFK8w6YrYsjenKI6V6h9oT3lVhtg==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@embroider/compat': ^0.47.0 || ^1.0.0 || ^2.0.0 || >=3.0.0
+      '@embroider/core': ^0.47.0 || ^1.0.0 || ^2.0.0 || >=3.0.0
+    peerDependenciesMeta:
+      '@embroider/compat':
+        optional: true
+      '@embroider/core':
+        optional: true
+
   ember-cli-dependency-checker@3.3.3:
     resolution: {integrity: sha512-mvp+HrE0M5Zhc2oW8cqs8wdhtqq0CfQXAYzaIstOzHJJn/U01NZEGu3hz7J7zl/+jxZkyygylzcS57QqmPXMuQ==}
     engines: {node: '>= 6'}
@@ -2775,6 +2815,10 @@ packages:
   ember-cli-sri@2.1.1:
     resolution: {integrity: sha512-YG/lojDxkur9Bnskt7xB6gUOtJ6aPl/+JyGYm9HNDk3GECVHB3SMN3rlGhDKHa1ndS5NK2W2TSLb9bzRbGlMdg==}
     engines: {node: '>= 0.10.0'}
+
+  ember-cli-string-helpers@6.1.0:
+    resolution: {integrity: sha512-Lw8B6MJx2n8CNF2TSIKs+hWLw0FqSYjr2/NRPyquyYA05qsl137WJSYW3ZqTsLgoinHat0DGF2qaCXocLhLmyA==}
+    engines: {node: 10.* || >=12.*}
 
   ember-cli-string-utils@1.1.0:
     resolution: {integrity: sha512-PlJt4fUDyBrC/0X+4cOpaGCiMawaaB//qD85AXmDRikxhxVzfVdpuoec02HSiTGTTB85qCIzWBIh8lDOiMyyFg==}
@@ -3584,6 +3628,10 @@ packages:
     resolution: {integrity: sha512-9fSjSaos/fRIVIp+xSJlE6lfwhES7LNtKaCBIamHsjr2na1BiABJPo0mOjjz8GJDURarmCPGqaiVg5mfjb98CQ==}
     engines: {node: '>= 0.4'}
 
+  get-package-type@0.1.0:
+    resolution: {integrity: sha512-pjzuKtY64GYfWizNAJ0fr9VqttZkNiK2iS430LtIHzjBEr6bX8Am2zm4sW4Ro5wjWW5cAlRL1qAMTcXbjNAO2Q==}
+    engines: {node: '>=8.0.0'}
+
   get-proto@1.0.1:
     resolution: {integrity: sha512-sTSfBjoXBp89JvIKIefqw7U2CCebsc74kiY6awiGogKtoSGbgjYE/G/+l9sF3MWFPNc9IcoOC4ODfKHfxFmp0g==}
     engines: {node: '>= 0.4'}
@@ -3819,6 +3867,9 @@ packages:
   hosted-git-info@6.1.3:
     resolution: {integrity: sha512-HVJyzUrLIL1c0QmviVh5E8VGyUS7xCFPS6yydaVd1UegW+ibV/CohqTH9MkOLDp5o+rb82DMo77PTuc9F/8GKw==}
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
+
+  html-escaper@2.0.2:
+    resolution: {integrity: sha512-H2iMtd0I4Mt5eYiapRdIDjp+XzelXQ0tFE4JS7YFwFevXXMmOp9myNrUvCg0D6ws8iqkRPBfKHgbwig1SmlLfg==}
 
   html-tags@3.3.1:
     resolution: {integrity: sha512-ztqyC3kLto0e9WbNp0aeP+M3kTt+nbaIveGmUxAtZa+8iFgKLUOD4YKM5j+f3QD89bra7UeumolZHKuOXnTmeQ==}
@@ -4197,6 +4248,26 @@ packages:
     resolution: {integrity: sha512-WhB9zCku7EGTj/HQQRz5aUQEUeoQZH2bWcltRErOpymJ4boYE6wL9Tbr23krRPSZ+C5zqNSrSw+Cc7sZZ4b7vg==}
     engines: {node: '>=0.10.0'}
 
+  istanbul-lib-coverage@3.2.2:
+    resolution: {integrity: sha512-O8dpsF+r0WV/8MNRKfnmrtCWhuKjxrq2w+jpzBL5UZKTi2LeVWnWOmWRxFlesJONmc+wLAGvKQZEOanko0LFTg==}
+    engines: {node: '>=8'}
+
+  istanbul-lib-instrument@5.2.1:
+    resolution: {integrity: sha512-pzqtp31nLv/XFOzXGuvhCb8qhjmTVo5vjVk19XE4CRlSWz0KoeJ3bw9XsA7nOp9YBf4qHjwBxkDzKcME/J29Yg==}
+    engines: {node: '>=8'}
+
+  istanbul-lib-report@3.0.1:
+    resolution: {integrity: sha512-GCfE1mtsHGOELCU8e/Z7YWzpmybrx/+dSTfLrvY8qRmaY6zXTKWn6WQIjaAFw069icm6GVMNkgu0NzI4iPZUNw==}
+    engines: {node: '>=10'}
+
+  istanbul-lib-source-maps@4.0.1:
+    resolution: {integrity: sha512-n3s8EwkdFIJCG3BPKBYvskgXGoy88ARzvegkitk60NxRdwltLOTaH7CUiMRXvwYorl0Q712iEjcWB+fK/MrWVw==}
+    engines: {node: '>=10'}
+
+  istanbul-reports@3.2.0:
+    resolution: {integrity: sha512-HGYWWS/ehqTV3xN10i23tkPkpH46MLCIMFNCaaKNavAXTF1RkqxawEPtnjnGZ6XKSInBKkiOA5BKS+aZiY3AvA==}
+    engines: {node: '>=8'}
+
   istextorbinary@2.1.0:
     resolution: {integrity: sha512-kT1g2zxZ5Tdabtpp9VSdOzW9lb6LXImyWbzbQeTxoRtHhurC9Ej9Wckngr2+uepPL09ky/mJHmN9jeJPML5t6A==}
     engines: {node: '>=0.12'}
@@ -4218,6 +4289,10 @@ packages:
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
+
+  js-yaml@3.15.0:
+    resolution: {integrity: sha512-ttBQIIQPDeLjpPOohtUdXuXUVoA2uIB6fEH9HyJ7234s5mBJ5wTx20njxplLZQgLaOfpmPQA7X2t5AX6tIPbog==}
+    hasBin: true
 
   js-yaml@4.1.1:
     resolution: {integrity: sha512-qQKT4zQxXl8lLwBtHMWwaTcGfFOZviOJet3Oy/xmGk2gZH677CJM9EvtfdSkgWcATZhj/55JZ0rmy3myCT5lsA==}
@@ -4423,6 +4498,10 @@ packages:
   make-dir@3.1.0:
     resolution: {integrity: sha512-g3FeP20LNwhALb/6Cz6Dd4F2ngze0jz7tbzrD2wAV+o9FeNHe4rL+yK2md0J/fiSf1sa1ADhXqi5+oVwOM/eGw==}
     engines: {node: '>=8'}
+
+  make-dir@4.0.0:
+    resolution: {integrity: sha512-hXdUTZYIVOt1Ex//jAQi+wTZZpUpwBj/0QsOzqegb3rGMMeJiSEu5xLHnYfBrRV4RH2+OCSOO95Is/7x1WJ4bw==}
+    engines: {node: '>=10'}
 
   makeerror@1.0.12:
     resolution: {integrity: sha512-JmqCvUhmt43madlpFzG4BQzG2Z3m6tvQDNKdClZnO3VbIudJYmxsT0FNJMeiB2+JTSlTQTSbU8QdesVmwJcmLg==}
@@ -4687,6 +4766,10 @@ packages:
 
   no-case@3.0.4:
     resolution: {integrity: sha512-fgAN3jGAh+RoxUGZHTSOLJIqUc2wmoBwGR4tbpNAKmmovFoWq0OdRkb0VkldReO2a2iBT/OEulG9XSUc10r3zg==}
+
+  node-dir@0.1.17:
+    resolution: {integrity: sha512-tmPX422rYgofd4epzrNoOXiE8XFZYOcCq1vD7MAXCDO+O+zndlA2ztdKKMa+EeuBG5tHETpr4ml4RGgpqDCCAg==}
+    engines: {node: '>= 0.10.5'}
 
   node-fetch@2.7.0:
     resolution: {integrity: sha512-c4FRfUm/dbcWZ7U+1Wq0AwCyFL+3nt2bEw05wfxSz+DWpWsitgmSgYmy2dQdWyKC1694ELPqMs/YzUSNozLt8A==}
@@ -5747,6 +5830,9 @@ packages:
     resolution: {integrity: sha512-NzNVhJDYpwceVVii8/Hu6DKfD2G+NrQHlS/V/qgv763EYudVwEcMQNxd2lh+0VrUByXN/oJkl5grOhYWvQUYiw==}
     engines: {node: '>=0.10.0'}
 
+  sprintf-js@1.0.3:
+    resolution: {integrity: sha512-D9cPgkvLlV3t3IzL0D0YLvGA9Ahk4PcvVwUbN0dSGr1aP0Nrt4AEnTUbuGvquEC0mA64Gqt1fzirlRs5ibXx8g==}
+
   sprintf-js@1.1.3:
     resolution: {integrity: sha512-Oo+0REFV59/rz3gfJNKQiBlwfHaSESl1pcGyABQsnnIfWOFt6JNj5gCog2U6MLZ//IGYD+nA8nI+mTShREReaA==}
 
@@ -6002,6 +6088,10 @@ packages:
     resolution: {integrity: sha512-tPbLXTI6ohPASb/1YViL428oEHu6/qv1OxqYnfaonVCFHqx4+wCd95pHrQWsL5X4pl90CTyW9piSAsS2L0VoMw==}
     engines: {node: '>=10'}
     hasBin: true
+
+  test-exclude@6.0.0:
+    resolution: {integrity: sha512-cAGWPIyOHU6zlmg88jwm7VRyXnMN7iV68OGAbYDk/Mh/xC/pzVPlQtY6ngoIH/5/tciuhGfvESU8GrHrcxD56w==}
+    engines: {node: '>=8'}
 
   testem@3.20.0:
     resolution: {integrity: sha512-SSFfJQK/SGruISFjoKG2jCYwK596wWNPJFj2Wo77GzeIUxZ8ZjuwpyF01uekTLu4ITL6i9R4m1sWaKPK/HsunA==}
@@ -7908,6 +7998,16 @@ snapshots:
       wrap-ansi: 8.1.0
       wrap-ansi-cjs: wrap-ansi@7.0.0
 
+  '@istanbuljs/load-nyc-config@1.1.0':
+    dependencies:
+      camelcase: 5.3.1
+      find-up: 4.1.0
+      get-package-type: 0.1.0
+      js-yaml: 3.15.0
+      resolve-from: 5.0.0
+
+  '@istanbuljs/schema@0.1.6': {}
+
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
@@ -8070,7 +8170,7 @@ snapshots:
 
   '@types/glob@9.0.0':
     dependencies:
-      glob: 8.1.0
+      glob: 13.0.6
 
   '@types/http-errors@2.0.5': {}
 
@@ -8324,6 +8424,10 @@ snapshots:
       normalize-path: 3.0.0
       picomatch: 2.3.2
 
+  argparse@1.0.10:
+    dependencies:
+      sprintf-js: 1.0.3
+
   argparse@2.0.1: {}
 
   aria-query@5.3.2: {}
@@ -8472,6 +8576,16 @@ snapshots:
       magic-string: 0.25.9
       parse-static-imports: 1.1.0
       string.prototype.matchall: 4.0.12
+
+  babel-plugin-istanbul@6.1.1:
+    dependencies:
+      '@babel/helper-plugin-utils': 7.28.6
+      '@istanbuljs/load-nyc-config': 1.1.0
+      '@istanbuljs/schema': 0.1.6
+      istanbul-lib-instrument: 5.2.1
+      test-exclude: 6.0.0
+    transitivePeerDependencies:
+      - supports-color
 
   babel-plugin-module-resolver@3.2.0:
     dependencies:
@@ -9158,6 +9272,8 @@ snapshots:
       quick-lru: 5.1.1
       type-fest: 1.4.0
 
+  camelcase@5.3.1: {}
+
   camelcase@6.3.0: {}
 
   can-symlink@1.0.0:
@@ -9777,6 +9893,22 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  ember-cli-code-coverage@3.1.0:
+    dependencies:
+      babel-plugin-istanbul: 6.1.1
+      body-parser: 1.20.5
+      ember-cli-babel: 7.26.11
+      express: 4.22.1
+      fs-extra: 9.1.0
+      istanbul-lib-coverage: 3.2.2
+      istanbul-lib-report: 3.0.1
+      istanbul-lib-source-maps: 4.0.1
+      istanbul-reports: 3.2.0
+      node-dir: 0.1.17
+      walk-sync: 2.2.0
+    transitivePeerDependencies:
+      - supports-color
+
   ember-cli-dependency-checker@3.3.3(ember-cli@5.4.2(@babel/core@7.29.0)(@types/node@25.6.2)(handlebars@4.7.9)(underscore@1.13.8)):
     dependencies:
       chalk: 2.4.2
@@ -9883,6 +10015,15 @@ snapshots:
   ember-cli-sri@2.1.1:
     dependencies:
       broccoli-sri-hash: 2.1.2
+    transitivePeerDependencies:
+      - supports-color
+
+  ember-cli-string-helpers@6.1.0:
+    dependencies:
+      '@babel/core': 7.29.0
+      broccoli-funnel: 3.0.8
+      ember-cli-babel: 7.26.11
+      resolve: 1.22.12
     transitivePeerDependencies:
       - supports-color
 
@@ -11430,6 +11571,8 @@ snapshots:
       hasown: 2.0.3
       math-intrinsics: 1.1.0
 
+  get-package-type@0.1.0: {}
+
   get-proto@1.0.1:
     dependencies:
       dunder-proto: 1.0.1
@@ -11724,6 +11867,8 @@ snapshots:
   hosted-git-info@6.1.3:
     dependencies:
       lru-cache: 7.18.3
+
+  html-escaper@2.0.2: {}
 
   html-tags@3.3.1: {}
 
@@ -12093,6 +12238,37 @@ snapshots:
 
   isobject@3.0.1: {}
 
+  istanbul-lib-coverage@3.2.2: {}
+
+  istanbul-lib-instrument@5.2.1:
+    dependencies:
+      '@babel/core': 7.29.0
+      '@babel/parser': 7.29.3
+      '@istanbuljs/schema': 0.1.6
+      istanbul-lib-coverage: 3.2.2
+      semver: 6.3.1
+    transitivePeerDependencies:
+      - supports-color
+
+  istanbul-lib-report@3.0.1:
+    dependencies:
+      istanbul-lib-coverage: 3.2.2
+      make-dir: 4.0.0
+      supports-color: 7.2.0
+
+  istanbul-lib-source-maps@4.0.1:
+    dependencies:
+      debug: 4.4.3
+      istanbul-lib-coverage: 3.2.2
+      source-map: 0.6.1
+    transitivePeerDependencies:
+      - supports-color
+
+  istanbul-reports@3.2.0:
+    dependencies:
+      html-escaper: 2.0.2
+      istanbul-lib-report: 3.0.1
+
   istextorbinary@2.1.0:
     dependencies:
       binaryextensions: 2.3.0
@@ -12120,6 +12296,11 @@ snapshots:
   js-string-escape@1.0.1: {}
 
   js-tokens@4.0.0: {}
+
+  js-yaml@3.15.0:
+    dependencies:
+      argparse: 1.0.10
+      esprima: 4.0.1
 
   js-yaml@4.1.1:
     dependencies:
@@ -12309,6 +12490,10 @@ snapshots:
   make-dir@3.1.0:
     dependencies:
       semver: 6.3.1
+
+  make-dir@4.0.0:
+    dependencies:
+      semver: 7.8.0
 
   makeerror@1.0.12:
     dependencies:
@@ -12570,6 +12755,10 @@ snapshots:
     dependencies:
       lower-case: 2.0.2
       tslib: 2.8.1
+
+  node-dir@0.1.17:
+    dependencies:
+      minimatch: 3.1.5
 
   node-fetch@2.7.0:
     dependencies:
@@ -13714,6 +13903,8 @@ snapshots:
     dependencies:
       extend-shallow: 3.0.2
 
+  sprintf-js@1.0.3: {}
+
   sprintf-js@1.1.3: {}
 
   sri-toolbox@0.2.0: {}
@@ -14000,6 +14191,12 @@ snapshots:
       acorn: 8.16.0
       commander: 2.20.3
       source-map-support: 0.5.21
+
+  test-exclude@6.0.0:
+    dependencies:
+      '@istanbuljs/schema': 0.1.6
+      glob: 7.2.3
+      minimatch: 3.1.5
 
   testem@3.20.0(@babel/core@7.29.0)(handlebars@4.7.9)(underscore@1.13.8):
     dependencies:
