@@ -8,6 +8,7 @@ import { sendCoverage } from 'ember-cli-code-coverage/test-support';
 import stubSocketCluster from './helpers/stub-socketcluster';
 import stubConsoleExtensions from './helpers/stub-console-extensions';
 import forceAddonModulesToBeLoaded from './helpers/force-addon-modules';
+import resetStorages from 'ember-local-storage/test-support/reset-storage';
 
 const COVERAGE_UPLOAD_TIMEOUT_MS = 60000;
 
@@ -22,6 +23,14 @@ stubConsoleExtensions();
 setApplication(Application.create(config.APP));
 
 setup(QUnit.assert);
+
+// ember-local-storage caches its storage objects across owners. Without a reset
+// the second test to use a `storageFor` service inherits the previous test's
+// destroyed object and fails with "calling set on destroyed object".
+QUnit.testDone(function () {
+    resetStorages();
+    window.localStorage.clear();
+});
 
 // Pull this addon's untested modules into the coverage denominator and ship the
 // report. A failed or stalled upload is reported as a global failure rather than
