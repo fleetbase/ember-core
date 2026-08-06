@@ -81,7 +81,7 @@ export default class LanguageService extends Service {
         const localeMap = {};
 
         for (let i = 0; i < this.locales.length; i++) {
-            const locale = this.locales.objectAt(i);
+            const locale = this.locales[i];
 
             localeMap[locale] = this._findCountryDataForLocale(locale);
         }

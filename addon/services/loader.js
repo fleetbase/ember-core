@@ -57,7 +57,8 @@ export default class LoaderService extends Service {
             });
         }
 
-        this.routesLoaded.pushObject(route);
+        // Reassigned rather than mutated so the tracked property invalidates.
+        this.routesLoaded = [...this.routesLoaded, route];
     }
 
     /**
