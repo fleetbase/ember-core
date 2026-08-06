@@ -3,14 +3,29 @@ const Funnel = require('broccoli-funnel');
 const MergeTrees = require('broccoli-merge-trees');
 const path = require('path');
 
+/**
+ * Istanbul instrumentation for this addon's own `addon/` tree, so coverage
+ * reflects the addon source rather than only the dummy app.
+ *
+ * ember-cli-code-coverage is a devDependency and is only ever needed while
+ * running this repository's own test suite, so it is resolved lazily behind the
+ * same env var it keys off. Consumers of the published addon never load it.
+ */
+function coverageBabelPlugins() {
+    if (process.env.COVERAGE !== 'true') {
+        return [];
+    }
+
+    // eslint-disable-next-line n/no-unpublished-require -- dev-only, guarded above
+    return require('ember-cli-code-coverage').buildBabelPlugin();
+}
+
 module.exports = {
     name: require('./package').name,
 
-    // Instruments this addon's own `addon/` tree with istanbul when COVERAGE=true,
-    // so coverage reflects the addon source rather than only the dummy app.
     options: {
         babel: {
-            plugins: [...require('ember-cli-code-coverage').buildBabelPlugin()],
+            plugins: [...coverageBabelPlugins()],
         },
     },
 

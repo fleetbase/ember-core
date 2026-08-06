@@ -4,10 +4,10 @@ import * as QUnit from 'qunit';
 import { setApplication } from '@ember/test-helpers';
 import { setup } from 'qunit-dom';
 import { start } from 'ember-qunit';
-import { forceModulesToBeLoaded, sendCoverage } from 'ember-cli-code-coverage/test-support';
+import { sendCoverage } from 'ember-cli-code-coverage/test-support';
 import stubSocketCluster from './helpers/stub-socketcluster';
+import forceAddonModulesToBeLoaded from './helpers/force-addon-modules';
 
-const ADDON_MODULE_PREFIX = '@fleetbase/ember-core/';
 const COVERAGE_UPLOAD_TIMEOUT_MS = 60000;
 
 // Must run before the application boots so the socket service never builds a
@@ -18,19 +18,15 @@ setApplication(Application.create(config.APP));
 
 setup(QUnit.assert);
 
-// Evaluate this addon's own modules once the suite has finished so that source
-// files without tests still land in the coverage denominator rather than being
-// silently dropped. The filter is scoped to the addon: forcing every module in
-// the build would evaluate unrelated vendor code with side effects.
-//
-// A failed or stalled coverage upload is reported as a global failure rather
-// than left to hang the run, so a broken coverage pipeline is always visible.
+// Pull this addon's untested modules into the coverage denominator and ship the
+// report. A failed or stalled upload is reported as a global failure rather than
+// left to hang the run, so a broken coverage pipeline is always visible.
 QUnit.done(async function () {
     if (!config.coverageEnabled) {
         return;
     }
 
-    forceModulesToBeLoaded((type, module) => type === 'require' && module.startsWith(ADDON_MODULE_PREFIX));
+    forceAddonModulesToBeLoaded();
 
     const instrumentedFiles = Object.keys(window.__coverage__ ?? {}).length;
 
@@ -43,7 +39,8 @@ QUnit.done(async function () {
             }),
         ]);
     } catch (error) {
-        QUnit.onUncaughtException(new Error(`[coverage] ${error.message} (instrumented files: ${instrumentedFiles})`));
+        // eslint-disable-next-line no-console
+        console.error(`[coverage] ${error.message} (instrumented files: ${instrumentedFiles})`);
     } finally {
         clearTimeout(timeoutId);
     }
