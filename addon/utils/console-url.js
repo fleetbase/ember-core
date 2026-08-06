@@ -26,7 +26,9 @@ export default function consoleUrl(path = '', queryParams = {}, subdomain = null
             subdomain = parts.length > 2 ? parts[0] : null;
         }
         if (host === null) {
-            host = currentHost;
+            // extractHostAndPort parses with `new URL`, which needs a protocol;
+            // window.location.host is only "hostname:port" and would not parse.
+            host = `${window.location.protocol}//${currentHost}`;
         }
     }
 

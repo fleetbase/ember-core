@@ -14,7 +14,7 @@ const isRoutingInCountry = (country, payload, waypoints = []) => {
         countryCode = country;
     }
 
-    if (isArray(waypoints) && !isBlank(waypoints?.firstObject) && get(waypoints?.firstObject, 'place.country') === country) {
+    if (isArray(waypoints) && !isBlank(waypoints[0]) && get(waypoints[0], 'place.country') === country) {
         countryCode = country;
     }
 
