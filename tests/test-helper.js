@@ -6,6 +6,7 @@ import { setup } from 'qunit-dom';
 import { start } from 'ember-qunit';
 import { sendCoverage } from 'ember-cli-code-coverage/test-support';
 import stubSocketCluster from './helpers/stub-socketcluster';
+import stubConsoleExtensions from './helpers/stub-console-extensions';
 import forceAddonModulesToBeLoaded from './helpers/force-addon-modules';
 
 const COVERAGE_UPLOAD_TIMEOUT_MS = 60000;
@@ -13,6 +14,10 @@ const COVERAGE_UPLOAD_TIMEOUT_MS = 60000;
 // Must run before the application boots so the socket service never builds a
 // real client. See the helper for why an unstubbed client hangs the suite.
 stubSocketCluster();
+
+// Supplies the host-application module the extension manager imports, so that
+// service can be loaded and measured at all.
+stubConsoleExtensions();
 
 setApplication(Application.create(config.APP));
 
