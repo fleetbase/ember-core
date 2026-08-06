@@ -30,7 +30,7 @@
         "test": "concurrently \"npm:lint\" \"npm:test:*\" --names \"lint,test:\"",
         "test:ember": "ember test",
         "coverage": "COVERAGE=true ember test",
-        "coverage:check": "node --test scripts/ && node scripts/check-coverage.mjs",
+        "coverage:check": "node --test scripts/check-coverage.test.mjs && node scripts/check-coverage.mjs",
         "test:ember-compatibility": "ember try:each",
         "publish:npm": "npm config set registry https://registry.npmjs.org/ && npm publish",
         "publish:github": "npm config set '@fleetbase:registry' https://npm.pkg.github.com/ && npm publish"

@@ -48,7 +48,7 @@ jobs:
       run: pnpm run build
 
     - name: Coverage gate self-tests
-      run: node --test scripts/
+      run: node --test scripts/check-coverage.test.mjs
 
     - name: Test with coverage (full suite)
       run: pnpm run coverage
