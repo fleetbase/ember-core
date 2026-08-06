@@ -15,6 +15,6 @@ module('Unit | Utility | is-longitude', function () {
         assert.false(isLongitude(NaN));
         assert.false(isLongitude(-Infinity));
         assert.false(isLongitude('east'));
-        assert.false(isLongitude(null && undefined));
+        assert.false(isLongitude(undefined));
     });
 });

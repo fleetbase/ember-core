@@ -14,7 +14,7 @@ export default function getMimeType(fileName) {
     const extensions = Object.keys(map);
 
     for (let index = 0; index < extensions.length; index++) {
-        const ext = extensions.objectAt(index);
+        const ext = extensions[index];
 
         if (fileName.endsWith(ext)) {
             return ext;

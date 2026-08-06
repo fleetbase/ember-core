@@ -1,4 +1,7 @@
-import range, { _range } from 'dummy/utils/range';
+import range from 'dummy/utils/range';
+// The app re-export only forwards the default export, so the named helper has
+// to come from the addon module itself.
+import { _range } from '@fleetbase/ember-core/utils/range';
 import { module, test } from 'qunit';
 
 module('Unit | Utility | range', function () {

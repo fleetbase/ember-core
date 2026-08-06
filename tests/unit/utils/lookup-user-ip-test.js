@@ -1,5 +1,6 @@
 import { module, test } from 'qunit';
-import { ensureWhoisTimezone, getBrowserTimezone } from 'dummy/utils/lookup-user-ip';
+// This util has no app/ re-export, so it is imported from the addon directly.
+import { ensureWhoisTimezone, getBrowserTimezone } from '@fleetbase/ember-core/utils/lookup-user-ip';
 
 module('Unit | Utility | lookup-user-ip', function () {
     test('it preserves provider timezone', function (assert) {

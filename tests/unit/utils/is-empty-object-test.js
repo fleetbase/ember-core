@@ -16,9 +16,15 @@ module('Unit | Utility | is-empty-object', function () {
         assert.false(isEmptyObject({ a: 1 }));
     });
 
-    test('it returns false for non-plain constructors even when empty', function (assert) {
+    test('it returns false for non-plain constructors that are not blank', function (assert) {
         assert.false(isEmptyObject(new Date()));
         assert.false(isEmptyObject([1]));
-        assert.false(isEmptyObject(new Map()));
+    });
+
+    test('it treats anything Ember considers blank as empty', function (assert) {
+        // isBlank short-circuits first, and Ember's isEmpty reads `size`, so an
+        // empty Map is blank and never reaches the plain-object check.
+        assert.true(isEmptyObject(new Map()));
+        assert.true(isEmptyObject([]));
     });
 });
