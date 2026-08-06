@@ -1,4 +1,4 @@
-import config from '@fleetbase/console/config/environment';
+import config from 'ember-get-config';
 import { isBlank } from '@ember/utils';
 
 const isDevelopment = ['local', 'development'].includes(config.environment);

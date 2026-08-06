@@ -1,7 +1,7 @@
 import { get } from '@ember/object';
 import { isArray } from '@ember/array';
 import { isBlank } from '@ember/utils';
-import config from '@fleetbase/console/config/environment';
+import config from 'ember-get-config';
 
 const isRoutingInCountry = (country, payload, waypoints = []) => {
     if (isBlank(payload)) {

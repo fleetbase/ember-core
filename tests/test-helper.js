@@ -5,9 +5,14 @@ import { setApplication } from '@ember/test-helpers';
 import { setup } from 'qunit-dom';
 import { start } from 'ember-qunit';
 import { forceModulesToBeLoaded, sendCoverage } from 'ember-cli-code-coverage/test-support';
+import stubSocketCluster from './helpers/stub-socketcluster';
 
 const ADDON_MODULE_PREFIX = '@fleetbase/ember-core/';
 const COVERAGE_UPLOAD_TIMEOUT_MS = 60000;
+
+// Must run before the application boots so the socket service never builds a
+// real client. See the helper for why an unstubbed client hangs the suite.
+stubSocketCluster();
 
 setApplication(Application.create(config.APP));
 
@@ -21,6 +26,10 @@ setup(QUnit.assert);
 // A failed or stalled coverage upload is reported as a global failure rather
 // than left to hang the run, so a broken coverage pipeline is always visible.
 QUnit.done(async function () {
+    if (!config.coverageEnabled) {
+        return;
+    }
+
     forceModulesToBeLoaded((type, module) => type === 'require' && module.startsWith(ADDON_MODULE_PREFIX));
 
     const instrumentedFiles = Object.keys(window.__coverage__ ?? {}).length;

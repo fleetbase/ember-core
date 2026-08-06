@@ -18,6 +18,10 @@ module.exports = function (environment) {
             // Here you can pass flags/options to your application instance
             // when it is created
         },
+
+        // Mirrors the env var ember-cli-code-coverage instruments on, so the test
+        // suite only pays the cost of collecting and shipping coverage when asked.
+        coverageEnabled: process.env.COVERAGE === 'true',
     };
 
     if (environment === 'development') {
