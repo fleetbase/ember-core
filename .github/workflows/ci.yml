@@ -53,16 +53,20 @@ jobs:
     - name: Test with coverage (full suite)
       run: pnpm run coverage
 
-    - name: Enforce 100% coverage gate
-      run: pnpm run coverage:check
-
+    # Uploaded before the gate, and regardless of whether the suite passed, so
+    # Codecov still receives a report from a run with failing tests. A missing or
+    # unreadable report is a real problem and still fails the job.
     - name: Upload coverage to Codecov
+      if: '!cancelled()'
       uses: codecov/codecov-action@v5
       with:
         files: coverage/lcov.info
         flags: ember-core
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: Enforce 100% coverage gate
+      run: pnpm run coverage:check
 
   npm_publish:
     needs: test
