@@ -7,6 +7,7 @@ import { start } from 'ember-qunit';
 import { sendCoverage } from 'ember-cli-code-coverage/test-support';
 import stubSocketCluster from './helpers/stub-socketcluster';
 import stubConsoleExtensions from './helpers/stub-console-extensions';
+import stubEmberUi from './helpers/stub-ember-ui';
 import forceAddonModulesToBeLoaded from './helpers/force-addon-modules';
 import resetStorages from 'ember-local-storage/test-support/reset-storage';
 
@@ -19,6 +20,10 @@ stubSocketCluster();
 // Supplies the host-application module the extension manager imports, so that
 // service can be loaded and measured at all.
 stubConsoleExtensions();
+
+// Supplies the sibling-package util the crud service imports; see the helper for
+// why ember-ui cannot be a dependency of this addon.
+stubEmberUi();
 
 setApplication(Application.create(config.APP));
 
