@@ -1,7 +1,7 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'dummy/tests/helpers';
 import Service from '@ember/service';
-import Model, { attr } from '@ember-data/model';
+import Model, { attr, belongsTo } from '@ember-data/model';
 import { getBrowserTimezone } from '@fleetbase/ember-core/utils/lookup-user-ip';
 
 const WHOIS_CACHE_KEY = 'fleetbase:whois';
@@ -14,10 +14,16 @@ const WHOIS_CACHE_KEY = 'fleetbase:whois';
  * fetch — so that is swapped here rather than stubbed on the service, and the
  * whois cache is cleared so a previous test's result cannot satisfy it.
  */
+class RoleModel extends Model {
+    @attr('string') name;
+}
+
 class UserModel extends Model {
     @attr('string') name;
     @attr('string') locale;
     @attr('string') company_uuid;
+    // getUserSnapshot serializes the role, so it has to be a real record.
+    @belongsTo('role', { async: false, inverse: null }) role;
 }
 
 class CompanyModel extends Model {
@@ -102,6 +108,7 @@ module('Unit | Service | current-user (loading)', function (hooks) {
 
         this.owner.register('service:universe', class extends Service {});
         this.owner.register('model:user', UserModel);
+        this.owner.register('model:role', RoleModel);
         this.owner.register('model:company', CompanyModel);
 
         this.responses = {
@@ -117,7 +124,18 @@ module('Unit | Service | current-user (loading)', function (hooks) {
         this.store = this.owner.lookup('service:store');
         this.service = this.owner.lookup('service:current-user');
 
-        this.user = this.store.push({ data: { id: 'user-1', type: 'user', attributes: { name: 'Ron', company_uuid: 'company-1' } } });
+        this.pushUser = (id, attributes = {}) =>
+            this.store.push({
+                data: {
+                    id,
+                    type: 'user',
+                    attributes,
+                    relationships: { role: { data: { id: `role-for-${id}`, type: 'role' } } },
+                },
+                included: [{ id: `role-for-${id}`, type: 'role', attributes: { name: 'Admin' } }],
+            });
+
+        this.user = this.pushUser('user-1', { name: 'Ron', company_uuid: 'company-1' });
         this.store.push({ data: { id: 'company-1', type: 'company', attributes: { name: 'Acme' } } });
     });
 
@@ -236,7 +254,7 @@ module('Unit | Service | current-user (loading)', function (hooks) {
         });
 
         test('a user carrying a locale short-circuits the locale request', async function (assert) {
-            const user = this.store.push({ data: { id: 'user-2', type: 'user', attributes: { name: 'Ada', locale: 'fr-fr' } } });
+            const user = this.pushUser('user-2', { name: 'Ada', locale: 'fr-fr' });
 
             await this.service.setUser(user);
 
