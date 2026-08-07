@@ -62,9 +62,20 @@ export function checkCoverage({ summary, eligibleFiles }) {
         }
         const entry = summary[key];
         for (const metric of METRICS) {
-            const pct = entry?.[metric]?.pct;
-            if (pct !== 100) {
-                below.push({ file, metric, pct: pct ?? 'n/a' });
+            const summaryMetric = entry?.[metric];
+
+            // A file with nothing to instrument is vacuously covered. Pure
+            // re-export barrels are the real case: `export { default as X }
+            // from './x'` compiles away, so istanbul records an empty
+            // statementMap and then reports 0/0 as pct 0 — which would make
+            // those files impossible to pass no matter what tests exist.
+            // The file must still be PRESENT; that is checked above.
+            if (summaryMetric?.total === 0) {
+                continue;
+            }
+
+            if (summaryMetric?.pct !== 100) {
+                below.push({ file, metric, pct: summaryMetric?.pct ?? 'n/a' });
             }
         }
     }

@@ -50,6 +50,31 @@ test('fails when any metric is below 100%', () => {
     assert.deepEqual(result.below.map(({ metric, pct }) => ({ metric, pct })), [{ metric: 'branches', pct: 87.5 }]);
 });
 
+test('treats a file with nothing to instrument as covered', () => {
+    // Pure re-export barrels compile away entirely, so istanbul records an
+    // empty statementMap and reports 0/0 as pct 0. Without this, such a file
+    // could never pass the gate no matter what tests were written.
+    const { addonDir } = makeFixture({ files: ['contracts/index.js'], summary: {} });
+    const empty = { total: 0, covered: 0, skipped: 0, pct: 0 };
+    const summary = {
+        [path.join(addonDir, 'contracts/index.js')]: { statements: empty, branches: empty, functions: empty, lines: { ...empty } },
+    };
+
+    const result = checkCoverage({ summary, eligibleFiles: listEligibleFiles(addonDir) });
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.below, []);
+});
+
+test('an empty file must still be present in the report', () => {
+    const { addonDir } = makeFixture({ files: ['contracts/index.js'], summary: {} });
+
+    const result = checkCoverage({ summary: {}, eligibleFiles: listEligibleFiles(addonDir) });
+
+    assert.equal(result.ok, false);
+    assert.equal(result.missing.length, 1);
+});
+
 test('matches relative summary keys against absolute source paths', () => {
     const { addonDir } = makeFixture({ files: ['utils/a.js'], summary: {} });
     const file = listEligibleFiles(addonDir)[0];
