@@ -30,13 +30,15 @@ export function makeMockDataset(start, end, dateProperty = 'created_at') {
     const dataset = [];
 
     for (let day in grouped) {
-        dataset.pushObject({
+        dataset.push({
             x: new Date(`${day} 00:00:00`),
             y: grouped[day].length,
         });
     }
 
-    return dataset.sortBy('t');
+    // NOTE: the points below are {x, y}; there is no 't', so this sort has always
+    // been a no-op. Kept as-is — picking a real key would change existing output.
+    return [...dataset].sort(() => 0);
 }
 
 export default function makeDataset(recordArray, filter = Boolean, dateProperty = 'created_at') {
@@ -47,11 +49,13 @@ export default function makeDataset(recordArray, filter = Boolean, dateProperty 
     const dataset = [];
 
     for (let day in grouped) {
-        dataset.pushObject({
+        dataset.push({
             x: new Date(`${day} 00:00:00`),
             y: grouped[day].length,
         });
     }
 
-    return dataset.sortBy('t');
+    // NOTE: the points below are {x, y}; there is no 't', so this sort has always
+    // been a no-op. Kept as-is — picking a real key would change existing output.
+    return [...dataset].sort(() => 0);
 }

@@ -17,7 +17,8 @@ export default class ChatService extends Service.extend(Evented) {
         if (this.openChannels.includes(chatChannelRecord)) {
             return;
         }
-        this.openChannels.pushObject(chatChannelRecord);
+        // Reassigned rather than mutated so the tracked property invalidates.
+        this.openChannels = [...this.openChannels, chatChannelRecord];
         this.rememberOpenedChannel(chatChannelRecord);
         this.trigger('chat.opened', chatChannelRecord);
     }
@@ -25,7 +26,7 @@ export default class ChatService extends Service.extend(Evented) {
     closeChannel(chatChannelRecord) {
         const index = this.openChannels.findIndex((_) => _.id === chatChannelRecord.id);
         if (index >= 0) {
-            this.openChannels.removeAt(index);
+            this.openChannels = this.openChannels.filter((_, i) => i !== index);
             this.trigger('chat.closed', chatChannelRecord);
         }
         this.forgetOpenedChannel(chatChannelRecord);
@@ -34,7 +35,7 @@ export default class ChatService extends Service.extend(Evented) {
     rememberOpenedChannel(chatChannelRecord) {
         let openedChats = this.appCache.get('open-chats', []);
         if (isArray(openedChats) && !openedChats.includes(chatChannelRecord.id)) {
-            openedChats.pushObject(chatChannelRecord.id);
+            openedChats = [...openedChats, chatChannelRecord.id];
         } else {
             openedChats = [chatChannelRecord.id];
         }
@@ -44,7 +45,7 @@ export default class ChatService extends Service.extend(Evented) {
     forgetOpenedChannel(chatChannelRecord) {
         let openedChats = this.appCache.get('open-chats', []);
         if (isArray(openedChats)) {
-            openedChats.removeObject(chatChannelRecord.id);
+            openedChats = openedChats.filter((id) => id !== chatChannelRecord.id);
         } else {
             openedChats = [];
         }
