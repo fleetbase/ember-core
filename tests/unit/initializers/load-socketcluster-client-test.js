@@ -1,37 +1,36 @@
-import Application from '@ember/application';
-
-import config from 'dummy/config/environment';
-import { initialize } from 'dummy/initializers/load-socketcluster-client';
 import { module, test } from 'qunit';
-import Resolver from 'ember-resolver';
-import { run } from '@ember/runloop';
+import { initialize } from 'dummy/initializers/load-socketcluster-client';
 
+/**
+ * This initializer injects the SocketCluster client script tag. It guards
+ * against inserting the same tag twice, which matters because engines boot the
+ * initializer more than once.
+ */
 module('Unit | Initializer | load-socketcluster-client', function (hooks) {
-    hooks.beforeEach(function () {
-        this.TestApplication = class TestApplication extends Application {
-            modulePrefix = config.modulePrefix;
-            podModulePrefix = config.podModulePrefix;
-            Resolver = Resolver;
-        };
-
-        this.TestApplication.initializer({
-            name: 'initializer under test',
-            initialize,
-        });
-
-        this.application = this.TestApplication.create({
-            autoboot: false,
-        });
-    });
-
     hooks.afterEach(function () {
-        run(this.application, 'destroy');
+        document.querySelectorAll('script[data-socketcluster-client]').forEach((node) => node.remove());
     });
 
-    // TODO: Replace this with your real tests.
-    test('it works', async function (assert) {
-        await this.application.boot();
+    test('it appends the client script', function (assert) {
+        initialize();
 
-        assert.ok(true);
+        const scripts = document.querySelectorAll('script[data-socketcluster-client]');
+        assert.strictEqual(scripts.length, 1);
+        assert.true(scripts[0].src.endsWith('/assets/socketcluster-client.min.js'));
+        assert.strictEqual(scripts[0].getAttribute('data-socketcluster-client'), '1');
+    });
+
+    test('the script is added to the body', function (assert) {
+        initialize();
+
+        assert.strictEqual(document.querySelector('script[data-socketcluster-client]').parentNode, document.body);
+    });
+
+    test('running it again does not add a second tag', function (assert) {
+        initialize();
+        initialize();
+        initialize();
+
+        assert.strictEqual(document.querySelectorAll('script[data-socketcluster-client]').length, 1, 'engines boot initializers more than once');
     });
 });
