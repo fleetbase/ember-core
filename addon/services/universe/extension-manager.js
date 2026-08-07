@@ -370,7 +370,9 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         const servicesObject = {};
         if (isArray(dependencies.services)) {
             for (let i = 0; i < dependencies.services.length; i++) {
-                let serviceName = dependencies.services.objectAt(i);
+                // Engine dependencies are declared as plain array literals, so
+                // `objectAt` does not exist with prototype extensions off.
+                let serviceName = dependencies.services[i];
                 if (typeof serviceName === 'object') {
                     Object.assign(servicesObject, serviceName);
                     continue;
@@ -391,7 +393,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
         const externalRoutesObject = {};
         if (isArray(dependencies.externalRoutes)) {
             for (let i = 0; i < dependencies.externalRoutes.length; i++) {
-                const externalRoute = dependencies.externalRoutes.objectAt(i);
+                const externalRoute = dependencies.externalRoutes[i];
 
                 if (typeof externalRoute === 'object') {
                     Object.assign(externalRoutesObject, externalRoute);

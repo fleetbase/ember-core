@@ -178,7 +178,10 @@ export default class FetchService extends Service {
     normalizeModel(payload, modelType = null) {
         if (modelType === null) {
             const modelTypeKeys = Object.keys(payload);
-            modelType = modelTypeKeys.length ? modelTypeKeys.firstObject : false;
+            // `Object.keys` returns a plain array, which has no `firstObject`
+            // once prototype extensions are off — this silently yielded
+            // undefined, so the payload was returned unnormalized.
+            modelType = modelTypeKeys.length ? modelTypeKeys[0] : false;
         }
 
         if (typeof modelType !== 'string') {
@@ -314,7 +317,10 @@ export default class FetchService extends Service {
                     }
 
                     if (isArray(response.json.errors)) {
-                        return reject(new Error(response.json.errors ? response.json.errors.firstObject : response.statusText));
+                        // Decoded JSON is a plain array, so `firstObject` was
+                        // undefined and every such error surfaced as the
+                        // literal string "undefined".
+                        return reject(new Error(response.json.errors[0] ?? response.statusText));
                     }
 
                     if (response.json.error && typeof response.json.error === 'string') {
@@ -693,11 +699,14 @@ export default class FetchService extends Service {
                     const serialized = [];
 
                     for (let i = 0; i < configs.length; i++) {
-                        const config = configs.objectAt(i);
+                        // `configs` is decoded JSON and `serialized` is a plain
+                        // array literal; neither has the Ember array methods
+                        // once prototype extensions are off.
+                        const config = configs[i];
                         const normalizedConfig = this.store.normalize('order-config', config);
                         const serializedConfig = this.store.push(normalizedConfig);
 
-                        serialized.pushObject(serializedConfig);
+                        serialized.push(serializedConfig);
                     }
 
                     resolve(serialized);
