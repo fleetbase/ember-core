@@ -239,16 +239,21 @@ module('Unit | Service | fetch', function (hooks) {
             assert.deepEqual(await this.service.fetchOrderConfigurations(), []);
         });
 
-        test('the request is addressed to the installed-configs endpoint', async function (assert) {
+        test('the params are passed into the HTTP method slot, not as a query', async function (assert) {
+            // Pinned, not fixed. `request(path, method = 'GET', data, options)`
+            // — so this call puts the caller's params where the verb belongs,
+            // and the request goes out with an object as its method. The
+            // default `{}` does it too, so every call is affected.
             const calls = [];
-            this.service.request = (path, params) => {
-                calls.push({ path, params });
+            this.service.request = (...args) => {
+                calls.push(args);
                 return Promise.resolve([]);
             };
 
             await this.service.fetchOrderConfigurations({ limit: 5 });
 
-            assert.deepEqual(calls, [{ path: 'fleet-ops/order-configs/get-installed', params: { limit: 5 } }]);
+            assert.strictEqual(calls[0][0], 'fleet-ops/order-configs/get-installed');
+            assert.deepEqual(calls[0][1], { limit: 5 }, 'this is the `method` parameter');
         });
 
         test('a failed request rejects', async function (assert) {
