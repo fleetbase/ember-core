@@ -257,14 +257,36 @@ module('Unit | Service | fetch (request shaping)', function (hooks) {
         });
 
         test('a matching version leaves the cache alone', function (assert) {
-            this.service.shouldResetCache();
-            const version = this.service.localCache.get('console-version');
+            this.service.localCache.set('console-version', 'v1.2.3');
             this.service.localCache.set('orders', { a: 1 });
+            const config = this.owner.resolveRegistration('config:environment');
+            const original = config.APP.version;
+            config.APP.version = 'v1.2.3';
 
-            this.service.shouldResetCache();
+            try {
+                this.service.shouldResetCache();
+            } finally {
+                config.APP.version = original;
+            }
 
             assert.deepEqual(this.service.localCache.get('orders'), { a: 1 });
-            assert.strictEqual(this.service.localCache.get('console-version'), version);
+            assert.strictEqual(this.service.localCache.get('console-version'), 'v1.2.3');
+        });
+
+        test('with no APP.version configured the cache is cleared on every call', function (assert) {
+            // Pinned, not fixed. `shouldResetCache` clears whenever the stored
+            // version is falsy OR differs from config.APP.version. When an app
+            // does not set APP.version — as the dummy app does not — the stored
+            // value is written as undefined, so the falsy branch trips again on
+            // the very next call and the request cache can never survive.
+            const config = this.owner.resolveRegistration('config:environment');
+            assert.strictEqual(config.APP.version, undefined, 'the dummy app sets none');
+
+            this.service.shouldResetCache();
+            this.service.localCache.set('orders', { a: 1 });
+            this.service.shouldResetCache();
+
+            assert.strictEqual(this.service.localCache.get('orders'), undefined, 'cleared again');
         });
     });
 
