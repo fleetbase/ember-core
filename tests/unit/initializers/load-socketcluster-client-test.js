@@ -16,7 +16,9 @@ module('Unit | Initializer | load-socketcluster-client', function (hooks) {
 
         const scripts = document.querySelectorAll('script[data-socketcluster-client]');
         assert.strictEqual(scripts.length, 1);
-        assert.true(scripts[0].src.endsWith('/assets/socketcluster-client.min.js'));
+        // The literal attribute, not the `src` property — that one resolves to
+        // an absolute URL against whatever host the test server is on.
+        assert.strictEqual(scripts[0].getAttribute('src'), '/assets/socketcluster-client.min.js');
         assert.strictEqual(scripts[0].getAttribute('data-socketcluster-client'), '1');
     });
 
