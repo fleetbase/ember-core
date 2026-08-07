@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'dummy/tests/helpers';
-import { settled } from '@ember/test-helpers';
+import { run } from '@ember/runloop';
 import { tracked } from '@glimmer/tracking';
 import Model, { attr, hasMany } from '@ember-data/model';
 import SubjectCustomFields from '@fleetbase/ember-core/library/subject-custom-fields';
@@ -452,8 +452,7 @@ module('Unit | Library | subject-custom-fields', function (hooks) {
             this.manager.groups = [group];
             this.manager.fields = [this.field('a', { category_uuid: 'group-1' }), this.field('b', { category_uuid: 'group-1' })];
 
-            const groups = this.manager.getGroupedFields();
-            await settled();
+            const groups = run(() => this.manager.getGroupedFields());
 
             assert.deepEqual(
                 groups[0].customFields.map((cf) => cf.id),
@@ -468,7 +467,7 @@ module('Unit | Library | subject-custom-fields', function (hooks) {
             this.manager.fields = [this.field('a')];
 
             this.manager.getGroupedFields();
-            await settled();
+            run(() => {});
 
             assert.deepEqual(group.customFields, [], 'ungrouped fields are not attached to an arbitrary group');
         });
@@ -479,11 +478,11 @@ module('Unit | Library | subject-custom-fields', function (hooks) {
             this.manager.fields = [this.field('a', { category_uuid: 'group-1' })];
 
             this.manager.getGroupedFields();
-            await settled();
+            run(() => {});
             const first = group.customFields;
 
             this.manager.getGroupedFields();
-            await settled();
+            run(() => {});
 
             assert.strictEqual(group.customFields, first, 'an unchanged group is not rewritten');
         });
@@ -494,11 +493,11 @@ module('Unit | Library | subject-custom-fields', function (hooks) {
             this.manager.fields = [this.field('a', { category_uuid: 'group-1' })];
 
             this.manager.getGroupedFields();
-            await settled();
+            run(() => {});
 
             this.manager.fields = [this.field('a', { category_uuid: 'group-1' }), this.field('b', { category_uuid: 'group-1' })];
             this.manager.getGroupedFields();
-            await settled();
+            run(() => {});
 
             assert.deepEqual(
                 group.customFields.map((cf) => cf.id),
@@ -521,7 +520,7 @@ module('Unit | Library | subject-custom-fields', function (hooks) {
             this.manager.fields = [this.field('a', { category_uuid: 'group-1' })];
 
             this.manager.getGroupedFields();
-            await settled();
+            run(() => {});
             const entries = this.manager.getGroupedEntries();
 
             assert.strictEqual(entries[0].group, group);
@@ -602,7 +601,7 @@ module('Unit | Library | subject-custom-fields', function (hooks) {
             this.field('a', { category_uuid: 'group-1' });
 
             const result = await this.manager.load({ group: true });
-            await settled();
+            run(() => {});
 
             assert.deepEqual(
                 result.map((g) => g.id),

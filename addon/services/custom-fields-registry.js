@@ -127,8 +127,12 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
     }
 
     // Optional proxy methods if you prefer service ergonomics:
+    // NOTE: `set`, `get` and `setProperties` shadow the EmberObject methods of
+    // the same name that this service inherits, and take a different first
+    // argument. Anything calling `registry.get('somePropertyName')` reaches
+    // this instead of the property lookup it expected.
     set(subject, fieldOrId, value, valueType) {
-        return this.forSubject(subject).set(fieldOrId, value, valueType);
+        return this.forSubject(subject).setField(fieldOrId, value, valueType);
     }
 
     setProperties(subject, entries) {
@@ -136,7 +140,7 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
     }
 
     get(subject, customFieldId) {
-        return this.forSubject(subject).get(customFieldId);
+        return this.forSubject(subject).getValue(customFieldId);
     }
 
     getProperties(subject) {
