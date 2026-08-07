@@ -106,7 +106,17 @@ module('Unit | Service | current-user (loading)', function (hooks) {
             }
         );
 
-        this.owner.register('service:universe', class extends Service {});
+        // A bare Service is not Evented, so `trigger` has to be supplied —
+        // the service broadcasts user lifecycle events on the universe bus.
+        this.universeEvents = [];
+        this.owner.register(
+            'service:universe',
+            class extends Service {
+                trigger(name, ...args) {
+                    testContext.universeEvents.push({ name, args });
+                }
+            }
+        );
         this.owner.register('model:user', UserModel);
         this.owner.register('model:role', RoleModel);
         this.owner.register('model:company', CompanyModel);
