@@ -8,11 +8,15 @@ import EmberObject from '@ember/object';
  * appear in the order their value was first seen, not sorted.
  */
 module('Unit | Utility | macros/group-by', function () {
+    // The macro returns a ComputedProperty, which only installs through
+    // `.extend()`. As a native class field it would just be stored as an
+    // object, and every read would hand back the macro rather than the groups.
+    const Subject = EmberObject.extend({
+        byStatus: macrosGroupBy('orders', 'status'),
+    });
+
     function subject(orders) {
-        return class extends EmberObject {
-            orders = orders;
-            byStatus = macrosGroupBy('orders', 'status');
-        }.create();
+        return Subject.create({ orders });
     }
 
     test('items sharing a value are collected into one group', function (assert) {
