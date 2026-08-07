@@ -102,7 +102,7 @@ module('Unit | Utility | corslite', function (hooks) {
             assert.strictEqual(this.calls.length, 1);
             assert.true(this.calls[0][0] instanceof Error);
             assert.strictEqual(this.calls[0][0].message, 'Browser not supported');
-            assert.deepEqual(returned, [this.calls[0][0]], 'it hands back whatever the callback returned');
+            assert.strictEqual(returned, this.calls.length, 'it hands back whatever the callback returned, not a request');
         });
     });
 
@@ -182,8 +182,11 @@ module('Unit | Utility | corslite', function (hooks) {
             window.XMLHttpRequest = LegacyXHR;
         });
 
+        // A same-origin URL keeps this on the XMLHttpRequest path; a
+        // cross-origin one would divert to XDomainRequest, which is a
+        // different branch covered below.
         test('a request without onload is driven by readyState', function (assert) {
-            corslite('https://example.com/api', this.callback);
+            corslite(this.sameOrigin, this.callback);
             const [xhr] = LegacyXHR.instances;
 
             assert.strictEqual(xhr.onload, undefined, 'onload is not used');
@@ -193,7 +196,7 @@ module('Unit | Utility | corslite', function (hooks) {
         });
 
         test('an intermediate readyState does not call back', function (assert) {
-            corslite('https://example.com/api', this.callback);
+            corslite(this.sameOrigin, this.callback);
             const [xhr] = LegacyXHR.instances;
 
             for (const readyState of [0, 1, 2, 3]) {
