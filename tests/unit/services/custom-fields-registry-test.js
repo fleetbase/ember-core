@@ -63,6 +63,14 @@ module('Unit | Service | custom-fields-registry', function (hooks) {
         assert.strictEqual(this.service.modelNamePath, 'label');
     });
 
+    test('it initializes itself for the custom-field model', function (assert) {
+        // Regression: the service never called `initialize`, so `modelName`
+        // stayed null and every create path below reached
+        // `store.createRecord(undefined)`.
+        assert.strictEqual(this.service.modelName, 'custom-field');
+        assert.strictEqual(this.service.createPermission, 'fleet-ops create custom-field');
+    });
+
     module('forSubject', function () {
         test('it refuses anything that is not an object', function (assert) {
             assert.throws(() => this.service.forSubject(null), /subject must be an object/);
@@ -277,7 +285,9 @@ module('Unit | Service | custom-fields-registry', function (hooks) {
 
         test('confirm hands the modal to the save task', function (assert) {
             const performed = [];
-            this.service.modalTask = { perform: (...args) => performed.push(args) };
+            // `modalTask` is an ember-concurrency task and getter-only, so the
+            // seam is its `perform`, not the property.
+            this.service.modalTask.perform = (...args) => performed.push(args);
 
             this.service.modal.create();
             this.shown[0].options.confirm('the-modal');

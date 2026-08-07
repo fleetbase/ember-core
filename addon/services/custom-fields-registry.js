@@ -13,6 +13,15 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
     #cache = new WeakMap();
     modelNamePath = 'label';
 
+    constructor() {
+        super(...arguments);
+        // Without this the base class keeps `modelName = null`, so
+        // `createNewInstance` reaches `store.createRecord(undefined)` and every
+        // create path below throws. `modelNamePath` is already set by the class
+        // field above, and `initialize` preserves it.
+        this.initialize('custom-field');
+    }
+
     panel = {
         create: (attributes = {}, options = {}, saveOptions = {}) => {
             saveOptions = { ...(options?.saveOptions ?? {}), ...saveOptions };

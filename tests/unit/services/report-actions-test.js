@@ -152,7 +152,7 @@ module('Unit | Service | report-actions', function (hooks) {
 
         test('confirm hands the modal to the save task', function (assert) {
             const performed = [];
-            this.service.modalTask = { perform: (...args) => performed.push(args) };
+            this.service.modalTask.perform = (...args) => performed.push(args);
 
             this.service.modal.create();
             this.shown[0].options.confirm('the-modal');
@@ -166,7 +166,7 @@ module('Unit | Service | report-actions', function (hooks) {
 
         test('extra save options reach the save task', function (assert) {
             const performed = [];
-            this.service.modalTask = { perform: (...args) => performed.push(args) };
+            this.service.modalTask.perform = (...args) => performed.push(args);
 
             this.service.modal.create({}, {}, { silent: true });
             this.shown[0].options.confirm('the-modal');
