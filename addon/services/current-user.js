@@ -235,20 +235,20 @@ export default class CurrentUserService extends Service.extend(Evented) {
 
         // get direct applied permissions
         if (user.get('permissions')) {
-            permissions.pushObjects(user.get('permissions').toArray());
+            permissions.push(...user.get('permissions').toArray());
         }
 
         // get role permissions and role policies permissions
         if (user.get('role')) {
             if (user.get('role.permissions')) {
-                permissions.pushObjects(user.get('role.permissions').toArray());
+                permissions.push(...user.get('role.permissions').toArray());
             }
 
             if (user.get('role.policies')) {
                 for (let i = 0; i < user.get('role.policies').length; i++) {
                     const policy = user.get('role.policies').objectAt(i);
                     if (policy.get('permissions')) {
-                        permissions.pushObjects(policy.get('permissions').toArray());
+                        permissions.push(...policy.get('permissions').toArray());
                     }
                 }
             }
@@ -259,7 +259,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
             for (let i = 0; i < user.get('policies').length; i++) {
                 const policy = user.get('policies').objectAt(i);
                 if (policy.get('permissions')) {
-                    permissions.pushObjects(policy.get('permissions').toArray());
+                    permissions.push(...policy.get('permissions').toArray());
                 }
             }
         }
