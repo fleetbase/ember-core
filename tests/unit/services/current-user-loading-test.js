@@ -264,7 +264,7 @@ module('Unit | Service | current-user (loading)', function (hooks) {
         });
 
         test('a user carrying a locale short-circuits the locale request', async function (assert) {
-            const user = this.pushUser('user-2', { name: 'Ada', locale: 'fr-fr' });
+            const user = this.pushUser('user-2', { name: 'Ada', locale: 'fr-fr', company_uuid: 'company-1' });
 
             await this.service.setUser(user);
 
