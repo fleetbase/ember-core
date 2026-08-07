@@ -90,8 +90,18 @@ module('Unit | Service | crud (delete)', function (hooks) {
             assert.strictEqual(this.lastConfirm().title, 'Are you sure to delete this Order?');
         });
 
-        test('a supplied model name overrides the derived one', function (assert) {
+        test('the modelName option is a fallback, not an override', function (assert) {
+            // Easy to assume otherwise from the option's name. getModelName
+            // takes it as the *fallback* argument, and a real model's own
+            // constructor.modelName always wins — so passing modelName
+            // alongside a model record has no effect at all.
             this.service.delete(this.record(), { modelName: 'fuel_report' });
+
+            assert.strictEqual(this.lastConfirm().title, 'Are you sure to delete this Order?');
+        });
+
+        test('the modelName option applies when the subject is not a model', function (assert) {
+            this.service.delete({ name: 'Loose object' }, { modelName: 'fuel_report' });
 
             assert.strictEqual(this.lastConfirm().title, 'Are you sure to delete this Fuel Report?');
         });
@@ -227,10 +237,16 @@ module('Unit | Service | crud (delete)', function (hooks) {
             assert.strictEqual(options.actionPath, 'orders/bulk-delete');
         });
 
-        test('the action path is derived from the model name', function (assert) {
-            this.service.bulkDelete([this.record()], { modelName: 'fuel_report' });
+        test('the action path is pluralized and dasherized from the model name', function (assert) {
+            this.service.bulkDelete([{ name: 'Loose object' }], { modelName: 'fuel_report' });
 
             assert.strictEqual(this.lastConfirm().actionPath, 'fuel-reports/bulk-delete');
+        });
+
+        test('a real record ignores the modelName option here too', function (assert) {
+            this.service.bulkDelete([this.record()], { modelName: 'fuel_report' });
+
+            assert.strictEqual(this.lastConfirm().actionPath, 'orders/bulk-delete');
         });
 
         test('records of a different type are dropped from the selection', function (assert) {
