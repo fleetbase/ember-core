@@ -25,7 +25,7 @@ export default class FiltersService extends Service {
                 continue;
             }
 
-            activeQueryParams.pushObject({ queryParam, label: queryParam, value });
+            activeQueryParams.push({ queryParam, label: queryParam, value });
         }
 
         return activeQueryParams;
@@ -162,7 +162,7 @@ export default class FiltersService extends Service {
 
             if (isArray(controllerQueryParams)) {
                 for (let i = 0; i < controllerQueryParams.length; i++) {
-                    const qp = controllerQueryParams.objectAt(i);
+                    const qp = controllerQueryParams[i];
 
                     if (this.managedQueryParams.includes(qp)) {
                         continue;
@@ -178,7 +178,7 @@ export default class FiltersService extends Service {
         const currentRouteQueryParams = Object.keys(currentRoute.queryParams);
 
         for (let i = 0; i < currentRouteQueryParams.length; i++) {
-            const queryParam = currentRouteQueryParams.objectAt(i);
+            const queryParam = currentRouteQueryParams[i];
             const value = this.urlSearchParams.get(queryParam);
 
             if (this.managedQueryParams.includes(queryParam)) {
