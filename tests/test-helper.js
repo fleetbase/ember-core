@@ -40,6 +40,20 @@ QUnit.done(async function () {
         return;
     }
 
+    // A filtered run exercises a handful of tests but still force-loads every
+    // addon module, so it produces a report with the full denominator and a
+    // nearly empty numerator. Writing that would overwrite a good full-suite
+    // report with something that looks like a catastrophic regression, and the
+    // coverage gate would then read it. Partial runs are refused outright.
+    const { filter, module: moduleFilter, testId } = QUnit.config;
+    const partialRun = Boolean(filter) || Boolean(moduleFilter) || (Array.isArray(testId) && testId.length > 0);
+
+    if (partialRun) {
+        // eslint-disable-next-line no-console
+        console.warn('[coverage] filtered run detected — report not written, so the full-suite report on disk is preserved');
+        return;
+    }
+
     forceAddonModulesToBeLoaded();
 
     const instrumentedFiles = Object.keys(window.__coverage__ ?? {}).length;
