@@ -88,7 +88,10 @@ export default class ApplicationAdapter extends RESTAdapter {
         const userId = this.session.data.authenticated.user;
         const userOptions = getUserOptions();
         const isSandbox = get(userOptions, `${userId}:sandbox`) === true;
-        const testKey = get(userOptions, `${userId}:testKey`);
+        // `currentUser.setOption` dasherizes before storing, so the key written
+        // by `setOption('testKey', …)` is `<user>:test-key`. Reading `testKey`
+        // never matched anything, so this header was never sent.
+        const testKey = get(userOptions, `${userId}:test-key`);
         let isAuthenticated = this.session.isAuthenticated;
         let { token } = this.session.data.authenticated;
 

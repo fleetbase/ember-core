@@ -81,7 +81,7 @@ module('Unit | Adapter | application', function (hooks) {
         test('sandbox mode adds the sandbox header', function (assert) {
             this.isAuthenticated = true;
             this.sessionData = { authenticated: { user: 'user-1', token: 'abc123' } };
-            this.setUserOptions({ 'user-1': { sandbox: true } });
+            this.setUserOptions({ 'user-1:sandbox': true });
 
             assert.true(this.buildAdapter().setupHeaders()['Access-Console-Sandbox']);
         });
@@ -89,7 +89,7 @@ module('Unit | Adapter | application', function (hooks) {
         test('sandbox must be exactly true', function (assert) {
             this.isAuthenticated = true;
             this.sessionData = { authenticated: { user: 'user-1', token: 'abc123' } };
-            this.setUserOptions({ 'user-1': { sandbox: 'yes' } });
+            this.setUserOptions({ 'user-1:sandbox': 'yes' });
 
             assert.strictEqual(this.buildAdapter().setupHeaders()['Access-Console-Sandbox'], undefined);
         });
@@ -97,7 +97,7 @@ module('Unit | Adapter | application', function (hooks) {
         test('a test key is sent alongside the sandbox header', function (assert) {
             this.isAuthenticated = true;
             this.sessionData = { authenticated: { user: 'user-1', token: 'abc123' } };
-            this.setUserOptions({ 'user-1': { sandbox: true, testKey: 'key-1' } });
+            this.setUserOptions({ 'user-1:sandbox': true, 'user-1:test-key': 'key-1' });
 
             assert.strictEqual(this.buildAdapter().setupHeaders()['Access-Console-Sandbox-Key'], 'key-1');
         });
@@ -105,7 +105,7 @@ module('Unit | Adapter | application', function (hooks) {
         test('sandbox options belonging to another user are not applied', function (assert) {
             this.isAuthenticated = true;
             this.sessionData = { authenticated: { user: 'user-1', token: 'abc123' } };
-            this.setUserOptions({ 'user-2': { sandbox: true, testKey: 'key-2' } });
+            this.setUserOptions({ 'user-2:sandbox': true, 'user-2:test-key': 'key-2' });
 
             const headers = this.buildAdapter().setupHeaders();
 
@@ -115,7 +115,7 @@ module('Unit | Adapter | application', function (hooks) {
 
         test('sandbox headers are withheld from an unauthenticated request', function (assert) {
             this.sessionData = { authenticated: { user: 'user-1' } };
-            this.setUserOptions({ 'user-1': { sandbox: true, testKey: 'key-1' } });
+            this.setUserOptions({ 'user-1:sandbox': true, 'user-1:test-key': 'key-1' });
 
             const headers = this.buildAdapter().setupHeaders();
 

@@ -68,7 +68,9 @@ export default class FetchService extends Service {
         const userId = this.session.data.authenticated.user;
         const userOptions = getUserOptions();
         const isSandbox = get(userOptions, `${userId}:sandbox`) === true;
-        const testKey = get(userOptions, `${userId}:testKey`);
+        // See the note in adapters/application.js: `setOption` dasherizes, so
+        // the stored key is `<user>:test-key`, not `<user>:testKey`.
+        const testKey = get(userOptions, `${userId}:test-key`);
 
         headers['Content-Type'] = 'application/json';
 

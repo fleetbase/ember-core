@@ -63,7 +63,7 @@ module('Unit | Service | fetch', function (hooks) {
 
         test('sandbox mode adds the sandbox header and key', function (assert) {
             this.authenticate();
-            this.setUserOptions({ 'user-1': { sandbox: true, testKey: 'key-1' } });
+            this.setUserOptions({ 'user-1:sandbox': true, 'user-1:test-key': 'key-1' });
 
             const headers = this.service.getHeaders();
 
@@ -73,21 +73,21 @@ module('Unit | Service | fetch', function (hooks) {
 
         test('sandbox must be exactly true', function (assert) {
             this.authenticate();
-            this.setUserOptions({ 'user-1': { sandbox: 'yes' } });
+            this.setUserOptions({ 'user-1:sandbox': 'yes' });
 
             assert.strictEqual(this.service.getHeaders()['Access-Console-Sandbox'], undefined);
         });
 
         test('another user’s options are not applied', function (assert) {
             this.authenticate();
-            this.setUserOptions({ 'user-2': { sandbox: true } });
+            this.setUserOptions({ 'user-2:sandbox': true });
 
             assert.strictEqual(this.service.getHeaders()['Access-Console-Sandbox'], undefined);
         });
 
         test('sandbox headers are withheld while unauthenticated', function (assert) {
             this.sessionData = { authenticated: { user: 'user-1' } };
-            this.setUserOptions({ 'user-1': { sandbox: true, testKey: 'key-1' } });
+            this.setUserOptions({ 'user-1:sandbox': true, 'user-1:test-key': 'key-1' });
 
             const headers = this.service.getHeaders();
 
@@ -123,20 +123,20 @@ module('Unit | Service | fetch', function (hooks) {
 
     module('jsonToModel', function () {
         test('it pushes attributes into the store as a model', function (assert) {
-            const record = this.service.jsonToModel({ id: '1', name: 'Standard' }, 'order-config');
+            const record = this.service.jsonToModel({ uuid: '1', name: 'Standard' }, 'order-config');
 
             assert.strictEqual(record.constructor.modelName, 'order-config');
             assert.strictEqual(record.name, 'Standard');
         });
 
         test('it parses a JSON string first', function (assert) {
-            const record = this.service.jsonToModel(JSON.stringify({ id: '1', name: 'Standard' }), 'order-config');
+            const record = this.service.jsonToModel(JSON.stringify({ uuid: '1', name: 'Standard' }), 'order-config');
 
             assert.strictEqual(record.name, 'Standard');
         });
 
         test('the model type is dasherized', function (assert) {
-            const record = this.service.jsonToModel({ id: '1', name: 'Standard' }, 'orderConfig');
+            const record = this.service.jsonToModel({ uuid: '1', name: 'Standard' }, 'orderConfig');
 
             assert.strictEqual(record.constructor.modelName, 'order-config');
         });
@@ -146,8 +146,8 @@ module('Unit | Service | fetch', function (hooks) {
         test('an array payload becomes an array of models', function (assert) {
             const records = this.service.normalizeModel(
                 [
-                    { id: '1', name: 'A' },
-                    { id: '2', name: 'B' },
+                    { uuid: '1', name: 'A' },
+                    { uuid: '2', name: 'B' },
                 ],
                 'order-config'
             );
@@ -159,7 +159,7 @@ module('Unit | Service | fetch', function (hooks) {
         });
 
         test('a payload keyed by the pluralized model type is unwrapped', function (assert) {
-            const records = this.service.normalizeModel({ order_configs: [{ id: '1', name: 'A' }] }, 'orderConfig');
+            const records = this.service.normalizeModel({ order_configs: [{ uuid: '1', name: 'A' }] }, 'orderConfig');
 
             assert.deepEqual(
                 records.map((r) => r.name),
@@ -168,7 +168,7 @@ module('Unit | Service | fetch', function (hooks) {
         });
 
         test('a payload keyed by the model type itself is unwrapped', function (assert) {
-            const records = this.service.normalizeModel({ 'order-config': [{ id: '1', name: 'A' }] }, 'order-config');
+            const records = this.service.normalizeModel({ 'order-config': [{ uuid: '1', name: 'A' }] }, 'order-config');
 
             assert.deepEqual(
                 records.map((r) => r.name),
@@ -177,13 +177,13 @@ module('Unit | Service | fetch', function (hooks) {
         });
 
         test('a bare object payload is turned into a single model', function (assert) {
-            const record = this.service.normalizeModel({ id: '1', name: 'Standard' }, 'order-config');
+            const record = this.service.normalizeModel({ uuid: '1', name: 'Standard' }, 'order-config');
 
             assert.strictEqual(record.name, 'Standard');
         });
 
         test('a wrapped single object is unwrapped', function (assert) {
-            const record = this.service.normalizeModel({ 'order-config': { id: '1', name: 'Standard' } }, 'order-config');
+            const record = this.service.normalizeModel({ 'order-config': { uuid: '1', name: 'Standard' } }, 'order-config');
 
             assert.strictEqual(record.name, 'Standard');
         });
@@ -192,7 +192,7 @@ module('Unit | Service | fetch', function (hooks) {
             // Regression: this read `Object.keys(payload).firstObject`, which is
             // undefined once prototype extensions are off. The inferred type was
             // therefore never a string and the payload came back unnormalized.
-            const records = this.service.normalizeModel({ 'order-config': [{ id: '1', name: 'A' }] });
+            const records = this.service.normalizeModel({ 'order-config': [{ uuid: '1', name: 'A' }] });
 
             assert.deepEqual(
                 records.map((r) => r.name),
@@ -218,8 +218,8 @@ module('Unit | Service | fetch', function (hooks) {
         test('it normalizes every configuration the API returns', async function (assert) {
             this.service.request = () =>
                 Promise.resolve([
-                    { id: '1', name: 'A' },
-                    { id: '2', name: 'B' },
+                    { uuid: '1', name: 'A' },
+                    { uuid: '2', name: 'B' },
                 ]);
 
             // Regression: the response is decoded JSON and the accumulator is a
