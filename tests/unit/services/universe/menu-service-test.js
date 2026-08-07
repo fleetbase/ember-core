@@ -319,17 +319,38 @@ module('Unit | Service | universe/menu-service', function (hooks) {
             assert.strictEqual(this.service.getUserMenuItems()[0].route, 'console.profile');
         });
 
-        test('organization and user items share a registry but not a section', function (assert) {
+        test('the two account getters do not actually separate the two menus', function (assert) {
+            // Documenting a defect rather than an intention. Registration goes
+            // to deliberate trouble to keep these apart — distinct key prefixes
+            // (`organization:` / `user:`) and distinct default sections — but
+            // getOrganizationMenuItems and getUserMenuItems are byte-identical:
+            // both return the whole `console:account` menu-item registry with no
+            // filter. So the organization menu lists user items and vice versa.
+            // The registry already stores `_registryKey` and supports prefix
+            // filtering, so a fix is available; changing what a public getter
+            // returns is a maintainer's call.
             this.service.registerOrganizationMenuItem('Billing');
             this.service.registerUserMenuItem('Profile');
 
             assert.deepEqual(
                 this.service.getOrganizationMenuItems().map((i) => i.title),
-                ['Billing']
+                ['Billing', 'Profile'],
+                'both menus come back from either getter'
             );
             assert.deepEqual(
                 this.service.getUserMenuItems().map((i) => i.title),
-                ['Profile']
+                ['Billing', 'Profile']
+            );
+        });
+
+        test('the registry keys do keep them apart', function (assert) {
+            this.service.registerOrganizationMenuItem('Billing');
+            this.service.registerUserMenuItem('Profile');
+
+            assert.deepEqual(
+                this.registry.getRegistry('console:account', 'menu-item').map((i) => i._registryKey),
+                ['organization:billing', 'user:profile'],
+                'the information a working filter would need is present'
             );
         });
 
@@ -385,8 +406,18 @@ module('Unit | Service | universe/menu-service', function (hooks) {
             assert.deepEqual(this.service.getMenuPanels('engine:nope'), []);
         });
 
-        test('lookupMenuItem finds by slug', function (assert) {
+        test('a custom-registry item defaults to the ~ slug, not one derived from the title', function (assert) {
+            // `registerMenuItem` sets `slug = options.slug || '~'`, so the
+            // title-derived slug the other registration methods produce does
+            // not apply here. Looking one up by its title slug finds nothing.
             this.service.registerMenuItem('engine:fleet-ops', 'Orders', { route: 'r' });
+
+            assert.strictEqual(this.service.lookupMenuItem('engine:fleet-ops', '~').title, 'Orders');
+            assert.strictEqual(this.service.lookupMenuItem('engine:fleet-ops', 'orders'), undefined);
+        });
+
+        test('an explicit slug is used for the lookup', function (assert) {
+            this.service.registerMenuItem('engine:fleet-ops', 'Orders', { route: 'r', slug: 'orders' });
 
             assert.strictEqual(this.service.lookupMenuItem('engine:fleet-ops', 'orders').title, 'Orders');
         });
@@ -404,9 +435,11 @@ module('Unit | Service | universe/menu-service', function (hooks) {
         });
 
         test('getMenuItem is an alias for lookupMenuItem', function (assert) {
-            this.service.registerMenuItem('engine:fleet-ops', 'Orders', { route: 'r' });
+            this.service.registerMenuItem('engine:fleet-ops', 'Orders', { route: 'r', slug: 'orders' });
 
-            assert.strictEqual(this.service.getMenuItem('engine:fleet-ops', 'orders'), this.service.lookupMenuItem('engine:fleet-ops', 'orders'));
+            const found = this.service.getMenuItem('engine:fleet-ops', 'orders');
+            assert.strictEqual(found.title, 'Orders', 'it finds a real item rather than matching two misses');
+            assert.strictEqual(found, this.service.lookupMenuItem('engine:fleet-ops', 'orders'));
         });
     });
 
