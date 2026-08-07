@@ -310,7 +310,13 @@ export default class CurrentUserService extends Service.extend(Evented) {
     }
 
     hasOption(key) {
-        return this.getOption(key) !== undefined;
+        // Read storage directly rather than going through getOption: its
+        // `defaultValue = null` parameter applies whenever the stored value is
+        // undefined, so getOption can never return undefined and this was
+        // always true.
+        key = `${this.optionsPrefix}${dasherize(key)}`;
+
+        return this.options.get(key) !== undefined;
     }
 
     filledOption(key) {
