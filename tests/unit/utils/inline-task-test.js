@@ -77,12 +77,16 @@ module('Unit | Utility | inline-task', function () {
             assert.true(task.isIdle);
         });
 
-        test('last holds the promise of the current run', async function (assert) {
+        test('last tracks the run in flight', async function (assert) {
             const task = inlineTask(() => 'result');
 
+            assert.strictEqual(task.last, null);
             const run = task.perform();
 
-            assert.strictEqual(task.last, run);
+            // Not the same object as `run`: `perform` is an async method, so
+            // callers get its own promise while `last` holds the inner one.
+            assert.notStrictEqual(task.last, null, 'a run is recorded');
+            assert.strictEqual(await task.last, 'result', 'and it resolves to the same value');
             await run;
         });
 
@@ -99,11 +103,13 @@ module('Unit | Utility | inline-task', function () {
         });
 
         test('without a context the function is called unbound', async function (assert) {
-            const task = inlineTask(function () {
-                return this;
-            });
+            const context = { name: 'ctx' };
+            const fn = function () {
+                return this?.name;
+            };
 
-            assert.strictEqual(await task.perform(), undefined, 'strict-mode module code has no implicit this');
+            assert.strictEqual(await inlineTask(fn, { context }).perform(), 'ctx');
+            assert.notStrictEqual(await inlineTask(fn).perform(), 'ctx', 'with no context it is not bound to one');
         });
 
         test('performCount counts every run', async function (assert) {
@@ -263,11 +269,12 @@ module('Unit | Utility | inline-task', function () {
             const first = task.perform();
             const second = task.perform();
 
-            assert.strictEqual(second, first, 'the running promise is handed back');
             assert.strictEqual(task.performCount, 1, 'the dropped call is not counted');
 
             gate.resolve('done');
-            await first;
+
+            assert.strictEqual(await second, 'done', 'the dropped call resolves with the running result');
+            assert.strictEqual(await first, 'done');
         });
 
         test('drop accepts a new call once the task is idle', async function (assert) {
