@@ -81,17 +81,16 @@ module('Unit | Service | universe', function (hooks) {
     });
 
     module('application instance', function () {
-        test('it cascades to the sub-services that need it', function (assert) {
+        test('it cascades to every sub-service', function (assert) {
             const application = {};
 
             this.service.setApplicationInstance(application);
 
-            assert.deepEqual(
-                this.applications.map((a) => a.service).sort(),
-                ['extension-manager', 'menu-service', 'registry-service'],
-                'the widget and hook services are not part of the cascade'
+            assert.deepEqual(this.applications.map((a) => a.service).sort(), ['extension-manager', 'hook-service', 'menu-service', 'registry-service', 'widget-service']);
+            assert.true(
+                this.applications.every((a) => a.application === application),
+                'each receives the same instance'
             );
-            assert.strictEqual(this.applications[0].application, application);
         });
 
         test('it is readable back', function (assert) {
@@ -241,8 +240,11 @@ module('Unit | Service | universe', function (hooks) {
             assert.strictEqual(this.service.getViewFromTransition({ to: { queryParams: { view: 'list' } } }), 'list');
         });
 
-        test('a transition with no query params yields no view', function (assert) {
-            assert.strictEqual(this.service.getViewFromTransition({ to: {} }), undefined);
+        test('a transition with no query params yields a null view', function (assert) {
+            // Both routes end at null: a missing `queryParams` falls back to
+            // `{ view: null }`, and a missing `to` does the same via the
+            // optional chain.
+            assert.strictEqual(this.service.getViewFromTransition({ to: {} }), null);
             assert.strictEqual(this.service.getViewFromTransition({}), null);
         });
 
