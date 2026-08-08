@@ -146,6 +146,29 @@ module('Unit | Service | loader (overlay options and removal)', function (hooks)
         });
     });
 
+    module('removeStyle fallback', function () {
+        test('a style object without removeProperty falls back to removeAttribute', function (assert) {
+            // The helper inside removeLoader tries `el.style.removeProperty` and
+            // falls back to `removeAttribute` for hosts that lack it. A real DOM
+            // element always has removeProperty, so the fallback needs a target
+            // whose style object does not.
+            const removed = [];
+            const loader = document.createElement('div');
+            loader.classList.add('overloader');
+            const target = {
+                style: { removeAttribute: (name) => removed.push(name) },
+                classList: { contains: () => false },
+                querySelector: () => loader,
+                removeChild: () => {},
+            };
+
+            const result = this.service.removeLoader(target);
+
+            assert.deepEqual(removed, ['position']);
+            assert.strictEqual(result, this.service);
+        });
+    });
+
     module('remove', function () {
         test('it clears every overlay on the page', async function (assert) {
             this.service.show();
