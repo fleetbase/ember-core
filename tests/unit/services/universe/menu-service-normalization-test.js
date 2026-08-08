@@ -48,7 +48,7 @@ module('Unit | Service | universe/menu-service (normalization)', function (hooks
         this.registry = this.owner.lookup('service:universe/registry-service');
         this.universe = this.owner.lookup('service:universe');
 
-        this.headerItems = () => this.registry.getRegistry('console:header', 'menu-item');
+        this.headerItems = () => this.registry.getRegistry('header', 'menu-item');
         this.itemsIn = (registryName) => this.registry.getRegistry(registryName, 'menu-item');
     });
 
