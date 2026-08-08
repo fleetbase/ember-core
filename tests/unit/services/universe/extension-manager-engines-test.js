@@ -17,12 +17,17 @@ import Service from '@ember/service';
  * #initializeBootState, which calls #getApplication. That is why each test builds
  * its own service with factoryFor().create() after registering the universe stub.
  */
-function fakeEngineInstance(name) {
+function fakeEngineInstance(name, environment) {
     return {
         name,
         booted: 0,
         destroyed: 0,
         registrations: [],
+        // The owner patch calls this on every instance it builds, to read the
+        // engine's mount prefix out of its own config.
+        resolveRegistration(key) {
+            return key === 'config:environment' ? environment : undefined;
+        },
         boot() {
             this.booted += 1;
             return Promise.resolve(this);
@@ -42,7 +47,7 @@ function fakeEngineInstance(name) {
     };
 }
 
-function fakeApplication({ loadedBundles = [] } = {}) {
+function fakeApplication({ loadedBundles = [], environmentFor = (name) => ({ modulePrefix: name }) } = {}) {
     const registrations = new Map();
     const built = [];
     const router = {
@@ -83,7 +88,7 @@ function fakeApplication({ loadedBundles = [] } = {}) {
             return registrations.get(key);
         },
         buildChildEngineInstance(name, options) {
-            const instance = fakeEngineInstance(name);
+            const instance = fakeEngineInstance(name, environmentFor(name));
             built.push({ name, options, instance });
             return instance;
         },
@@ -109,22 +114,60 @@ module('Unit | Service | universe/extension-manager (engine loading)', function 
             }
         );
 
+        // A test that needs a differently-configured application swaps it in and
+        // rebuilds, since the constructor reads the application immediately.
+        this.applyApplication = () => {
+            this.application.hasRegistration = (key) => (key.startsWith('engine:') ? true : this.application.registrations.has(key));
+            this.service = this.build();
+            this.router = this.application.router;
+        };
+
         this.build = () => this.owner.factoryFor('service:universe/extension-manager').create();
         this.service = this.build();
         this.router = this.application.router;
     });
 
     module('mount points', function () {
-        test('a scoped engine name becomes a console mount path', function (assert) {
-            assert.strictEqual(this.service.getEngineMountPoint('@fleetbase/fleetops-engine'), 'console.fleetops');
+        test('an engine that is not loaded has no mount point', function (assert) {
+            // getEngineMountPoint reads the LOADED instance's own
+            // config:environment — it does not derive anything from the name.
+            assert.strictEqual(this.service.getEngineMountPoint('@fleetbase/fleetops-engine'), null);
         });
 
-        test('an unscoped name is handled too', function (assert) {
-            assert.strictEqual(this.service.getEngineMountPoint('storefront-engine'), 'console.storefront');
+        test('it is derived from the engine module prefix, with a trailing dot', async function (assert) {
+            await this.service.ensureEngineLoaded('@fleetbase/fleetops-engine');
+
+            assert.strictEqual(this.service.getEngineMountPoint('@fleetbase/fleetops-engine'), 'console.fleetops.');
         });
 
-        test('a name with no engine suffix keeps its last segment', function (assert) {
-            assert.strictEqual(this.service.getEngineMountPoint('@fleetbase/pallet'), 'console.pallet');
+        test('an unscoped module prefix is handled too', async function (assert) {
+            await this.service.ensureEngineLoaded('storefront-engine');
+
+            assert.strictEqual(this.service.getEngineMountPoint('storefront-engine'), 'console.storefront.');
+        });
+
+        test('a config that names its own route prefix wins', async function (assert) {
+            this.application = fakeApplication({ environmentFor: () => ({ modulePrefix: '@fleetbase/fleetops-engine', mountedEngineRoutePrefix: 'ops' }) });
+            this.applyApplication();
+            await this.service.ensureEngineLoaded('@fleetbase/fleetops-engine');
+
+            assert.strictEqual(this.service.getEngineMountPoint('@fleetbase/fleetops-engine'), 'ops.');
+        });
+
+        test('a prefix that already ends in a dot is left alone', async function (assert) {
+            this.application = fakeApplication({ environmentFor: () => ({ modulePrefix: 'x', mountedEngineRoutePrefix: 'ops.' }) });
+            this.applyApplication();
+            await this.service.ensureEngineLoaded('@fleetbase/fleetops-engine');
+
+            assert.strictEqual(this.service.getEngineMountPoint('@fleetbase/fleetops-engine'), 'ops.');
+        });
+
+        test('an instance with no config at all has no mount point', async function (assert) {
+            this.application = fakeApplication({ environmentFor: () => undefined });
+            this.applyApplication();
+            await this.service.ensureEngineLoaded('@fleetbase/fleetops-engine');
+
+            assert.strictEqual(this.service.getEngineMountPoint('@fleetbase/fleetops-engine'), null);
         });
     });
 
