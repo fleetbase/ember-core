@@ -7,29 +7,34 @@ import Service from '@ember/service';
  * one this campaign long recorded as unreachable because it calls the
  * MODULE-SCOPE `fetch` imported from ember-fetch rather than the global.
  *
- * That was wrong. ember-fetch's browser asset installs its exports as live
- * accessors onto the global:
+ * It IS reachable, just not through `window.fetch`. This build does not prefer
+ * native fetch, so ember-fetch bundles the github/fetch polyfill and assigns it
+ * to its OWN module exports rather than to the global — which is why swapping
+ * window.fetch changed nothing and the requests went out for real.
  *
- *   Object.defineProperty(exports, prop, {
- *       get: function () { return originalGlobal[prop] },
- *       set: function (v) { originalGlobal[prop] = v },
- *   });
+ * The seam is one level in. Under a test environment ember-fetch's default
+ * export is a wrapper:
  *
- * and under a test environment its default export is a wrapper that calls
- * `exports.fetch.apply(...)` at CALL time. So the import resolves through to
- * `window.fetch` on every call, and swapping the global intercepts it — the
- * same seam already used for lookup-user-ip and load-extensions.
+ *   exports['default'] = function () {
+ *       pending++;
+ *       return exports.fetch.apply(originalGlobal, arguments).then(...);
+ *   };
+ *
+ * `exports.fetch` is read at CALL time, and `exports` is the AMD module object
+ * that `window.require('fetch')` returns. Replacing `.fetch` on it therefore
+ * intercepts every call the service makes, and is restored afterwards.
  */
 module('Unit | Service | fetch (base request)', function (hooks) {
     setupTest(hooks);
 
     hooks.beforeEach(function () {
-        this.originalFetch = window.fetch;
+        this.fetchModule = window.require('fetch');
+        this.originalModuleFetch = this.fetchModule.fetch;
         this.requests = [];
         this.response = { ok: true, status: 200, statusText: 'OK', json: { data: 'ok' } };
         this.networkRejects = false;
 
-        window.fetch = (url, options) => {
+        this.fetchModule.fetch = (url, options) => {
             this.requests.push({ url, options });
 
             if (this.networkRejects) {
@@ -73,8 +78,8 @@ module('Unit | Service | fetch (base request)', function (hooks) {
     });
 
     hooks.afterEach(function () {
-        if (typeof this.originalFetch === 'function') {
-            window.fetch = this.originalFetch;
+        if (typeof this.originalModuleFetch === 'function') {
+            this.fetchModule.fetch = this.originalModuleFetch;
         }
     });
 
