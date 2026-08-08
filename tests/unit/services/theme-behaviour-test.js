@@ -34,7 +34,11 @@ module('Unit | Service | theme (behaviour)', function (hooks) {
         // The service reads `router:main` out of the container, so a fake is
         // registered rather than mutating the real router, which other tests
         // in the run share.
-        this.router = { currentRouteName: 'console.home' };
+        this.routerSubscriptions = [];
+        this.router = {
+            currentRouteName: 'console.home',
+            on: (eventName, handler) => this.routerSubscriptions.push({ eventName, handler }),
+        };
         this.owner.register('router:main', this.router, { instantiate: false });
 
         this.bodyClasses = document.body.className;
@@ -250,6 +254,103 @@ module('Unit | Service | theme (behaviour)', function (hooks) {
             this.service.setEnvironment();
 
             assert.false(document.body.classList.contains('sandbox-console'));
+        });
+    });
+
+    module('initialize', function () {
+        test('it applies the active theme without persisting it', function (assert) {
+            this.options.theme = 'light';
+            this.service.currentTheme = 'dark';
+
+            this.service.initialize();
+
+            assert.true(document.body.classList.contains('light-theme'));
+            assert.strictEqual(this.service.currentTheme, 'light');
+        });
+
+        test('an initial theme option is recorded', function (assert) {
+            this.service.initialize({ theme: 'dark' });
+
+            assert.strictEqual(this.service.initialTheme, 'dark');
+        });
+
+        test('it subscribes to both route transition hooks', function (assert) {
+            this.service.initialize();
+
+            assert.deepEqual(
+                this.routerSubscriptions.map((s) => s.eventName),
+                ['routeDidChange', 'routeWillChange']
+            );
+        });
+
+        test('supplied body class names are applied', function (assert) {
+            this.service.initialize({ bodyClassNames: ['custom-class'] });
+
+            assert.true(document.body.classList.contains('custom-class'));
+        });
+
+        test('a non-array bodyClassNames is ignored rather than spread', function (assert) {
+            this.service.initialize({ bodyClassNames: 'not-an-array' });
+
+            assert.true(document.body.classList.contains('console-home'), 'the route class still lands');
+        });
+
+        test('it marks the environment', function (assert) {
+            this.options.sandbox = true;
+
+            this.service.initialize();
+
+            assert.true(document.body.classList.contains('sandbox-console'));
+        });
+
+        test('an onInit callback receives the service', function (assert) {
+            const seen = [];
+
+            this.service.initialize({ onInit: (service) => seen.push(service) });
+
+            assert.deepEqual(seen, [this.service]);
+        });
+
+        test('a non-function onInit is ignored', function (assert) {
+            this.service.initialize({ onInit: 'not a function' });
+
+            assert.true(document.body.classList.contains('console-home'), 'initialization still completed');
+        });
+    });
+
+    module('route transitions', function () {
+        test('entering a route adds its body classes', function (assert) {
+            this.router.currentRouteName = 'console.orders';
+
+            this.service.routeDidChange();
+
+            assert.true(document.body.classList.contains('console-orders'));
+        });
+
+        test('leaving a route removes them again', function (assert) {
+            this.router.currentRouteName = 'console.orders';
+            this.service.routeDidChange();
+
+            this.service.routeWillChange();
+
+            assert.false(document.body.classList.contains('console-orders'));
+        });
+
+        test('a route declaring bodyClassNames contributes them', function (assert) {
+            this.owner.register('route:console.orders', { bodyClassNames: ['orders-page'] }, { instantiate: false });
+            this.router.currentRouteName = 'console.orders';
+
+            assert.deepEqual(this.service.currentRouteBodyClasses, ['orders-page']);
+
+            this.service.routeDidChange();
+            assert.true(document.body.classList.contains('orders-page'));
+        });
+
+        test('a route whose bodyClassNames is not an array contributes none', function (assert) {
+            this.owner.register('route:console.orders', { bodyClassNames: 'orders-page' }, { instantiate: false });
+            this.router.currentRouteName = 'console.orders';
+
+            assert.deepEqual(this.service.currentRouteBodyClasses, []);
         });
     });
 
