@@ -2,6 +2,7 @@ import { module, test } from 'qunit';
 import { setupTest } from 'dummy/tests/helpers';
 import Service from '@ember/service';
 import Model, { attr } from '@ember-data/model';
+import { set } from '@ember/object';
 
 /**
  * What loadWhois does when the lookup fails, and the company-option default.
@@ -36,16 +37,14 @@ module('Unit | Service | current-user (whois fallback)', function (hooks) {
         this.store = this.owner.lookup('service:store');
         this.service = this.owner.lookup('service:current-user');
 
-        // `notifications` is an app-tree collision — ember-cli-notifications ships
-        // the same path — so registering a stub over the name is unreliable, and
-        // an @service property does not take a plain assignment. Defining the
-        // property on the instance replaces the reference outright.
-        Object.defineProperty(this.service, 'notifications', {
-            value: {
-                warning: (message) => this.warnings.push(message),
-                serverError: () => {},
-            },
-            configurable: true,
+        // CurrentUserService is `Service.extend(Evented)` — a CLASSIC class, so
+        // its injections are Ember descriptors. Neither a plain assignment nor
+        // Object.defineProperty shadows those; `set` is what reaches them.
+        // (Registering a stub over `service:notifications` is separately
+        // unreliable — ember-cli-notifications ships the same app-tree path.)
+        set(this.service, 'notifications', {
+            warning: (message) => this.warnings.push(message),
+            serverError: () => {},
         });
     });
 
