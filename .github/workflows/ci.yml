@@ -65,6 +65,17 @@ jobs:
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }}
 
+    # Kept so the raw report can be pulled down with `gh run download` and read
+    # for exactly which statements are uncovered. The gate output only gives a
+    # per-file percentage, which is not enough to aim at a specific branch.
+    - name: Upload coverage report
+      if: '!cancelled()'
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage/
+        retention-days: 7
+
     - name: Enforce 100% coverage gate
       run: pnpm run coverage:check
 
