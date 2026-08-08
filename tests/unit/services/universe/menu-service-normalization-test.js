@@ -183,6 +183,17 @@ module('Unit | Service | universe/menu-service (normalization)', function (hooks
             assert.strictEqual(stored.priority, 5);
         });
 
+        test('a panel that is neither a contract, an object nor a string is returned unchanged', function (assert) {
+            // The final `return input` in #normalizeMenuPanel. Nothing rejects a
+            // value of the wrong type — it is handed to the registry as-is and
+            // stored under an undefined key.
+            this.service.registerAdminMenuPanel(42);
+
+            const stored = this.registry.getRegistry('console:admin', 'menu-panel');
+            assert.strictEqual(stored.length, 1, 'it was registered rather than refused');
+            assert.strictEqual(stored[0]._registryKey, undefined, 'under no key at all');
+        });
+
         test('a panel that matches none of the three shapes is passed straight through', function (assert) {
             // The final `return input`. Nothing rejects it, so it is registered
             // under an undefined key — the normalizer has no failure mode.
