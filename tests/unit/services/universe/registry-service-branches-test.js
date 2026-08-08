@@ -53,41 +53,47 @@ module('Unit | Service | universe/registry-service (branches)', function (hooks)
         });
     });
 
-    module('registerRenderableComponent keys', function () {
-        test('an explicit registry key wins', function (assert) {
-            this.service.registerRenderableComponent('slot', { _registryKey: 'chosen', name: 'Ignored' });
+    module('registerRenderableComponent keys', function (hooks) {
+        hooks.beforeEach(function () {
+            // The registry singleton lives on the Application, which outlives
+            // each test's owner — so entries accumulate across the run and a
+            // shared section name would read the previous test's component.
+            // Every test here gets a section of its own.
+            this.slot = `slot-${this.test.testId}`;
+            this.keys = () => this.service.getRegistry(this.slot, 'components').map((c) => c._registryKey);
+        });
 
-            assert.strictEqual(this.service.getRegistry('slot', 'components')[0]._registryKey, 'chosen');
+        test('an explicit registry key wins', function (assert) {
+            this.service.registerRenderableComponent(this.slot, { _registryKey: 'chosen', name: 'Ignored' });
+
+            assert.deepEqual(this.keys(), ['chosen']);
         });
 
         test('a class falls back to its name', function (assert) {
             class OrderCard {}
 
-            this.service.registerRenderableComponent('slot', OrderCard);
+            this.service.registerRenderableComponent(this.slot, OrderCard);
 
-            assert.strictEqual(this.service.getRegistry('slot', 'components')[0]._registryKey, 'OrderCard');
+            assert.deepEqual(this.keys(), ['OrderCard']);
         });
 
         test('a definition with a path falls back to that', function (assert) {
-            this.service.registerRenderableComponent('slot', { path: 'components/order-card' });
+            this.service.registerRenderableComponent(this.slot, { path: 'components/order-card' });
 
-            assert.strictEqual(this.service.getRegistry('slot', 'components')[0]._registryKey, 'components/order-card');
+            assert.deepEqual(this.keys(), ['components/order-card']);
         });
 
         test('a definition with none of them gets a generated key', function (assert) {
-            this.service.registerRenderableComponent('slot', { render: true });
+            this.service.registerRenderableComponent(this.slot, { render: true });
 
-            const key = this.service.getRegistry('slot', 'components')[0]._registryKey;
+            const [key] = this.keys();
             assert.true(key.startsWith('component-'), `a generated key, got ${key}`);
         });
 
         test('an array registers each of its members', function (assert) {
-            this.service.registerRenderableComponent('slot', [{ path: 'a' }, { path: 'b' }]);
+            this.service.registerRenderableComponent(this.slot, [{ path: 'a' }, { path: 'b' }]);
 
-            assert.deepEqual(
-                this.service.getRegistry('slot', 'components').map((c) => c._registryKey),
-                ['a', 'b']
-            );
+            assert.deepEqual(this.keys(), ['a', 'b']);
         });
     });
 
