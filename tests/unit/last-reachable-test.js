@@ -31,6 +31,23 @@ function withBroken(target, method, fn) {
     }
 }
 
+// The async form matters: a synchronous try/finally around an async call
+// restores the global the moment the PROMISE is returned, long before the code
+// under test gets as far as writing anything. Awaiting inside holds the
+// override for exactly as long as the call takes and no longer.
+async function withBrokenDuring(target, method, fn) {
+    const original = target[method];
+    target[method] = () => {
+        throw new Error('storage unavailable');
+    };
+
+    try {
+        return await fn();
+    } finally {
+        target[method] = original;
+    }
+}
+
 module('Unit | Utility | load-extensions (cache failures)', function () {
     test('a cache write that throws is swallowed', async function (assert) {
         const originalFetch = window.fetch;
@@ -41,7 +58,7 @@ module('Unit | Utility | load-extensions (cache failures)', function () {
             });
 
         try {
-            const extensions = await withBroken(window.localStorage, 'setItem', () => loadExtensions());
+            const extensions = await withBrokenDuring(window.localStorage, 'setItem', () => loadExtensions());
 
             assert.deepEqual(
                 extensions.map((e) => e.name),
@@ -88,7 +105,7 @@ module('Unit | Utility | lookup-user-ip (cache and timezone failures)', function
             });
 
         try {
-            const whois = await withBroken(window.localStorage, 'setItem', () => lookupUserIp({ cache: true }));
+            const whois = await withBrokenDuring(window.localStorage, 'setItem', () => lookupUserIp({ cache: true }));
 
             assert.strictEqual(whois.city, 'Kuala Lumpur', 'the caller still gets the lookup');
             assert.strictEqual(window.localStorage.getItem('fleetbase:whois'), null, 'nothing was cached');
