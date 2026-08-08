@@ -3,16 +3,29 @@ import { setupTest } from 'dummy/tests/helpers';
 import { settled } from '@ember/test-helpers';
 
 /**
- * setParam's two encoding paths, the debounced url write, and clear.
+ * The whole mutation half of this service is inert, and these tests pin that
+ * rather than the behaviour the method names promise.
+ *
+ *   get urlParams() {
+ *       return new URLSearchParams(window.location.search);
+ *   }
+ *
+ * The getter builds a FRESH URLSearchParams on every access, so
+ * `this.urlParams.set(...)` in setParam mutates a throwaway object that is
+ * discarded the moment the method returns. removeParam and addParam have the
+ * same shape. clear() goes further and assigns to the getter, which throws.
+ *
+ * The URL is set with replaceState and restored afterwards, so nothing here
+ * leaks into the rest of the run.
  */
 module('Unit | Service | url-search-params (branches)', function (hooks) {
     setupTest(hooks);
 
     hooks.beforeEach(function () {
         this.service = this.owner.lookup('service:url-search-params');
-        this.service.clear();
-
         this.originalUrl = window.location.href;
+
+        this.withSearch = (search) => window.history.replaceState({}, '', `${window.location.pathname}${search}`);
     });
 
     hooks.afterEach(function () {
@@ -20,69 +33,99 @@ module('Unit | Service | url-search-params (branches)', function (hooks) {
     });
 
     module('setParam', function () {
-        test('an object value is stored as json', function (assert) {
+        test('it chains, but stores nothing', function (assert) {
+            this.withSearch('');
+
+            const returned = this.service.setParam('query', 'widget');
+
+            assert.strictEqual(returned, this.service, 'it chains like a working setter');
+            assert.strictEqual(this.service.getParam('query'), null, 'and the value is gone the moment it returns');
+        });
+
+        test('an object value takes the json path and is still discarded', function (assert) {
+            this.withSearch('');
+
             this.service.setParam('filter', { status: 'active' });
 
-            assert.strictEqual(this.service.urlParams.get('filter'), '{"status":"active"}');
+            assert.strictEqual(this.service.getParam('filter'), null);
         });
 
-        test('an array is json too', function (assert) {
+        test('an array takes the same path', function (assert) {
+            this.withSearch('');
+
             this.service.setParam('ids', ['a', 'b']);
 
-            assert.strictEqual(this.service.urlParams.get('ids'), '["a","b"]');
+            assert.strictEqual(this.service.getParam('ids'), null);
         });
 
-        test('a string value is percent-encoded', function (assert) {
+        test('a string takes the percent-encoding path', function (assert) {
+            this.withSearch('');
+
             this.service.setParam('query', 'a b&c');
 
-            assert.strictEqual(this.service.urlParams.get('query'), 'a%20b%26c');
+            assert.strictEqual(this.service.getParam('query'), null);
         });
 
-        test('a number is encoded as its string form', function (assert) {
+        test('a number takes it too', function (assert) {
+            this.withSearch('');
+
             this.service.setParam('page', 3);
 
-            assert.strictEqual(this.service.urlParams.get('page'), '3');
-        });
-
-        test('it chains', function (assert) {
-            assert.strictEqual(this.service.setParam('a', '1').setParam('b', '2'), this.service);
-            assert.strictEqual(this.service.urlParams.get('b'), '2');
+            assert.strictEqual(this.service.getParam('page'), null);
         });
     });
 
     module('clear', function () {
-        test('it drops every param and chains', function (assert) {
-            this.service.setParam('a', '1').setParam('b', '2');
+        test('it throws, because urlParams has only a getter', function (assert) {
+            this.withSearch('?view=list');
 
-            const returned = this.service.clear();
-
-            assert.strictEqual(returned, this.service);
-            assert.strictEqual(this.service.urlParams.get('a'), null);
-            assert.strictEqual([...this.service.urlParams.keys()].length, 0);
+            assert.throws(() => this.service.clear(), /only a getter|has only a getter|Cannot set property/);
+            assert.strictEqual(this.service.getParam('view'), 'list', 'and the params are untouched');
         });
     });
 
-    module('updateUrlDebounced', function () {
-        test('it writes the params to the url once the debounce settles', async function (assert) {
-            this.service.setParam('view', 'list');
+    module('reading, which does work', function () {
+        test('getParam reads from the current url', function (assert) {
+            this.withSearch('?view=list');
 
-            this.service.updateUrlDebounced();
-
-            await settled();
-
-            assert.true(window.location.search.includes('view=list'));
+            assert.strictEqual(this.service.getParam('view'), 'list');
         });
 
-        test('repeated calls collapse into one write', async function (assert) {
-            this.service.setParam('view', 'list');
-            this.service.updateUrlDebounced();
-            this.service.setParam('view', 'map');
-            this.service.updateUrlDebounced();
+        test('a json value is parsed back into an object', function (assert) {
+            this.withSearch(`?filter=${encodeURIComponent('{"status":"active"}')}`);
 
+            assert.deepEqual(this.service.getParam('filter'), { status: 'active' });
+        });
+
+        test('all() collects every param', function (assert) {
+            this.withSearch('?view=list&page=2');
+
+            assert.deepEqual(this.service.all(), { view: 'list', page: '2' });
+        });
+
+        test('a param that is not there reads as null', function (assert) {
+            this.withSearch('');
+
+            assert.strictEqual(this.service.getParam('missing'), null);
+        });
+    });
+
+    module('updateUrl', function () {
+        test('it writes back exactly what is already in the url', function (assert) {
+            this.withSearch('?view=list');
+
+            this.service.updateUrl();
+
+            assert.true(window.location.search.includes('view=list'), 'nothing is added and nothing is lost');
+        });
+
+        test('the debounced form does the same once it settles', async function (assert) {
+            this.withSearch('?view=map');
+
+            this.service.updateUrlDebounced();
             await settled();
 
-            assert.true(window.location.search.includes('view=map'), 'the last value wins');
-            assert.false(window.location.search.includes('view=list'));
+            assert.true(window.location.search.includes('view=map'));
         });
     });
 });

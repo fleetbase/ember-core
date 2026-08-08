@@ -181,29 +181,39 @@ module('Unit | Service | universe (defaults and fallbacks)', function (hooks) {
             assert.strictEqual(item.route, null);
         });
     });
+});
 
-    module('empty registry fallbacks', function (hooks) {
-        hooks.beforeEach(function () {
-            // The recording proxy returns a string for every method; these two
-            // read through `|| A([])`, so a falsy return is what exercises the
-            // fallback.
-            this.owner.register(
-                'service:universe/registry-service',
-                class extends Service {
-                    getRegistry() {
-                        return null;
-                    }
+/**
+ * The `|| A([])` fallbacks on the two registry getters. This needs its own
+ * module rather than a nested one: UniverseService is a classic class, so its
+ * injections resolve when it is built, and re-registering a sub-service after
+ * that throws "Cannot re-register ... as it has already been resolved".
+ */
+module('Unit | Service | universe (empty registry fallbacks)', function (hooks) {
+    setupTest(hooks);
+
+    hooks.beforeEach(function () {
+        this.owner.register(
+            'service:universe/registry-service',
+            class extends Service {
+                getRegistry() {
+                    return null;
                 }
-            );
-            this.service = this.owner.lookup('service:universe');
-        });
+            }
+        );
 
-        test('menu items fall back to an empty list', function (assert) {
-            assert.deepEqual(this.service.getMenuItemsFromRegistry('engine:fleet-ops').slice(), []);
-        });
+        for (const name of ['universe/menu-service', 'universe/widget-service', 'universe/hook-service', 'universe/extension-manager', 'router', 'intl', 'url-search-params']) {
+            this.owner.register(`service:${name}`, class extends Service {});
+        }
 
-        test('menu panels fall back to an empty list', function (assert) {
-            assert.deepEqual(this.service.getMenuPanelsFromRegistry('engine:fleet-ops').slice(), []);
-        });
+        this.service = this.owner.lookup('service:universe');
+    });
+
+    test('menu items fall back to an empty list', function (assert) {
+        assert.deepEqual(this.service.getMenuItemsFromRegistry('engine:fleet-ops').slice(), []);
+    });
+
+    test('menu panels fall back to an empty list', function (assert) {
+        assert.deepEqual(this.service.getMenuPanelsFromRegistry('engine:fleet-ops').slice(), []);
     });
 });
