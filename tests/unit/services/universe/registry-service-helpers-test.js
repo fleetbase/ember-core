@@ -52,12 +52,35 @@ module('Unit | Service | universe/registry-service (helpers)', function (hooks) 
     });
 
     module('direct registration', function () {
-        test('a plain function is registered without instantiation', async function (assert) {
+        test('an arrow function is registered without instantiation', async function (assert) {
             const helper = () => 'result';
 
             await this.service.registerHelper('my-helper', helper);
 
-            assert.deepEqual(this.registered, [['helper:my-helper', helper, { instantiate: false }]]);
+            assert.strictEqual(this.registered[0][0], 'helper:my-helper');
+            assert.strictEqual(this.registered[0][1], helper);
+            assert.strictEqual(this.registered[0][2].instantiate, undefined, 'an arrow function has no prototype, so the expression yields undefined');
+        });
+
+        test('whether a helper is instantiated depends on how it was WRITTEN', async function (assert) {
+            // Pinned, not fixed. The flag is
+            //   typeof value !== 'function' || value.prototype
+            // which is never a boolean for a function: an arrow function has no
+            // prototype and yields undefined (falsy, not instantiated), while an
+            // equivalent `function` declaration has one and yields that object
+            // (truthy, instantiated as if it were a class). Two helpers with
+            // identical behaviour are registered differently based only on their
+            // syntax.
+            const arrow = () => 'result';
+            function declared() {
+                return 'result';
+            }
+
+            await this.service.registerHelper('arrow-helper', arrow);
+            await this.service.registerHelper('declared-helper', declared);
+
+            assert.strictEqual(this.registered[0][2].instantiate, undefined, 'arrow: not instantiated');
+            assert.strictEqual(this.registered[1][2].instantiate, declared.prototype, 'declared: instantiated');
         });
 
         test('a class is registered with instantiation', async function (assert) {
