@@ -44,4 +44,51 @@ module('Unit | Decorator | is-equal', function () {
         assert.strictEqual(typeof isEqual, 'function');
         assert.strictEqual(typeof isEqual('a', 'b'), 'function', 'it returns a decorator');
     });
+
+    test('fewer than two property names is rejected', function (assert) {
+        assert.throws(() => isEqual('a')({}, 'matches', {}), /requires two property names/);
+    });
+
+    /**
+     * The comparison the decorator builds is correct — it is only the installation
+     * that fails. Applying the decorator by hand yields the ComputedProperty it
+     * meant to define, and installing THAT through `.extend()` behaves exactly as
+     * the decorator was supposed to.
+     *
+     * This is the useful half of the finding: whoever fixes the decorator does not
+     * need to rewrite the comparison, only to define the property properly.
+     */
+    module('the computed property it builds', function () {
+        const buildComputed = () => isEqual('a', 'b')({}, 'matches', {});
+
+        test('it compares the two named properties', function (assert) {
+            const Working = EmberObject.extend({ matches: buildComputed() });
+
+            assert.true(Working.create({ a: 'x', b: 'x' }).matches);
+            assert.false(Working.create({ a: 'x', b: 'y' }).matches);
+        });
+
+        test('it compares by identity, not by value', function (assert) {
+            const Working = EmberObject.extend({ matches: buildComputed() });
+
+            assert.false(Working.create({ a: {}, b: {} }).matches, 'two equivalent objects are not equal');
+            assert.false(Working.create({ a: 1, b: '1' }).matches, 'and no coercion happens');
+        });
+
+        test('it recomputes when either property changes', function (assert) {
+            const subject = EmberObject.extend({ matches: buildComputed() }).create({ a: 'x', b: 'y' });
+
+            assert.false(subject.matches);
+
+            set(subject, 'b', 'x');
+            assert.true(subject.matches);
+
+            set(subject, 'a', 'z');
+            assert.false(subject.matches);
+        });
+
+        test('two undefined properties count as equal', function (assert) {
+            assert.true(EmberObject.extend({ matches: buildComputed() }).create().matches);
+        });
+    });
 });
