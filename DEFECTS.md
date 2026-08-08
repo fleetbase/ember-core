@@ -5,9 +5,10 @@ Every item here was found by writing a test against existing behaviour, and ever
 Nothing has been fixed. Each pin fails the moment someone changes the behaviour, which is
 the point at which the decision gets made.
 
-Coverage at the time of writing (CI run 31240648459, commit `760c971`):
-**statements 3861/4025 (95.92%)**, branches 93.14%, functions 98.01%, lines 95.91%.
-2146 tests, 0 failing.
+Coverage at the time of writing (CI run 31245775305, commit `d6daf5d`):
+**statements 3983/4025 (98.95%)**, branches 95.52%, functions 99.58%, lines 98.96%.
+**2215 tests, 0 failing.** Every statement a test can reach is now covered — the 42
+that remain are itemised below, and none of them can be reached by any input.
 
 ---
 
@@ -15,53 +16,56 @@ Coverage at the time of writing (CI run 31240648459, commit `760c971`):
 
 **The gate cannot go green until the items in this section are fixed.** They are not
 "hard to test" — they are **unreachable by any input**, so no test can execute them.
-Ten statements, seven defects.
-
-Everything else still uncovered is ordinary work in progress.
+**Seven defects, ten statements.**
 
 | # | file | lines | why no test can reach it |
 |---|---|---|---|
 | **B1** | `contracts/widget.js` | 239, 255 | `if (!this.options) { this.options = {}; }` — the constructor already assigns `this.options` on **both** of its paths, so the guard never fires |
 | **B2** | `services/resource-action.js` | 209, 233 | `selected = [...spread]; if (!selected) return;` — a spread always produces an array and an array is always truthy |
 | **B3** | `services/universe/menu-service.js` | 51 | `#wrapOnClickHandler` opens with `if (typeof onClick !== 'function') return onClick;` but its **only** caller already applies the same check |
-| **B4** | `services/url-search-params.js` | 176 | `clear()`'s `return this;` is unreachable because the line above it — `this.urlParams = …` — assigns to a getter-only property and **throws every time** |
-| **B5** | `utils/to-model.js` | 8, 10 | `ToModel.create()` has no owner, so `getOwner()` is `undefined` and `owner.lookup(...)` on the line above throws before these can run |
-| **B6** | `services/universe/hook-service.js` | 81 | `#getApplication`'s second priority, `this.applicationInstance`, is read only from a caller that runs **in the constructor** — before `setApplicationInstance` can have been called, so the field is always still `null` |
+| **B4** | `services/url-search-params.js` | 176 | `clear()`'s `return this;` is unreachable because the line above it assigns to a getter-only property and **throws every time** |
+| **B5** | `utils/to-model.js` | 8, 10 | `ToModel.create()` has no owner, so `getOwner()` is `undefined` and `owner.lookup(...)` on the line above throws first |
+| **B6** | `services/universe/hook-service.js` | 81 | `#getApplication`'s second priority is read only from a caller that runs **in the constructor** — before `setApplicationInstance` can have been called |
+| **B7** | `services/filters.js` | 25 | `activeFilters` skips blank and managed params, but `getQueryParams()` has already dropped both — the `continue` can never run |
 
-Each has a full write-up below (B1 → #19, B2 → #16, B3 → #21, B4 → #1, B5 → #23, B6 → #18).
+Full write-ups: B1 → #19, B2 → #16, B3 → #21, B4 → #1, B5 → #23, B6 → #18, B7 → #28.
 
 ### Fixing them is mechanical
 
-Five of the six are a deletion. B1, B2 and B3 are guards that can simply be removed. B6 is
-a reordering — move `#initializeHookRegistry()` out of the constructor, or drop the second
-priority. B4 and B5 need a real decision because the surrounding method is broken anyway
-(see #1 and #23).
+Six of the seven are a deletion — guards and a duplicated filter that can never fire.
+B6 is a reordering: move `#initializeHookRegistry()` out of the constructor, or drop the
+second priority. B4 and B5 need a real decision, because the surrounding method is broken
+anyway (see #1 and #23).
 
----
+## ◻︎ Uncoverable, and *not* a defect — 32 statements
 
-## ◻︎ Uncoverable, but *not* a defect
+These also cannot be covered, need no fix, and are the only honest candidates for an
+exclusion if the gate must be green without touching production code.
 
-These also cannot be covered, and are listed so nobody spends time trying. They need no
-fix, and if the gate must be green they are the only honest candidates for an exclusion.
+**`@tracked field = value` initialisers a constructor overwrites — 6 statements.**
+`extension-manager:31`, `library/subject-custom-fields:15`, `contracts/base-contract:14`,
+`abilities/dynamic:11`, `services/language:11-12`. A tracked field's initialiser only runs
+if the property is **read before it is written**; each of these classes assigns the field
+in its own constructor. An instrumentation artifact, not dead code.
 
-**`@tracked field = value` initialisers that a constructor overwrites** — 5 statements in
-`library/subject-custom-fields.js:15`, `contracts/base-contract.js:14`,
-`abilities/dynamic.js:11`, `services/language.js:11-12`. A tracked field's initialiser
-only runs if the property is **read before it is written**; each of these classes assigns
-the field in its constructor, so the initialiser never executes. This is an instrumentation
-artifact, not dead code.
-
-**Paths that need a container-less service** — 6 statements in
-`services/universe/registry-service.js:90,94,491,494,541` and
-`hook-service.js:91`. These are `if (!owner)` / `if (!application)` fallbacks. Ember always
-supplies an owner to a service built through the container, and the one substitute that
-would work — replacing `owner.application` — breaks the test run, because Ember's own
+**Fallbacks that need a container-less service — 12 statements.**
+`extension-manager:94,95,99,100,101,105`, `registry-service:90,94,491,494,541`,
+`hook-service:91`. All `if (!owner)` / `if (!application)` paths. Ember always supplies an
+owner to a service built through the container, and the one substitute that would work —
+replacing `owner.application` — breaks the test run, because Ember's own
 `ApplicationInstance#willDestroy` reads `this.application._unwatchInstance` during teardown.
 
-**Module-scope configuration** — `adapters/application.js:16`, which runs at import time,
-long before any test can influence it.
+**Module-scope configuration — 2 statements.** `adapters/application:16` and
+`services/fetch:23` both run at import time, long before a test can influence them.
 
----
+**Browser routes that cannot be faked safely — 10 statements.** `utils/download.js:11,126,
+160-173`. Reaching the no-URL/`btoa`/FileReader route means deleting `window.URL`, which
+stalls QUnit's reporter and aborts the whole run; and line 126 assigns `location.href`,
+which would navigate away from the test page. Every other path through that file is covered.
+
+**A hook path the other one always wins — 2 statements.** `extension-manager:1096-1097`.
+`#onEngineInstanceBuilt` schedules the engine-loaded hooks on `next()`, but the boot patch
+runs first in every ordering a test can produce and clears them.
 
 ## Live defects
 
@@ -252,6 +256,22 @@ one is present, so a caller cannot force a name for a response that supplies its
 as a default, behaves as an override.
 
 *Pinned in* `tests/unit/services/fetch-upload-download-test.js`
+
+### 28. `filters.activeFilters` filters a list that is already filtered — **⛔ BLOCKER B7**
+
+```js
+for (let queryParam in this.getQueryParams()) {
+    const value = get(queryParams, queryParam);
+    if (isBlank(value) || this.managedQueryParams.includes(queryParam)) {
+        continue;
+    }
+```
+
+`getQueryParams()` — called with no controller, so taking the route path — has already
+dropped both: it skips managed params and only adds a value `if (value)`. The `continue`
+can never run, and the filtering is duplicated one layer apart.
+
+*Pinned in* `tests/unit/final-branches-test.js`
 
 ---
 
