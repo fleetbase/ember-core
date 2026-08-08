@@ -62,30 +62,35 @@ module('Unit | Service | universe/hook-service (finding the application)', funct
     });
 
     test('the owner application is used when the universe has none', function (assert) {
-        this.owner.register('service:universe', class extends Service {});
-        const application = container('owner-application');
-        const owner = this.owner;
-        Object.defineProperty(owner, 'application', { value: application, configurable: true });
-
-        try {
-            this.build();
-
-            assert.true(application.registrations.has('registry:hooks'));
-        } finally {
-            delete owner.application;
-        }
-    });
-
-    test('the owner itself is the last resort', function (assert) {
-        // No universe instance and an owner with no `application` — which is
-        // what an EngineInstance looks like. The owner is a real container, so
-        // this asserts through its own API.
+        // This is the ordinary application path: getOwner returns the
+        // ApplicationInstance and its `application` is the Application, which
+        // owns the shared registry.
+        //
+        // `owner.application` is NOT safe to stand in for — Ember's own
+        // ApplicationInstance#willDestroy reads `this.application._unwatchInstance`
+        // during teardown, so replacing it breaks the run rather than the test.
+        // The real one is asserted against instead.
         this.owner.register('service:universe', class extends Service {});
 
         const service = this.build();
 
         assert.strictEqual(getOwner(service), this.owner);
-        assert.true(this.owner.hasRegistration('registry:hooks'), 'the owner received it directly');
+        assert.ok(this.owner.application, 'the test owner really does have one');
+        assert.true(this.owner.application.hasRegistration('registry:hooks'), 'the registry lives on the Application');
+    });
+
+    test('the last resort is the owner itself, for an owner with no application', function (assert) {
+        // An EngineInstance has no `application`, so #getApplication returns the
+        // owner. That shape cannot be built here without breaking Ember's
+        // teardown, so what is pinned is the reachable half: the registry is
+        // resolvable through the owner either way, because an ApplicationInstance
+        // shares its Application's registry.
+        this.owner.register('service:universe', class extends Service {});
+
+        const service = this.build();
+
+        assert.true(this.owner.hasRegistration('registry:hooks'));
+        assert.strictEqual(this.owner.resolveRegistration('registry:hooks'), service.hookRegistry);
     });
 
     test('a second service reuses the registry rather than replacing it', function (assert) {

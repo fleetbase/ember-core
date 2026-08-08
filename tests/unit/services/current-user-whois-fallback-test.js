@@ -23,6 +23,10 @@ module('Unit | Service | current-user (whois fallback)', function (hooks) {
         window.fetch = () => Promise.reject(new Error('offline'));
 
         this.warnings = [];
+        // lookupUserIp caches a successful lookup in localStorage, so a
+        // neighbouring test's success would be returned here instead of the
+        // failure this module is about.
+        localStorage.removeItem('fleetbase:whois');
 
         for (const name of ['fetch', 'session', 'theme', 'universe', 'socket', 'intl']) {
             this.owner.register(`service:${name}`, class extends Service {});
@@ -33,9 +37,16 @@ module('Unit | Service | current-user (whois fallback)', function (hooks) {
         this.service = this.owner.lookup('service:current-user');
 
         // `notifications` is an app-tree collision — ember-cli-notifications ships
-        // the same path — so registering a stub over the name is unreliable.
-        // Overriding the method on whichever instance actually resolved is not.
-        this.service.notifications.warning = (message) => this.warnings.push(message);
+        // the same path — so registering a stub over the name is unreliable, and
+        // an @service property does not take a plain assignment. Defining the
+        // property on the instance replaces the reference outright.
+        Object.defineProperty(this.service, 'notifications', {
+            value: {
+                warning: (message) => this.warnings.push(message),
+                serverError: () => {},
+            },
+            configurable: true,
+        });
     });
 
     hooks.afterEach(function () {
