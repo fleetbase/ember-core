@@ -115,10 +115,20 @@ module('Unit | Service | theme (system colour scheme)', function (hooks) {
         );
     });
 
-    test('no system preference still ends up dark, by default rather than by preference', function (assert) {
+    test('no system preference falls through to currentTheme, whatever that is', function (assert) {
+        // The comment on that line reads "default to dark theme", but it returns
+        // `this.currentTheme` — which is null on a service nobody has set a theme
+        // on. The fallback is whatever was last stored, not a literal dark.
+        this.service.currentTheme = null;
         assert.strictEqual(
             this.withColorScheme(false, () => this.service.activeTheme),
-            'dark'
+            null
+        );
+
+        this.service.currentTheme = 'light';
+        assert.strictEqual(
+            this.withColorScheme(false, () => this.service.activeTheme),
+            'light'
         );
     });
 });
