@@ -65,6 +65,7 @@ module('Unit | Service | current-user (events)', function (hooks) {
             'service:theme',
             class extends Service {
                 syncThemeFromCurrentUser() {}
+                setEnvironment() {}
             }
         );
         this.owner.register(
