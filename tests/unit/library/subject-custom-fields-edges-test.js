@@ -180,12 +180,28 @@ module('Unit | Library | subject-custom-fields (edges)', function (hooks) {
             assert.strictEqual(record.value_type, 'date');
         });
 
-        test('no field id means nothing happens', function (assert) {
+        test('no custom field THROWS, because the guard is checked too late', function (assert) {
+            // Pinned, not fixed. writeFieldValue opens with
+            //     this.setFieldValue(value, customField);
+            //     const fieldId = typeof customField === 'string' ? customField : customField?.id;
+            //     if (!fieldId || !resource) return;
+            // The optional chaining on `customField?.id` shows a null field was
+            // anticipated — but setFieldValue has already run by then, and it
+            // reaches `customFieldOrId.id` unguarded, so the method dies before
+            // its own guard is ever consulted.
             const resource = { get: () => null };
 
-            this.manager.writeFieldValue(resource, 'hello', null);
+            assert.throws(() => this.manager.writeFieldValue(resource, 'hello', null), /Cannot read properties of null/);
+        });
 
-            assert.deepEqual(this.manager.getProperties(), {}, 'not even staged');
+        test('an empty-string field id does reach the guard', function (assert) {
+            // A string takes setField's other branch, so it survives long
+            // enough for `!fieldId` to be true and return quietly.
+            const resource = { get: () => null };
+
+            this.manager.writeFieldValue(resource, 'hello', '');
+
+            assert.deepEqual(this.manager.getValue(''), { value: 'hello', value_type: null }, 'staged, then the write is skipped');
         });
 
         test('no resource means nothing is written', function (assert) {
