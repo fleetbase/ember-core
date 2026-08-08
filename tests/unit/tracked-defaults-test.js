@@ -20,15 +20,12 @@ module('Unit | tracked defaults', function (hooks) {
             'universe',
             'universe/registry-service',
             'universe/extension-manager',
-            'universe/menu-service',
-            'universe/widget-service',
             'universe/hook-service',
             'modals-manager',
             'notifications',
             'events',
             'abilities',
             'fetch',
-            'current-user',
             'table-context',
             'resource-context-panel',
             'crud',
@@ -41,6 +38,10 @@ module('Unit | tracked defaults', function (hooks) {
             this.owner.register(`service:${name}`, class extends Service {});
         }
 
+        // Deliberately NOT stubbed above: menu-service, widget-service and
+        // current-user are the subjects here, and registering a bare stub over
+        // one of them is what made three of these read `undefined` rather than
+        // its declared default on the first attempt.
         this.build = (name) => this.owner.factoryFor(`service:${name}`).create();
     });
 
