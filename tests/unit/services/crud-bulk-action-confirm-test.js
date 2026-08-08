@@ -26,6 +26,12 @@ module('Unit | Service | crud (bulkAction confirm)', function (hooks) {
     setupTest(hooks);
 
     hooks.beforeEach(function () {
+        // The catch branch logs before notifying; the console noise is not the
+        // subject of these tests. Saved before anything that can throw, so a
+        // failing hook cannot leave afterEach restoring `undefined`.
+        this.originalConsoleError = console.error;
+        console.error = () => {};
+
         this.shown = [];
         this.requests = [];
         this.notified = [];
@@ -102,15 +108,12 @@ module('Unit | Service | crud (bulkAction confirm)', function (hooks) {
             getOption: (key, fallback) => this.modals.getOption(key, fallback),
             setOption: (key, value) => this.modals.setOption(key, value),
         };
-
-        // The catch branch logs before notifying; the console noise is not the
-        // subject of these tests, so it is silenced and restored.
-        this.originalConsoleError = console.error;
-        console.error = () => {};
     });
 
     hooks.afterEach(function () {
-        console.error = this.originalConsoleError;
+        if (typeof this.originalConsoleError === 'function') {
+            console.error = this.originalConsoleError;
+        }
     });
 
     module('the request', function () {

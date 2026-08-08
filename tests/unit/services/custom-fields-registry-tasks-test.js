@@ -13,6 +13,12 @@ module('Unit | Service | custom-fields-registry (tasks)', function (hooks) {
     setupTest(hooks);
 
     hooks.beforeEach(function () {
+        // Saved before anything that can throw: if the rest of this hook fails,
+        // afterEach still has a function to put back. Restoring `undefined` to
+        // console.error takes the whole run down with it.
+        this.originalConsoleError = console.error;
+        console.error = () => {};
+
         this.shown = [];
         this.performed = [];
         this.loads = [];
@@ -55,19 +61,17 @@ module('Unit | Service | custom-fields-registry (tasks)', function (hooks) {
             return this.manager;
         };
 
-        this.service.modalTask = {
-            perform: (...args) => {
-                this.performed.push(args);
-                return Promise.resolve('saved');
-            },
+        // A task property is getter-only; `perform` is the seam.
+        this.service.modalTask.perform = (...args) => {
+            this.performed.push(args);
+            return Promise.resolve('saved');
         };
-
-        this.originalConsoleError = console.error;
-        console.error = () => {};
     });
 
     hooks.afterEach(function () {
-        console.error = this.originalConsoleError;
+        if (typeof this.originalConsoleError === 'function') {
+            console.error = this.originalConsoleError;
+        }
     });
 
     module('loadSubjectCustomFields', function () {
