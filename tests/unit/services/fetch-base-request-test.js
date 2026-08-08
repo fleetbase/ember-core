@@ -51,9 +51,22 @@ module('Unit | Service | fetch (base request)', function (hooks) {
             });
         };
 
-        this.owner.register('service:session', class extends Service {});
-        this.owner.register('service:current-user', class extends Service {});
-        this.owner.register('service:notifications', class extends Service {});
+        // getHeaders runs in the CONSTRUCTOR and reads session.data.authenticated,
+        // so a bare service stub throws before any test body runs.
+        const testContext = this;
+        this.sessionData = { authenticated: {} };
+        this.isAuthenticated = false;
+        this.owner.register(
+            'service:session',
+            class extends Service {
+                get data() {
+                    return testContext.sessionData;
+                }
+                get isAuthenticated() {
+                    return testContext.isAuthenticated;
+                }
+            }
+        );
 
         this.service = this.owner.lookup('service:fetch');
         this.lastRequest = () => this.requests.at(-1);
