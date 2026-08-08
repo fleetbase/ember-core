@@ -23,16 +23,6 @@ module('Unit | Service | current-user (whois fallback)', function (hooks) {
         window.fetch = () => Promise.reject(new Error('offline'));
 
         this.warnings = [];
-        const testContext = this;
-
-        this.owner.register(
-            'service:notifications',
-            class extends Service {
-                warning(message) {
-                    testContext.warnings.push(message);
-                }
-            }
-        );
 
         for (const name of ['fetch', 'session', 'theme', 'universe', 'socket', 'intl']) {
             this.owner.register(`service:${name}`, class extends Service {});
@@ -41,6 +31,11 @@ module('Unit | Service | current-user (whois fallback)', function (hooks) {
         this.owner.register('model:company', CompanyModel);
         this.store = this.owner.lookup('service:store');
         this.service = this.owner.lookup('service:current-user');
+
+        // `notifications` is an app-tree collision — ember-cli-notifications ships
+        // the same path — so registering a stub over the name is unreliable.
+        // Overriding the method on whichever instance actually resolved is not.
+        this.service.notifications.warning = (message) => this.warnings.push(message);
     });
 
     hooks.afterEach(function () {

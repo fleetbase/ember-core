@@ -5,62 +5,70 @@ import { getOwner } from '@ember/application';
 
 /**
  * The hook registry is stored on the application container so every engine
- * shares one. Finding that container has a four-step fallback, and only the
- * first step was exercised — the rest are what an engine, or a service booted
- * before the application instance is set, actually hits.
+ * shares one, and finding that container has a four-step fallback.
+ *
+ * The search runs in the CONSTRUCTOR (`this.hookRegistry =
+ * this.#initializeHookRegistry()`), so the container has to be arranged before
+ * the service is built — and each test builds its own with factoryFor().create()
+ * rather than taking the singleton, which would carry the previous test's
+ * registry.
  */
+function container(name) {
+    const registrations = new Map();
+    return {
+        name,
+        registrations,
+        hasRegistration: (key) => registrations.has(key),
+        register: (key, value) => registrations.set(key, value),
+        resolveRegistration: (key) => registrations.get(key),
+    };
+}
+
 module('Unit | Service | universe/hook-service (finding the application)', function (hooks) {
     setupTest(hooks);
 
     hooks.beforeEach(function () {
-        this.owner.register('service:universe', class extends Service {});
-
-        this.service = this.owner.lookup('service:universe/hook-service');
-        this.universe = this.owner.lookup('service:universe');
-
-        // A container stand-in that records what was registered on it. The
-        // registry is only stored once, so each test asserts which object
-        // received it.
-        this.container = (name) => {
-            const registrations = new Map();
-            return {
-                name,
-                hasRegistration: (key) => registrations.has(key),
-                register: (key, value) => registrations.set(key, value),
-                resolveRegistration: (key) => registrations.get(key),
-                registrations,
-            };
-        };
+        this.build = () => this.owner.factoryFor('service:universe/hook-service').create();
     });
 
     test('the universe application instance is preferred', function (assert) {
-        const preferred = this.container('universe');
-        this.universe.applicationInstance = preferred;
-        this.service.setApplicationInstance(this.container('own'));
+        const preferred = container('universe');
+        this.owner.register(
+            'service:universe',
+            class extends Service {
+                applicationInstance = preferred;
+            }
+        );
 
-        this.service.registerHook('order:created', () => {});
+        this.build();
 
         assert.true(preferred.registrations.has('registry:hooks'), 'the registry went to the universe instance');
     });
 
-    test('its own application instance is used when the universe has none', function (assert) {
-        const own = this.container('own');
-        this.universe.applicationInstance = null;
-        this.service.setApplicationInstance(own);
+    test('its own applicationInstance can never be the one used', function (assert) {
+        // Pinned, not fixed. #getApplication lists `this.applicationInstance` as
+        // its second priority, but the only caller runs in the constructor —
+        // before setApplicationInstance can possibly have been called — so at
+        // that moment the field is still its `null` default. The branch is
+        // unreachable, and setting the instance afterwards moves nothing.
+        this.owner.register('service:universe', class extends Service {});
+        const own = container('own');
 
-        this.service.registerHook('order:created', () => {});
+        const service = this.build();
+        service.setApplicationInstance(own);
 
-        assert.true(own.registrations.has('registry:hooks'));
+        assert.false(own.registrations.has('registry:hooks'), 'the registry was already placed elsewhere');
+        assert.strictEqual(service.applicationInstance, own, 'even though the field is now set');
     });
 
-    test('the owner application is used when neither is set', function (assert) {
-        this.universe.applicationInstance = null;
-        const application = this.container('owner-application');
-        const owner = getOwner(this.service);
+    test('the owner application is used when the universe has none', function (assert) {
+        this.owner.register('service:universe', class extends Service {});
+        const application = container('owner-application');
+        const owner = this.owner;
         Object.defineProperty(owner, 'application', { value: application, configurable: true });
 
         try {
-            this.service.registerHook('order:created', () => {});
+            this.build();
 
             assert.true(application.registrations.has('registry:hooks'));
         } finally {
@@ -69,25 +77,30 @@ module('Unit | Service | universe/hook-service (finding the application)', funct
     });
 
     test('the owner itself is the last resort', function (assert) {
-        // No universe instance, none of its own, and an owner with no
-        // `application` — which is what an EngineInstance looks like. The owner
-        // is a real container, so this asserts through its own API.
-        this.universe.applicationInstance = null;
-        const owner = getOwner(this.service);
+        // No universe instance and an owner with no `application` — which is
+        // what an EngineInstance looks like. The owner is a real container, so
+        // this asserts through its own API.
+        this.owner.register('service:universe', class extends Service {});
 
-        this.service.registerHook('order:created', () => {});
+        const service = this.build();
 
-        assert.true(owner.hasRegistration('registry:hooks'), 'the test owner received it directly');
+        assert.strictEqual(getOwner(service), this.owner);
+        assert.true(this.owner.hasRegistration('registry:hooks'), 'the owner received it directly');
     });
 
-    test('the registry is created once and reused', function (assert) {
-        const preferred = this.container('universe');
-        this.universe.applicationInstance = preferred;
+    test('a second service reuses the registry rather than replacing it', function (assert) {
+        const preferred = container('universe');
+        this.owner.register(
+            'service:universe',
+            class extends Service {
+                applicationInstance = preferred;
+            }
+        );
 
-        this.service.registerHook('order:created', () => {});
-        const first = preferred.registrations.get('registry:hooks');
-        this.service.registerHook('order:updated', () => {});
+        const first = this.build();
+        const second = this.build();
 
-        assert.strictEqual(preferred.registrations.get('registry:hooks'), first, 'a second hook does not replace it');
+        assert.strictEqual(second.hookRegistry, first.hookRegistry, 'which is what makes the registry shared across engines');
+        assert.strictEqual(preferred.registrations.size, 1);
     });
 });
