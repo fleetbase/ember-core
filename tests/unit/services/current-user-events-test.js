@@ -24,6 +24,7 @@ class CompanyModel extends Model {
 class UserModel extends Model {
     @attr('string') name;
     @attr('string') company_uuid;
+    @attr('string') locale;
     @belongsTo('role', { async: false, inverse: null }) role;
 }
 
@@ -57,7 +58,23 @@ module('Unit | Service | current-user (events)', function (hooks) {
             }
         );
 
-        for (const name of ['fetch', 'session', 'theme', 'socket', 'intl', 'notifications']) {
+        // setUser reaches both of these on its way to the events, and a bare
+        // stub would throw inside an async method whose rejection nothing here
+        // would surface.
+        this.owner.register(
+            'service:theme',
+            class extends Service {
+                syncThemeFromCurrentUser() {}
+            }
+        );
+        this.owner.register(
+            'service:intl',
+            class extends Service {
+                setLocale() {}
+            }
+        );
+
+        for (const name of ['fetch', 'session', 'socket', 'notifications']) {
             this.owner.register(`service:${name}`, class extends Service {});
         }
 
@@ -80,7 +97,7 @@ module('Unit | Service | current-user (events)', function (hooks) {
             data: {
                 id: 'user-1',
                 type: 'user',
-                attributes: { name: 'Ada', company_uuid: 'company-1' },
+                attributes: { name: 'Ada', company_uuid: 'company-1', locale: 'en-us' },
                 relationships: { role: { data: { id: 'role-1', type: 'role' } } },
             },
             included: [{ id: 'role-1', type: 'role', attributes: { name: 'Admin' } }],
@@ -88,8 +105,8 @@ module('Unit | Service | current-user (events)', function (hooks) {
     });
 
     module('setUser', function () {
-        test('it fires on all three buses', function (assert) {
-            this.service.setUser(this.user);
+        test('it fires on all three buses', async function (assert) {
+            await this.service.setUser(this.user);
 
             assert.deepEqual(
                 this.ownEvents.map((e) => e.name),
@@ -100,29 +117,29 @@ module('Unit | Service | current-user (events)', function (hooks) {
             assert.strictEqual(this.universeEvents[0].name, 'user.loaded');
         });
 
-        test('no events service still reaches the universe bus', function (assert) {
+        test('no events service still reaches the universe bus', async function (assert) {
             set(this.service, 'events', null);
 
-            this.service.setUser(this.user);
+            await this.service.setUser(this.user);
 
             assert.deepEqual(this.tracked, []);
             assert.strictEqual(this.universeEvents[0].name, 'user.loaded');
         });
 
-        test('no universe still reaches the events service', function (assert) {
+        test('no universe still reaches the events service', async function (assert) {
             set(this.service, 'universe', null);
 
-            this.service.setUser(this.user);
+            await this.service.setUser(this.user);
 
             assert.strictEqual(this.tracked[0].event, 'user.loaded');
             assert.deepEqual(this.universeEvents, []);
         });
 
-        test('neither one leaves only the local bus', function (assert) {
+        test('neither one leaves only the local bus', async function (assert) {
             set(this.service, 'events', null);
             set(this.service, 'universe', null);
 
-            this.service.setUser(this.user);
+            await this.service.setUser(this.user);
 
             assert.deepEqual(
                 this.ownEvents.map((e) => e.name),
@@ -132,9 +149,9 @@ module('Unit | Service | current-user (events)', function (hooks) {
         });
     });
 
-    module('updateUser', function () {
-        test('it reports the user and organization', function (assert) {
-            this.service.updateUser(this.user);
+    module('refreshUser', function () {
+        test('it reports the user and organization', async function (assert) {
+            await this.service.refreshUser(this.user);
 
             assert.deepEqual(
                 this.ownEvents.map((e) => e.name),
@@ -146,19 +163,19 @@ module('Unit | Service | current-user (events)', function (hooks) {
             assert.strictEqual(this.tracked[0].properties.organization_name, 'Acme');
         });
 
-        test('it is skipped when there is no events service', function (assert) {
+        test('it is skipped when there is no events service', async function (assert) {
             set(this.service, 'events', null);
 
-            this.service.updateUser(this.user);
+            await this.service.refreshUser(this.user);
 
             assert.deepEqual(this.tracked, []);
             assert.strictEqual(this.universeEvents[0].name, 'user.updated');
         });
 
-        test('the universe half is skipped when there is no universe', function (assert) {
+        test('the universe half is skipped when there is no universe', async function (assert) {
             set(this.service, 'universe', null);
 
-            this.service.updateUser(this.user);
+            await this.service.refreshUser(this.user);
 
             assert.deepEqual(this.universeEvents, []);
             assert.strictEqual(this.tracked[0].event, 'user.updated');
