@@ -45,8 +45,15 @@ module('Unit | Decorator | is-equal', function () {
         assert.strictEqual(typeof isEqual('a', 'b'), 'function', 'it returns a decorator');
     });
 
-    test('fewer than two property names is rejected', function (assert) {
-        assert.throws(() => isEqual('a')({}, 'matches', {}), /requires two property names/);
+    test('the arity guard can never fire, so one property name fails deeper down', function (assert) {
+        // Pinned, not fixed. The guard is
+        //   assert('... requires two property names ...', params.length === 2)
+        // but `isEqual(propNameA, propNameB)` forwards BOTH parameters onwards
+        // unconditionally, so `params` is always exactly two long — it is
+        // ['a', undefined] here, not ['a']. The guard is dead code, and a caller
+        // who passes one name gets Ember's low-level computed-key error instead
+        // of the decorator's own message naming the mistake.
+        assert.throws(() => isEqual('a')({}, 'matches', {}), /computed property key must be a string/);
     });
 
     /**
