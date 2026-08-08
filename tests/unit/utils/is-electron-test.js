@@ -60,6 +60,22 @@ module('Unit | Utility | is-electron', function () {
         });
     });
 
+    test('it detects the electron main process by its version list', function (assert) {
+        withUserAgent(PLAIN_UA, () => {
+            withWindowProcess({ versions: { electron: '28.0.0' } }, () => {
+                assert.true(isElectron());
+            });
+        });
+    });
+
+    test('a process with versions but no electron entry is not electron', function (assert) {
+        withUserAgent(PLAIN_UA, () => {
+            withWindowProcess({ versions: { node: '20.0.0' } }, () => {
+                assert.false(isElectron());
+            });
+        });
+    });
+
     test('it detects electron from the user agent', function (assert) {
         withUserAgent('Mozilla/5.0 Electron/28.0.0 Safari/537.36', () => {
             assert.true(isElectron());
