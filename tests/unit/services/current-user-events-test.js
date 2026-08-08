@@ -67,7 +67,13 @@ module('Unit | Service | current-user (events)', function (hooks) {
 
         this.store = this.owner.lookup('service:store');
         this.service = this.owner.lookup('service:current-user');
-        this.service.trigger = (name, ...args) => this.ownEvents.push({ name, args });
+
+        // CurrentUserService really is Evented, so the local bus is subscribed
+        // to rather than stubbed — assigning over a mixin method on a classic
+        // class does not shadow it, and `on` tests the actual bus anyway.
+        for (const name of ['user.loaded', 'user.updated', 'user.organization_switched']) {
+            this.service.on(name, (...args) => this.ownEvents.push({ name, args }));
+        }
 
         this.company = this.store.push({ data: { id: 'company-1', type: 'company', attributes: { name: 'Acme' } } });
         this.user = this.store.push({
