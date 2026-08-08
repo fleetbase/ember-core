@@ -7,6 +7,8 @@ import Service from '@ember/service';
  * other than an object, the generated key a component falls back to, and the
  * two clear paths.
  */
+let uniqueSection = 0;
+
 module('Unit | Service | universe/registry-service (branches)', function (hooks) {
     setupTest(hooks);
 
@@ -59,7 +61,7 @@ module('Unit | Service | universe/registry-service (branches)', function (hooks)
             // each test's owner — so entries accumulate across the run and a
             // shared section name would read the previous test's component.
             // Every test here gets a section of its own.
-            this.slot = `slot-${this.test.testId}`;
+            this.slot = `slot-${(uniqueSection += 1)}`;
             this.keys = () => this.service.getRegistry(this.slot, 'components').map((c) => c._registryKey);
         });
 
