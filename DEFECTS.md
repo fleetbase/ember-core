@@ -73,7 +73,22 @@ unwrapped. Any controller using the mapped form cannot be filtered at all.
 
 *Pinned in* `tests/unit/services/filters-actions-test.js`
 
-### 5. A class registered as a renderable component loses its key
+### 5. `getMimeTypeFromResponse` needs a semicolon it usually will not get
+
+```js
+const results = /(.*)?;/.exec(contentType);
+```
+
+The regex requires a trailing semicolon, so a `Content-Type: text/csv` — a header
+with no parameters, which is the common case — matches nothing and the mime type
+stays null. `download()` then falls through to `getMimeType(fileName)`, which
+returns the **extension** rather than a mime type (see below), so the browser is
+handed `'csv'` where `'text/csv'` was meant. A header *with* parameters
+(`text/csv; charset=utf-8`) parses correctly.
+
+*Pinned in* `tests/unit/services/fetch-upload-download-test.js`
+
+### 6. A class registered as a renderable component loses its key
 
 `registerRenderableComponent` computes the key correctly (`component.name` →
 `'OrderCard'`), but `register` only stamps it onto the value when the value is an
@@ -91,7 +106,7 @@ An equivalent plain object works.
 
 *Pinned in* `tests/unit/services/universe/registry-service-branches-test.js`
 
-### 6. The universe facade calls six sub-service methods with the wrong arity
+### 7. The universe facade calls six sub-service methods with the wrong arity
 
 None throw — the sub-services return empty collections for unknown lists — so these
 APIs silently never work:
@@ -109,7 +124,7 @@ APIs silently never work:
 
 *Pinned in* `tests/unit/services/universe-delegation-test.js`
 
-### 7. `current-user.loadWhois` can never warn the user
+### 8. `current-user.loadWhois` can never warn the user
 
 `loadWhois` wraps `lookupUserIp` in a try/catch whose catch warns *"Unable to detect
 your location"* and builds a fallback. But `lookupUserIp` absorbs every failure
@@ -119,7 +134,7 @@ twice, and the outer copy is unreachable by the path it was written for.
 
 *Pinned in* `tests/unit/services/current-user-whois-fallback-test.js`
 
-### 8. `promiseCurrentUser` aborts and invalidates twice
+### 9. `promiseCurrentUser` aborts and invalidates twice
 
 The no-user branch aborts the transition, invalidates, then throws — but the throw is
 inside the same `try`, so its own `catch` runs the identical abort-and-invalidate
@@ -128,14 +143,14 @@ invalidation takes a different code path.
 
 *Pinned in* `tests/unit/services/session-flows-test.js`
 
-### 9. `getSessionSecondsRemaining` has its operands reversed
+### 10. `getSessionSecondsRemaining` has its operands reversed
 
 `Math.round((now - date) / 1000)` — a session that has **not** expired reports a
 negative number, an expired one reports positive.
 
 *Pinned in* `tests/unit/services/session-behaviour-test.js`
 
-### 10. `crud.import` cannot accept a file
+### 11. `crud.import` cannot accept a file
 
 The default `uploadQueue` is a plain `[]`, but `queueFile`, `removeFile` and
 `confirm` all call `pushObject` / `removeObject` / `objectAt` on it. With prototype
@@ -144,7 +159,7 @@ callers who pass their own Ember array get through.
 
 *Pinned in* `tests/unit/services/crud-import-queue-test.js`
 
-### 11. Helper instantiation depends on how the helper was written
+### 12. Helper instantiation depends on how the helper was written
 
 ```js
 typeof value !== 'function' || value.prototype
@@ -157,7 +172,7 @@ only on syntax.
 
 *Pinned in* `tests/unit/services/universe/registry-service-helpers-test.js`
 
-### 12. `chat.rememberOpenedChannel` discards the rest of the list
+### 13. `chat.rememberOpenedChannel` discards the rest of the list
 
 ```js
 if (isArray(openedChats) && !openedChats.includes(id)) { append }
@@ -170,7 +185,7 @@ only because `openChannel` returns early for an already-open channel.
 
 *Pinned in* `tests/unit/services/chat-recall-test.js`
 
-### 13. `subject-custom-fields.writeFieldValue` checks its guard too late
+### 14. `subject-custom-fields.writeFieldValue` checks its guard too late
 
 ```js
 this.setFieldValue(value, customField);
@@ -190,7 +205,7 @@ line before consulting its own guard.
 
 These cannot be reached by any input. Their statements are uncoverable until fixed.
 
-### 14. `auto-serialize`'s serializer dispatch reads the wrong property
+### 15. `auto-serialize`'s serializer dispatch reads the wrong property
 
 ```js
 const invoke = (context, method, ...params) => {
@@ -206,13 +221,13 @@ are never called on a related record — every one falls through to the recursiv
 walk, which produces a reasonable result, which is why it went unnoticed. Worse: a
 model that happens to carry a property called `method` gets **that** invoked.
 
-### 15. `auto-serialize`'s fleet/zone patches read a removed private path
+### 16. `auto-serialize`'s fleet/zone patches read a removed private path
 
 `get(model, '_internalModel.modelName')` is `undefined` in ember-data 4.12, so
 neither `except.push('drivers')` nor `except.push('service_area')` can fire. They
 also push onto the **caller's** array rather than a copy.
 
-### 16. `resource-action`'s selection guards
+### 17. `resource-action`'s selection guards
 
 ```js
 selected = [...(isArray(selected) ? selected : []), ...tableRows];
@@ -223,7 +238,7 @@ A spread always produces an array and an array is always truthy. `export` has th
 identical pair. An empty selection is dispatched to `crud` as `[]` rather than
 skipped.
 
-### 17. `is-equal`'s arity guard
+### 18. `is-equal`'s arity guard
 
 `assert('… requires two property names …', params.length === 2)` can never fire:
 `isEqual(propNameA, propNameB)` forwards both parameters unconditionally, so
@@ -233,18 +248,18 @@ Ember's low-level *"computed property key must be a string"* instead.
 *(The decorator is separately non-functional — applying it by hand yields a working
 ComputedProperty, so only the installation is broken.)*
 
-### 18. `hook-service`'s second-priority application
+### 19. `hook-service`'s second-priority application
 
 `#getApplication` lists `this.applicationInstance` second, but its only caller runs
 in the **constructor** — before `setApplicationInstance` can have been called — so
 the field is always still its `null` default.
 
-### 19. `Widget`'s options guards
+### 20. `Widget`'s options guards
 
 `withTitle` and `withRefreshInterval` each open with `if (!this.options) {
 this.options = {}; }`, but the constructor assigns `this.options` on both paths.
 
-### 20. `menu-service.#wrapOnClickHandler`'s own guard
+### 21. `menu-service.#wrapOnClickHandler`'s own guard
 
 Opens with `if (typeof onClick !== 'function') return onClick;` but its only caller
 already applies the same check before calling it.
@@ -253,7 +268,7 @@ already applies the same check before calling it.
 
 ## Latent and behavioural
 
-### 21. `MenuItem`'s constructor shadows its own `onClick` method
+### 22. `MenuItem`'s constructor shadows its own `onClick` method
 
 `MenuItem` declares `onClick(handler)` as a chaining setter **and** its constructor
 assigns `this.onClick = null`. Every instance shadows the method with a null field,
@@ -261,7 +276,7 @@ so `item.onClick(fn)` throws. Two live entry points hit it: `menu-service`'s
 `#normalizeMenuItem` and `universe._createMenuItem`. Calling it off the prototype
 shows the method itself is correct — only unreachable.
 
-### 22. The two account-menu getters do not separate the two menus
+### 23. The two account-menu getters do not separate the two menus
 
 `getOrganizationMenuItems` and `getUserMenuItems` are byte-identical and each return
 the whole `console:account` registry unfiltered — so the organization menu lists user
@@ -269,7 +284,7 @@ items and vice versa. Registration deliberately namespaces the keys
 (`organization:<slug>` / `user:<slug>`), and the registry already does prefix
 filtering, so the fix is available.
 
-### 23. Smaller pinned behaviours
+### 24. Smaller pinned behaviours
 
 - `registerMenuItem` defaults `slug` to `'~'` rather than deriving it from the title,
   so an item registered into a custom registry cannot be looked up by its title slug.
