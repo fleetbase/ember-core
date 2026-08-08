@@ -71,12 +71,28 @@ module('Unit | Service | universe/registry-service (branches)', function (hooks)
             assert.deepEqual(this.keys(), ['chosen']);
         });
 
-        test('a class falls back to its name', function (assert) {
+        test('a class is stored but its key is thrown away, so it cannot be looked up', function (assert) {
+            // Pinned, not fixed. registerRenderableComponent computes the key as
+            //     component._registryKey || component.name || component.path || `component-...`
+            // which resolves to 'OrderCard' for a class. But `register` only
+            // stamps the key onto the value when it is an object:
+            //     if (typeof value === 'object' && value !== null) { value._registryKey = key; }
+            // and a class is a FUNCTION, so the key is discarded. `lookup` then
+            // skips non-objects for the same reason, making the component
+            // unfindable by the name it was keyed under.
             class OrderCard {}
 
             this.service.registerRenderableComponent(this.slot, OrderCard);
 
-            assert.deepEqual(this.keys(), ['OrderCard']);
+            assert.strictEqual(this.service.getRegistry(this.slot, 'components')[0], OrderCard, 'it is stored');
+            assert.deepEqual(this.keys(), [undefined], 'but with no key on it');
+            assert.strictEqual(this.service.lookup(this.slot, 'components', 'OrderCard'), null, 'so nothing finds it');
+        });
+
+        test('a plain object with a name keeps its key', function (assert) {
+            this.service.registerRenderableComponent(this.slot, { name: 'OrderCard' });
+
+            assert.deepEqual(this.keys(), ['OrderCard'], 'an object is stamped, a class is not');
         });
 
         test('a definition with a path falls back to that', function (assert) {
