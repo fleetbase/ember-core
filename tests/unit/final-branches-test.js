@@ -110,14 +110,14 @@ module('Unit | Service | theme (system colour scheme)', function (hooks) {
 
     test('a system preference for dark is honoured', function (assert) {
         assert.strictEqual(
-            this.withColorScheme(true, () => this.service.getTheme()),
+            this.withColorScheme(true, () => this.service.activeTheme),
             'dark'
         );
     });
 
     test('no system preference still ends up dark, by default rather than by preference', function (assert) {
         assert.strictEqual(
-            this.withColorScheme(false, () => this.service.getTheme()),
+            this.withColorScheme(false, () => this.service.activeTheme),
             'dark'
         );
     });
@@ -139,7 +139,19 @@ module('Unit | Service | language (saving a locale)', function (hooks) {
                 }
             }
         );
-        for (const name of ['intl', 'current-user', 'session']) {
+        // LanguageService reads intl.locales and intl.primaryLocale in its
+        // CONSTRUCTOR and subscribes with onLocaleChanged — a bare stub throws
+        // at lookup, before any test body runs.
+        this.owner.register(
+            'service:intl',
+            class extends Service {
+                locales = ['en-us'];
+                primaryLocale = 'en-us';
+                onLocaleChanged() {}
+                setLocale() {}
+            }
+        );
+        for (const name of ['current-user', 'session']) {
             this.owner.register(`service:${name}`, class extends Service {});
         }
 
