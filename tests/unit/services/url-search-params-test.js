@@ -2,25 +2,14 @@ import { module, test } from 'qunit';
 import { setupTest } from 'dummy/tests/helpers';
 
 /**
- * NOTE — a large part of this service does not work, and these tests pin what it
- * actually does rather than what the names suggest.
+ * `urlParams` used to be a getter that built a NEW URLSearchParams from
+ * window.location.search on every access, so every mutator wrote to a throwaway
+ * and `clear()` threw by assigning to a getter-only property.
  *
- * `urlParams` is a getter that builds a NEW URLSearchParams from
- * window.location.search on every access. So every mutator writes to a throwaway
- * object that is discarded the moment it returns:
- *
- *   setParam / setParamArray / remove   -> no observable effect
- *   clear                               -> throws, because it assigns to a getter
- *   updateUrl / getFullUrl / getPathWithParams
- *                                       -> re-serialise the unchanged current URL
- *
- * The read side (getParam, getParamArray, exists, has, all) works, because it
- * reads live from the URL, as do the *CurrentUrl methods, which operate on a real
- * URL object and push it to history.
- *
- * Making the mutators work means choosing a storage model — a cached instance
- * that can go stale, or mutating the real URL directly — which is a design
- * decision for the maintainers rather than a typo fix, so nothing is changed here.
+ * The storage model chosen is a cached instance that is rebuilt whenever the
+ * browser's search string differs from the one it was built from: writes persist
+ * until `updateUrl` publishes them, and a navigation underneath the service is
+ * still picked up on the next read.
  */
 module('Unit | Service | url-search-params', function (hooks) {
     setupTest(hooks);
@@ -86,25 +75,29 @@ module('Unit | Service | url-search-params', function (hooks) {
         assert.deepEqual(this.service.all(), {});
     });
 
-    test('setParam has no observable effect (see module note)', function (assert) {
+    test('setParam stores the value and chains', function (assert) {
         setSearch('?status=active');
 
-        assert.strictEqual(this.service.setParam('page', '2'), this.service, 'it still returns the service for chaining');
-        assert.strictEqual(this.service.getParam('page'), null, 'the write was discarded');
-        assert.strictEqual(window.location.search, '?status=active', 'the url is untouched');
+        assert.strictEqual(this.service.setParam('page', '2'), this.service, 'it returns the service for chaining');
+        assert.strictEqual(this.service.getParam('page'), '2', 'and the write is kept');
+        assert.strictEqual(window.location.search, '?status=active', 'the url is not touched until updateUrl');
     });
 
-    test('setParamArray and remove also have no observable effect', function (assert) {
+    test('setParamArray and remove both take effect', function (assert) {
         setSearch('?tag=a');
 
         this.service.setParamArray('tag', ['x', 'y']);
-        this.service.remove('tag');
+        assert.deepEqual(this.service.getParamArray('tag'), ['x', 'y']);
 
-        assert.deepEqual(this.service.getParamArray('tag'), ['a'], 'the original value survives both calls');
+        this.service.remove('tag');
+        assert.deepEqual(this.service.getParamArray('tag'), []);
     });
 
-    test('clear throws because urlParams has no setter', function (assert) {
-        assert.throws(() => this.service.clear(), TypeError);
+    test('clear empties the parameters', function (assert) {
+        setSearch('?status=active&tag=a');
+
+        assert.strictEqual(this.service.clear(), this.service, 'it chains');
+        assert.deepEqual(this.service.all(), {});
     });
 
     test('getFullUrl and getPathWithParams reflect the unchanged url', function (assert) {

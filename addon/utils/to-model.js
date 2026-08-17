@@ -21,7 +21,7 @@ import { assert } from '@ember/debug';
  * toModel(payload, 'order', this);
  */
 const toModel = (record, modelName, context) => {
-    const owner = getOwner(context) ?? context;
+    const owner = (context ? getOwner(context) : null) ?? context;
 
     assert('toModel() needs an owner: pass `this` from a service, component or route.', owner && typeof owner.lookup === 'function');
 
