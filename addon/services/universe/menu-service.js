@@ -47,10 +47,6 @@ export default class MenuService extends Service.extend(Evented) {
      * @returns {Function} Wrapped onClick function
      */
     #wrapOnClickHandler(onClick, menuItem) {
-        if (typeof onClick !== 'function') {
-            return onClick;
-        }
-
         const universe = this.universe;
         return function () {
             return onClick(menuItem, universe);

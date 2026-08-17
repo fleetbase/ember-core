@@ -2,17 +2,16 @@ import { module, test } from 'qunit';
 import Widget from '@fleetbase/ember-core/contracts/widget';
 
 /**
- * withTitle and withRefreshInterval each open with `if (!this.options) {
- * this.options = {}; }`. The constructor already assigns `this.options` on both
- * of its paths — `definition.options || {}` for a definition object, and `{}`
- * for a bare id — so the bag is always there and neither guard can fire.
- *
- * Pinned rather than fixed: the two statements inside those guards are
- * unreachable, so this file cannot reach 100% until they are removed.
+ * withTitle and withRefreshInterval used to open with
+ * `if (!this.options) { this.options = {}; }`. The constructor already assigns
+ * `this.options` on both of its paths — `definition.options || {}` for a
+ * definition object, and `{}` for a bare id — so neither guard could ever fire.
+ * They have been removed; the tests below are what guarantee the constructor
+ * keeps holding up its end.
  */
 module('Unit | Contract | widget (options setters)', function () {
     test('a widget built from a bare id already has an options bag', function (assert) {
-        assert.deepEqual(new Widget('orders-summary').options, {}, 'so the guard in each setter is dead code');
+        assert.deepEqual(new Widget('orders-summary').options, {}, 'which is what the setters rely on');
     });
 
     test('a widget built from a definition with no options has one too', function (assert) {

@@ -18,12 +18,10 @@ export default class FiltersService extends Service {
         const queryParams = this.getQueryParams();
         const activeQueryParams = [];
 
+        // getQueryParams has already dropped managed and blank params, so there
+        // is nothing left to filter here.
         for (let queryParam in queryParams) {
             const value = get(queryParams, queryParam);
-
-            if (isBlank(value) || this.managedQueryParams.includes(queryParam)) {
-                continue;
-            }
 
             activeQueryParams.push({ queryParam, label: queryParam, value });
         }

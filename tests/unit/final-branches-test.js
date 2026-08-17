@@ -183,7 +183,7 @@ module('Unit | Service | language (saving a locale)', function (hooks) {
     });
 });
 
-module('Unit | Service | filters (the unreachable filter)', function (hooks) {
+module('Unit | Service | filters (activeFilters)', function (hooks) {
     setupTest(hooks);
 
     hooks.beforeEach(function () {
@@ -209,16 +209,11 @@ module('Unit | Service | filters (the unreachable filter)', function (hooks) {
         };
     });
 
-    test('activeFilters can never actually skip anything', function (assert) {
-        // Pinned, not fixed. `activeFilters` loops over `this.getQueryParams()`
-        // and skips entries that are blank or managed:
-        //
-        //     if (isBlank(value) || this.managedQueryParams.includes(queryParam)) continue;
-        //
-        // but getQueryParams() — called with no controller, so taking the route
-        // path — has ALREADY dropped both: it skips managed params and only adds
-        // a value `if (value)`. The `continue` is therefore unreachable, and the
-        // filtering is duplicated one layer apart.
+    test('it lists exactly what getQueryParams returns', function (assert) {
+        // activeFilters used to re-apply the blank/managed filter that
+        // getQueryParams had already applied one layer down, so the `continue`
+        // could never run. The duplicate is gone; the filtering still happens,
+        // just once.
         this.useCurrentRoute({
             queryParams: { status: null, page: null, type: null },
             url: { status: 'active', page: '2', type: '' },

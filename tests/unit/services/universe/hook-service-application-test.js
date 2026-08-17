@@ -7,11 +7,11 @@ import { getOwner } from '@ember/application';
  * The hook registry is stored on the application container so every engine
  * shares one, and finding that container has a four-step fallback.
  *
- * The search runs in the CONSTRUCTOR (`this.hookRegistry =
- * this.#initializeHookRegistry()`), so the container has to be arranged before
- * the service is built — and each test builds its own with factoryFor().create()
- * rather than taking the singleton, which would carry the previous test's
- * registry.
+ * The search runs on FIRST USE of `hookRegistry`, not in the constructor, so
+ * `setApplicationInstance` can land first and be honoured — that ordering is
+ * what the fallback chain was written for. Each test builds its own service
+ * with factoryFor().create() rather than taking the singleton, which would
+ * carry the previous test's registry.
  */
 function container(name) {
     const registrations = new Map();
@@ -40,25 +40,43 @@ module('Unit | Service | universe/hook-service (finding the application)', funct
             }
         );
 
-        this.build();
+        const service = this.build();
 
+        assert.ok(service.hookRegistry, 'resolving the registry');
         assert.true(preferred.registrations.has('registry:hooks'), 'the registry went to the universe instance');
     });
 
-    test('its own applicationInstance can never be the one used', function (assert) {
-        // Pinned, not fixed. #getApplication lists `this.applicationInstance` as
-        // its second priority, but the only caller runs in the constructor —
-        // before setApplicationInstance can possibly have been called — so at
-        // that moment the field is still its `null` default. The branch is
-        // unreachable, and setting the instance afterwards moves nothing.
+    test('its own applicationInstance is used when set before first use', function (assert) {
+        // #getApplication lists `this.applicationInstance` second. That used to
+        // be unreachable because the only caller ran in the constructor, before
+        // setApplicationInstance could have been called. The registry now
+        // resolves lazily, so an instance set first is honoured.
         this.owner.register('service:universe', class extends Service {});
         const own = container('own');
 
         const service = this.build();
         service.setApplicationInstance(own);
 
-        assert.false(own.registrations.has('registry:hooks'), 'the registry was already placed elsewhere');
-        assert.strictEqual(service.applicationInstance, own, 'even though the field is now set');
+        assert.ok(service.hookRegistry, 'resolving it now');
+        assert.true(own.registrations.has('registry:hooks'), 'on the instance it was given');
+    });
+
+    test('the universe instance still outranks it', function (assert) {
+        const preferred = container('universe');
+        this.owner.register(
+            'service:universe',
+            class extends Service {
+                applicationInstance = preferred;
+            }
+        );
+        const own = container('own');
+
+        const service = this.build();
+        service.setApplicationInstance(own);
+
+        assert.ok(service.hookRegistry);
+        assert.true(preferred.registrations.has('registry:hooks'), 'first priority wins');
+        assert.false(own.registrations.has('registry:hooks'));
     });
 
     test('the owner application is used when the universe has none', function (assert) {
@@ -76,6 +94,7 @@ module('Unit | Service | universe/hook-service (finding the application)', funct
 
         assert.strictEqual(getOwner(service), this.owner);
         assert.ok(this.owner.application, 'the test owner really does have one');
+        assert.ok(service.hookRegistry, 'resolving the registry');
         assert.true(this.owner.application.hasRegistration('registry:hooks'), 'the registry lives on the Application');
     });
 

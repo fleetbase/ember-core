@@ -23,14 +23,39 @@ export default class HookService extends Service {
      */
     @tracked applicationInstance = null;
 
+    #hookRegistry = null;
+
     /**
-     * Creates an instance of HookService.
-     * @memberof HookService
+     * The shared hook registry, resolved on first use.
+     *
+     * This is deliberately lazy rather than resolved in the constructor:
+     * #getApplication prefers an explicitly set applicationInstance over the
+     * owner, and setApplicationInstance can only run after construction. Doing
+     * the lookup here means that preference is actually honoured.
+     *
+     * @type {HookRegistry}
      */
-    constructor() {
-        super(...arguments);
-        // Initialize shared hook registry
-        this.hookRegistry = this.#initializeHookRegistry();
+    get hookRegistry() {
+        return this.#resolveHookRegistry();
+    }
+
+    /**
+     * Memoized resolution, kept out of the getter body so a property read is not
+     * itself an assignment.
+     *
+     * @private
+     * @returns {HookRegistry}
+     */
+    #resolveHookRegistry() {
+        if (!this.#hookRegistry) {
+            this.#hookRegistry = this.#initializeHookRegistry();
+        }
+
+        return this.#hookRegistry;
+    }
+
+    set hookRegistry(value) {
+        this.#hookRegistry = value;
     }
 
     /**

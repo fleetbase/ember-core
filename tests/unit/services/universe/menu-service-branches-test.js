@@ -160,16 +160,14 @@ module('Unit | Service | universe/menu-service (branches)', function (hooks) {
     });
 
     module('the onClick wrapper guard', function () {
-        test('its own non-function check can never fire', function (assert) {
-            // Pinned, not fixed. #wrapOnClickHandler opens with
-            //     if (typeof onClick !== 'function') return onClick;
-            // but its only caller already guards the call:
+        test('a non-function onClick is left alone by the caller', function (assert) {
+            // #wrapOnClickHandler used to repeat this check itself, which was
+            // unreachable because the caller already does it:
             //     if (menuItemObj && typeof menuItemObj.onClick === 'function') {
             //         menuItemObj.onClick = this.#wrapOnClickHandler(...);
             //     }
-            // so the wrapper is only ever handed a function. The inner check is
-            // unreachable, and its statement cannot be covered until one of the
-            // two guards is removed.
+            // The duplicate has been removed; the caller's guard is what keeps a
+            // non-function value untouched.
             this.service.registerHeaderMenuItem({ slug: 'a', onClick: null });
             this.service.registerHeaderMenuItem({ slug: 'b', onClick: 'not a function' });
 

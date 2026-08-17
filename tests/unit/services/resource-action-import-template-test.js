@@ -115,21 +115,18 @@ module('Unit | Service | resource-action (import template)', function (hooks) {
         });
     });
 
-    module('the selection guards', function () {
-        test('bulkDelete cannot short-circuit, because the guard is dead code', function (assert) {
-            // Pinned, not fixed. The method reads
-            //   selected = [...(isArray(selected) ? selected : []), ...tableRows];
-            //   if (!selected) return;
-            // but a spread always produces an array, and an array is always
-            // truthy — so the guard can never fire, not even for an empty
-            // selection, and crud is called with [] instead of being skipped.
+    module('an empty or missing selection', function () {
+        test('bulkDelete dispatches an empty selection rather than short-circuiting', function (assert) {
+            // The `if (!selected) return` that used to sit here could never fire
+            // — a spread is always a truthy array — and has been removed. The
+            // behaviour is unchanged: crud.bulkDelete does its own empty check.
             this.service.bulkDelete(null);
 
             assert.strictEqual(this.crudCalls[0].method, 'bulkDelete');
-            assert.deepEqual(this.crudCalls[0].args[0], [], 'an empty bulk delete is still dispatched');
+            assert.deepEqual(this.crudCalls[0].args[0], []);
         });
 
-        test('export has the identical dead guard', function (assert) {
+        test('export does the same, which is how "export everything" works', function (assert) {
             this.service.export(null);
 
             assert.strictEqual(this.crudCalls[0].method, 'export');
