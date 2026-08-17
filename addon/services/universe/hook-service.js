@@ -33,6 +33,10 @@ export default class HookService extends Service {
      * owner, and setApplicationInstance can only run after construction. Doing
      * the lookup here means that preference is actually honoured.
      *
+     * Read-only. It was a writable field before, but nothing in the addon, its
+     * tests or the console app ever assigned it, and replacing a memoized
+     * container lookup from outside is not a meaningful operation.
+     *
      * @type {HookRegistry}
      */
     get hookRegistry() {
@@ -52,10 +56,6 @@ export default class HookService extends Service {
         }
 
         return this.#hookRegistry;
-    }
-
-    set hookRegistry(value) {
-        this.#hookRegistry = value;
     }
 
     /**
