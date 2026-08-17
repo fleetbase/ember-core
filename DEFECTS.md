@@ -1,46 +1,64 @@
 # Defects found while building the test suite
 
 Every item here was found by writing a test against existing behaviour, and every one is
-**pinned by a test that asserts what the code does today** — not what it was meant to do.
-Nothing has been fixed. Each pin fails the moment someone changes the behaviour, which is
-the point at which the decision gets made.
+**pinned by a test**. The seven that blocked the 100% coverage gate have since been fixed
+and their pins rewritten to assert the fixed behaviour; everything else is still recorded
+as-is, awaiting a maintainer's decision. Each remaining pin fails the moment someone
+changes the behaviour, which is the point at which that decision gets made.
 
-Coverage at the time of writing (CI run 31245775305, commit `d6daf5d`):
-**statements 3983/4025 (98.95%)**, branches 95.52%, functions 99.58%, lines 98.96%.
-**2215 tests, 0 failing.** Every statement a test can reach is now covered — the 42
-that remain are itemised below, and none of them can be reached by any input.
+Coverage at the time of writing (CI run 32043195517, commit `7c2baaa`):
+**statements 3993/4025 (99.2%)**, branches 95.78%, functions 99.58%, lines 99.17%.
+**2222 tests, 0 failing.**
 
 ---
 
-# ⛔ BLOCKING THE 100% COVERAGE GATE
+# ✅ THE SEVEN GATE BLOCKERS ARE FIXED
 
-**The gate cannot go green until the items in this section are fixed.** They are not
-"hard to test" — they are **unreachable by any input**, so no test can execute them.
-**Seven defects, ten statements.**
+These were unreachable by any input, so no test could execute them and the 100% gate could
+not go green. All seven are now fixed, and every test that pinned the broken behaviour has
+been rewritten to assert the fixed behaviour — which is what those pins were for.
 
-| # | file | lines | why no test can reach it |
-|---|---|---|---|
-| **B1** | `contracts/widget.js` | 239, 255 | `if (!this.options) { this.options = {}; }` — the constructor already assigns `this.options` on **both** of its paths, so the guard never fires |
-| **B2** | `services/resource-action.js` | 209, 233 | `selected = [...spread]; if (!selected) return;` — a spread always produces an array and an array is always truthy |
-| **B3** | `services/universe/menu-service.js` | 51 | `#wrapOnClickHandler` opens with `if (typeof onClick !== 'function') return onClick;` but its **only** caller already applies the same check |
-| **B4** | `services/url-search-params.js` | 176 | `clear()`'s `return this;` is unreachable because the line above it assigns to a getter-only property and **throws every time** |
-| **B5** | `utils/to-model.js` | 8, 10 | `ToModel.create()` has no owner, so `getOwner()` is `undefined` and `owner.lookup(...)` on the line above throws first |
-| **B6** | `services/universe/hook-service.js` | 81 | `#getApplication`'s second priority is read only from a caller that runs **in the constructor** — before `setApplicationInstance` can have been called |
-| **B7** | `services/filters.js` | 25 | `activeFilters` skips blank and managed params, but `getQueryParams()` has already dropped both — the `continue` can never run |
+**Four were deletions of a guard that could never fire:**
 
-Full write-ups: B1 → #19, B2 → #16, B3 → #21, B4 → #1, B5 → #23, B6 → #18, B7 → #28.
+| file | what it was | why it could not fire |
+|---|---|---|
+| `contracts/widget.js` | `if (!this.options) { this.options = {}; }` in both setters | the constructor assigns `this.options` on both of its paths |
+| `services/resource-action.js` | `if (!selected) return;` in `bulkDelete` and `export` | it follows a spread, which is always a truthy array |
+| `services/universe/menu-service.js` | `#wrapOnClickHandler`'s own type check | its only caller already applies the same check |
+| `services/filters.js` | `activeFilters`' blank/managed skip | `getQueryParams()` had already dropped both |
 
-### Fixing them is mechanical
+The `resource-action` guards were **removed rather than turned into `.length` checks**:
+`crud.bulkDelete` already rejects an empty selection, and an empty *export* selection is how
+"export everything" is expressed, so making the guard work would have broken that.
 
-Six of the seven are a deletion — guards and a duplicated filter that can never fire.
-B6 is a reordering: move `#initializeHookRegistry()` out of the constructor, or drop the
-second priority. B4 and B5 need a real decision, because the surrounding method is broken
-anyway (see #1 and #23).
+**Three needed real changes:**
 
-## ◻︎ Uncoverable, and *not* a defect — 32 statements
+**`services/universe/hook-service.js`** — `#getApplication` prefers an explicitly set
+`applicationInstance` over the owner, but its only caller ran in the **constructor**, so
+`setApplicationInstance` could never get there first. The registry now resolves on first
+use, which is the ordering the fallback chain was written for.
 
-These also cannot be covered, need no fix, and are the only honest candidates for an
-exclusion if the gate must be green without touching production code.
+**`services/url-search-params.js`** — the whole mutation API was inert. The getter built a
+fresh `URLSearchParams` on every access, so every setter mutated a throwaway, `clear()`
+assigned to a getter-only property and threw, and `updateUrl()` wrote the current URL back
+over itself. The params are now cached and rebuilt only when the browser's search string
+changes underneath them: writes persist until they are published, and a navigation is still
+picked up on the next read.
+
+**`utils/to-model.js`** — it built a bare `CoreObject` and called `getOwner()` on it, which
+is always `undefined`, so every call threw on the following line. It now takes the owner
+from the caller: `toModel(payload, 'order', this)`. That is a signature change to published
+API, and it is safe here only because the function could never have worked.
+
+The memoization in the two lazy getters lives in a named private method rather than the
+getter body, so a property read is not itself an assignment and `ember/no-side-effects`
+stays satisfied — no lint rule was relaxed.
+
+## ◻︎ What still cannot be covered — 32 statements, none of them defects
+
+With the seven blockers fixed, **everything left uncovered is in this list**. None of it is
+a defect, none of it needs a fix, and it is the only honest candidate for an exclusion if
+the gate must reach 100%.
 
 **`@tracked field = value` initialisers a constructor overwrites — 6 statements.**
 `extension-manager:31`, `library/subject-custom-fields:15`, `contracts/base-contract:14`,
@@ -50,7 +68,7 @@ in its own constructor. An instrumentation artifact, not dead code.
 
 **Fallbacks that need a container-less service — 12 statements.**
 `extension-manager:94,95,99,100,101,105`, `registry-service:90,94,491,494,541`,
-`hook-service:91`. All `if (!owner)` / `if (!application)` paths. Ember always supplies an
+`hook-service:116`. All `if (!owner)` / `if (!application)` paths. Ember always supplies an
 owner to a service built through the container, and the one substitute that would work —
 replacing `owner.application` — breaks the test run, because Ember's own
 `ApplicationInstance#willDestroy` reads `this.application._unwatchInstance` during teardown.
@@ -71,7 +89,7 @@ runs first in every ordering a test can produce and clears them.
 
 Reachable in production today, with user-visible consequences.
 
-### 1. `url-search-params` cannot write anything — the whole mutation API is inert
+### 1. ✅ FIXED — `url-search-params` could not write anything
 
 ```js
 get urlParams() {
@@ -257,7 +275,7 @@ as a default, behaves as an override.
 
 *Pinned in* `tests/unit/services/fetch-upload-download-test.js`
 
-### 28. `filters.activeFilters` filters a list that is already filtered — **⛔ BLOCKER B7**
+### 28. ✅ FIXED — `filters.activeFilters` filtered an already-filtered list
 
 ```js
 for (let queryParam in this.getQueryParams()) {
@@ -280,7 +298,7 @@ can never run, and the filtering is duplicated one layer apart.
 Cannot execute. **B1–B6 above are drawn from this section** — the rest were reachable with a
 contrived-but-legitimate input and are now covered.
 
-### 16. `resource-action`'s selection guards — **⛔ BLOCKER B2**
+### 16. ✅ FIXED — `resource-action`'s selection guards
 
 ```js
 selected = [...(isArray(selected) ? selected : []), ...tableRows];
@@ -300,13 +318,13 @@ always `['a', undefined]`, never `['a']`. A caller passing one name gets Ember's
 *(Covered — the pin applies the decorator by hand. The decorator is separately non-functional:
 applying it manually yields a working ComputedProperty, so only the installation is broken.)*
 
-### 18. `hook-service`'s second-priority application — **⛔ BLOCKER B6**
+### 18. ✅ FIXED — `hook-service`'s second-priority application
 
 `#getApplication` lists `this.applicationInstance` second, but its only caller runs in the
 **constructor** — before `setApplicationInstance` can have been called — so the field is
 always still its `null` default.
 
-### 19. `Widget`'s options guards — **⛔ BLOCKER B1**
+### 19. ✅ FIXED — `Widget`'s options guards
 
 `withTitle` and `withRefreshInterval` each open with `if (!this.options) { this.options = {}; }`,
 but the constructor assigns `this.options` on both of its paths.
@@ -329,7 +347,7 @@ property called `method` gets **that** invoked.
 
 *(Covered — the pin registers a model with a `method` property, which is the only way in.)*
 
-### 21. `menu-service.#wrapOnClickHandler`'s own guard — **⛔ BLOCKER B3**
+### 21. ✅ FIXED — `menu-service.#wrapOnClickHandler`'s own guard
 
 Opens with `if (typeof onClick !== 'function') return onClick;` but its only caller already
 applies the same check before calling it.
@@ -342,7 +360,7 @@ applies the same check before calling it.
 
 *(Covered — the pin supplies the removed path with `Object.defineProperty`.)*
 
-### 23. `to-model.js` always throws — **⛔ BLOCKER B5**
+### 23. ✅ FIXED — `to-model.js` always threw
 
 `ToModel.create()` has no owner, so `getOwner()` returns `undefined` and `owner.lookup(...)`
 throws on every call. There are no call sites in this addon.
