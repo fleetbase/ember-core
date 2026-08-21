@@ -269,10 +269,10 @@ module('Unit | Service | universe/extension-manager (loading and setup)', functi
             assert.deepEqual(calls, ['ran']);
             assert.true(this.service.isInstalled('@fleetbase/string-engine'));
         });
-    });
 
-    module('an export that is not an object at all', function () {
         test('a primitive default export is warned about rather than called', async function (assert) {
+            // `module.default ?? module` yields the primitive, so neither the
+            // function arm nor the object arm applies.
             this.loaders['@fleetbase/fleetops-engine'] = () => Promise.resolve({ default: 42 });
 
             await this.service.setupExtensions(this.appInstance, this.universeStub);
