@@ -135,6 +135,50 @@ module('Unit | Utility | download (browser fallbacks)', function (hooks) {
         });
     });
 
+    module('a browser with no URL.createObjectURL', function () {
+        // window.URL is deleted around the CALL only, never for a whole test.
+        // I had assumed this would abort the run the way a whole-test
+        // document.createElement override did — it does not, because the test
+        // framework does not consult window.URL between synchronous statements.
+        // Worth checking rather than assuming.
+        function withoutObjectUrls(fn) {
+            const original = window.URL;
+            delete window.URL;
+
+            try {
+                return fn();
+            } finally {
+                window.URL = original;
+            }
+        }
+
+        test('a string payload is base64 encoded into a data url', function (assert) {
+            const result = withoutObjectUrls(() => this.withoutDownloadAttribute(() => download('hello', 'hello.txt', 'text/plain')));
+
+            assert.true(result);
+            assert.ok(this.iframes.at(-1), 'the iframe route carried it');
+            assert.true(this.iframes.at(-1).src.startsWith('data:'), 'as a data url rather than an object url');
+        });
+
+        test('a blob is read asynchronously and then saved', async function (assert) {
+            // No URL and a real Blob means the FileReader route: readAsDataURL,
+            // then saver() from its onload. The reader resolves after both
+            // overrides are back, so the iframe it creates is a real one rather
+            // than one my createElement wrapper recorded — count them in the DOM.
+            // The anchor is captured at the top of download(), while the wrapper
+            // was still installed, so it is a <span> and the saver still takes
+            // the iframe route.
+            const before = document.querySelectorAll('iframe[src^="data:"]').length;
+            const result = withoutObjectUrls(() => this.withoutDownloadAttribute(() => download(new Blob(['hello']), 'hello.txt', 'text/plain')));
+
+            assert.true(result, 'it reports success before the read finishes');
+
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            assert.true(document.querySelectorAll('iframe[src^="data:"]').length > before, 'the reader eventually handed a data url to the saver');
+        });
+    });
+
     module('a data url larger than two megabytes', function () {
         test('it is decoded into a blob rather than passed through', function (assert) {
             // Under the threshold downloadjs hands the data url straight to the
