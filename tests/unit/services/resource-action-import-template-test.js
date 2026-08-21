@@ -1,6 +1,8 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'dummy/tests/helpers';
 import Service from '@ember/service';
+import { setOwner } from '@ember/application';
+import ResourceActionService from '@fleetbase/ember-core/services/resource-action';
 
 /**
  * The import template URL the import modal offers for download, and the two
@@ -131,6 +133,75 @@ module('Unit | Service | resource-action (import template)', function (hooks) {
 
             assert.strictEqual(this.crudCalls[0].method, 'export');
             assert.deepEqual(this.crudCalls[0].args[1].params.selections, []);
+        });
+    });
+
+    module('options a subclass has cleared', function () {
+        // bulkDeleteOptions, exportOptions, importOptions and fetchOptions are
+        // all public tracked fields declared as `{}`. A consumer that clears one
+        // is what the `?? {}` beside each of them is for.
+        test('bulkDelete falls back to empty options and empty fetch options', function (assert) {
+            this.service.bulkDeleteOptions = null;
+            this.service.fetchOptions = null;
+
+            this.service.bulkDelete();
+
+            assert.deepEqual(this.crudCalls[0].args[0], [], 'no selection was passed and the table has none');
+            assert.deepEqual(this.crudCalls[0].args[1].fetchOptions, {});
+        });
+
+        test('export does the same', function (assert) {
+            this.service.exportOptions = null;
+            this.service.fetchOptions = null;
+
+            this.service.export();
+
+            assert.deepEqual(this.crudCalls[0].args[1].params.selections, []);
+            assert.deepEqual(this.crudCalls[0].args[1].fetchOptions, {});
+        });
+
+        test('import does too', function (assert) {
+            this.service.importOptions = null;
+            this.service.fetchOptions = null;
+
+            this.service.import();
+
+            assert.deepEqual(this.crudCalls[0].args[1].fetchOptions, {});
+        });
+
+        test('a cleared template path falls back to the declared one', function (assert) {
+            this.service.importTemplatePath = null;
+
+            assert.true(this.templateUrl().includes('/import-templates/'));
+        });
+    });
+
+    module('the router it borrows', function () {
+        // setupTest's owner always resolves `service:router` from Ember itself,
+        // so the last link in the chain is only reachable with an owner that
+        // resolves neither router service — an engine mid-boot, in practice.
+        function routerFor(owner) {
+            const context = {};
+            setOwner(context, owner);
+            return Object.getOwnPropertyDescriptor(ResourceActionService.prototype, 'router').get.call(context);
+        }
+
+        test('the host router wins when there is one', function (assert) {
+            const hostRouter = { name: 'host-router' };
+
+            assert.strictEqual(routerFor({ lookup: (name) => (name === 'service:host-router' ? hostRouter : undefined) }), hostRouter);
+        });
+
+        test('the plain router service is next', function (assert) {
+            const router = { name: 'router' };
+
+            assert.strictEqual(routerFor({ lookup: (name) => (name === 'service:router' ? router : undefined) }), router);
+        });
+
+        test('and the router microlib is the last resort', function (assert) {
+            const main = { name: 'router:main' };
+
+            assert.strictEqual(routerFor({ lookup: (name) => (name === 'router:main' ? main : undefined) }), main);
         });
     });
 });

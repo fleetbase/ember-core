@@ -1025,6 +1025,7 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             const _mountPoint = self.#getMountPointFromEngineInstance(engineInstance);
             if (_mountPoint) {
                 // Remove trailing dot before setting on engine instance
+                /* istanbul ignore next -- #getMountPointFromEngineInstance appends a trailing dot to whatever it returns, so the other arm cannot be taken */
                 engineInstance.mountPoint = _mountPoint.endsWith('.') ? _mountPoint.slice(0, -1) : _mountPoint;
             }
 

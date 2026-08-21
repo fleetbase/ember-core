@@ -845,4 +845,23 @@ module('Unit | Library | subject-custom-fields', function (hooks) {
             assert.deepEqual(result, { created: [], updated: [], deleted: [], errors: [] });
         });
     });
+
+    module('a group written before the scheduled write lands', function () {
+        test('the planned write is skipped rather than replacing an identical list', async function (assert) {
+            // getGroupedFields plans the write during render and re-checks it in
+            // afterRender, because something else may have written the same list
+            // in between — which is exactly what this does.
+            const group = this.push('category', 'group-1', { name: 'Details' });
+            const field = this.field('a', { category_uuid: 'group-1' });
+            this.manager.groups = [group];
+            this.manager.fields = [field];
+
+            this.manager.getGroupedFields();
+            group.customFields = [field];
+            const written = group.customFields;
+            run(() => {});
+
+            assert.strictEqual(group.customFields, written, 'the array put there first is left in place');
+        });
+    });
 });

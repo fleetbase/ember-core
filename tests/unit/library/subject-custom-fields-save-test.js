@@ -287,4 +287,49 @@ module('Unit | Library | subject-custom-fields (saving)', function (hooks) {
             assert.deepEqual(result.errors, [], 'the manager-level option wins, so validation is skipped');
         });
     });
+
+    module('what the diff falls back to', function () {
+        test('an entry with no type asks the field record, and takes null when it has none', async function (assert) {
+            this.push('custom-field', 'field-1', { label: 'Ref' });
+
+            this.manager.setProperties([{ fieldId: 'field-1', value: 'hello' }]);
+            const result = await this.manager.saveTo(this.subject);
+
+            assert.strictEqual(result.created[0].value_type, null, 'neither valueType nor value_type is set, so the chain ends in null');
+        });
+
+        test('a null staged over an existing value is written as an empty string', async function (assert) {
+            this.queryResult = [this.existing('cfv-1', { custom_field_uuid: 'field-1', value: 'before', value_type: 'text' })];
+
+            this.manager.setProperties([{ fieldId: 'field-1', value: null, value_type: 'text' }]);
+            const result = await this.manager.saveTo(this.subject);
+
+            assert.strictEqual(result.updated.length, 1, 'blanking a value counts as a change');
+            assert.strictEqual(result.updated[0].value, '');
+        });
+
+        test('a manager whose values have been cleared outright stages nothing', async function (assert) {
+            this.manager.values = null;
+
+            const result = await this.manager.saveTo(this.subject);
+
+            assert.deepEqual(result.created, [], 'the missing bag falls back to an empty one rather than throwing');
+            assert.deepEqual(result.updated, []);
+        });
+
+        test('adapter options reach the update and the deletion, not just the create', async function (assert) {
+            this.queryResult = [this.existing('cfv-1', { custom_field_uuid: 'field-1', value: 'before' }), this.existing('cfv-2', { custom_field_uuid: 'field-gone', value: 'stale' })];
+            this.manager.setField('field-1', 'after');
+
+            const result = await this.manager.saveTo(this.subject, { persist: true, deleteMissing: true, adapterOptions: { skipHooks: true } });
+
+            assert.strictEqual(result.updated.length, 1);
+            assert.strictEqual(result.deleted.length, 1);
+            assert.true(this.saved.length >= 2, 'both were saved');
+            assert.true(
+                this.saved.every((entry) => entry.options?.adapterOptions?.skipHooks === true),
+                'every save carried the adapter options'
+            );
+        });
+    });
 });

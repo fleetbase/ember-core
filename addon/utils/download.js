@@ -10,11 +10,14 @@ export default function download(data, strFileName, strMimeType) {
         toString = /* istanbul ignore next -- only used when the browser has no Blob constructor, a path that throws on `instanceof` before reaching here */ function (a) {
             return String(a);
         },
-        myBlob =
-            /* istanbul ignore next -- every browser this suite can run in has Blob, so the vendored fallbacks are unreachable */ self.Blob || self.MozBlob || self.WebKitBlob || toString,
+        myBlob,
         fileName = strFileName || 'download',
         blob,
         reader;
+    // Hoisted out of the declaration above so the ignore hint below attaches to a
+    // statement — on a declarator inside a var list it is not honoured.
+    /* istanbul ignore next -- every browser this suite can run in has Blob, so the vendored MozBlob/WebKitBlob/toString fallbacks are unreachable */
+    myBlob = self.Blob || self.MozBlob || self.WebKitBlob || toString;
     myBlob = /* istanbul ignore next -- myBlob is always a constructor here, so the bare-Blob arm cannot be taken */ myBlob.call ? myBlob.bind(self) : Blob;
 
     if (String(this) === 'true') {

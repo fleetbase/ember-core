@@ -95,15 +95,20 @@ module('Unit | Service | universe/widget-service (edges)', function (hooks) {
     });
 
     module('ordering slot dashboards', function () {
-        test('dashboards with no priority sort as zero rather than dropping out', function (assert) {
-            this.service.registerDashboardForSlot('console.home', 'first', { name: 'First' });
-            this.service.registerDashboardForSlot('console.home', 'second', { name: 'Second' });
-            this.service.registerDashboardForSlot('console.home', 'top', { name: 'Top', priority: 5 });
+        test('entries registered without a priority sort as zero rather than dropping out', function (assert) {
+            // registerDashboardForSlot always fills a priority in, so the `?? 0`
+            // in the comparator is for entries put into the registry directly —
+            // which is how an extension registers one.
+            this.registry.register('dashboard:slots', 'dashboard', 'console.home#a', { id: 'a', name: 'A' });
+            this.registry.register('dashboard:slots', 'dashboard', 'console.home#b', { id: 'b', name: 'B' });
 
             const dashboards = this.service.getDashboardsForSlot('console.home');
 
-            assert.strictEqual(dashboards[0].id, 'top', 'a declared priority still wins');
-            assert.strictEqual(dashboards.length, 3, 'and the unprioritised two are kept');
+            assert.deepEqual(
+                dashboards.map((dashboard) => dashboard.id),
+                ['a', 'b'],
+                'neither is dropped, and the registration order stands'
+            );
         });
     });
 });

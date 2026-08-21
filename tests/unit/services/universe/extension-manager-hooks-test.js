@@ -302,4 +302,32 @@ module('Unit | Service | universe/extension-manager (hooks and dependencies)', f
             assert.deepEqual(this.service.registerComponentIntoAllEngines('order-card', class {}), []);
         });
     });
+
+    module('dependencies and registrations that come up short', function () {
+        test('a base with no dependencies of its own still gets an object', async function (assert) {
+            this.engineBase = {};
+
+            const instance = await this.service.ensureEngineLoaded('@fleetbase/fleetops-engine');
+
+            assert.deepEqual(instance.dependencies, { services: {}, externalRoutes: {} }, 'the missing dependencies default to an empty set');
+        });
+
+        test('a hostRouter the application cannot resolve is left as the name', async function (assert) {
+            this.services = {};
+            this.engineBase = { dependencies: { services: ['hostRouter'] } };
+
+            const instance = await this.service.ensureEngineLoaded('@fleetbase/fleetops-engine');
+
+            assert.strictEqual(instance.dependencies.services.hostRouter, 'hostRouter', 'the engine gets the name to resolve itself');
+        });
+
+        test('an engine that rejects the registration is left out of the result', async function (assert) {
+            await this.service.ensureEngineLoaded('@fleetbase/a-engine');
+            this.built[0].register = () => {
+                throw new Error('sealed');
+            };
+
+            assert.deepEqual(this.service.registerComponentIntoAllEngines('order-card', class {}), [], 'a failure is reported by omission');
+        });
+    });
 });

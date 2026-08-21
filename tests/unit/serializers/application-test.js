@@ -74,6 +74,6 @@ module('Unit | Serializer | application', function (hooks) {
     test('removeReadOnlyAttributes defaults its payload to an empty object', function (assert) {
         // Nothing calls it that way; the default keeps it from throwing on a
         // missing payload the way `delete undefined[attr]` would.
-        assert.strictEqual(this.serializer.removeReadOnlyAttributes(), undefined, 'it completes rather than throwing on the missing payload');
+        assert.deepEqual(this.serializer.removeReadOnlyAttributes(), {}, 'an empty payload comes back empty rather than throwing');
     });
 });

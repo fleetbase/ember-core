@@ -270,4 +270,14 @@ module('Unit | Service | universe/extension-manager (loading and setup)', functi
             assert.true(this.service.isInstalled('@fleetbase/string-engine'));
         });
     });
+
+    module('an export that is not an object at all', function () {
+        test('a primitive default export is warned about rather than called', async function (assert) {
+            this.loaders['@fleetbase/fleetops-engine'] = () => Promise.resolve({ default: 42 });
+
+            await this.service.setupExtensions(this.appInstance, this.universeStub);
+
+            assert.true(this.service.isInstalled('@fleetbase/fleetops-engine'), 'and setup carries on');
+        });
+    });
 });
