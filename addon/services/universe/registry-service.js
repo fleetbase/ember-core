@@ -535,12 +535,8 @@ export default class RegistryService extends Service {
      * @returns {Promise<Function|Class|null>} The loaded helper or null if failed
      */
     async #loadHelperFromEngine(templateHelper) {
-        const owner = this.applicationInstance || getOwner(this);
-
-        if (!owner) {
-            return null;
-        }
-
+        // No owner check here: registerHelper is the only caller and has already
+        // returned on the identical expression, so a second one could never fire.
         try {
             // Ensure the engine is loaded (will load if not already loaded)
             const engineInstance = await this.extensionManager.ensureEngineLoaded(templateHelper.engineName);
