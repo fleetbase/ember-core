@@ -421,8 +421,12 @@ export default class SubjectCustomFields {
             }
 
             case 'file':
-                // your File value is a JSON string; reuse your rule (must look like {...})
-                return typeof value === 'string' && value.startsWith('{') && value.endsWith('}');
+                if (typeof value !== 'string') return false;
+                // A value that has been through the server comes back as file JSON, but one
+                // staged since the last save is still the `file:<uuid>` sentinel the upload
+                // handlers write. Both mean the field has a file on it.
+                if (value.startsWith('file:')) return value.length > 'file:'.length;
+                return value.startsWith('{') && value.endsWith('}');
 
             default:
                 // fallback: any non-nullish, non-empty string

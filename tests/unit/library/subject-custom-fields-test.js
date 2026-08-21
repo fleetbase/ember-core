@@ -372,10 +372,12 @@ module('Unit | Library | subject-custom-fields', function (hooks) {
             requires(assert, this.manager, 'date', null, false, 'null is not');
         });
 
-        test('file requires something that looks like JSON', function (assert) {
+        test('file accepts server expanded json and the freshly uploaded sentinel', function (assert) {
             this.field('a', { required: true, value_type: 'file' });
 
             requires(assert, this.manager, 'file', '{"url":"x"}', true, 'a JSON object is present');
+            requires(assert, this.manager, 'file', 'file:0c1a-uuid', true, 'so is a file staged since the last save');
+            requires(assert, this.manager, 'file', 'file:', false, 'but the bare prefix carries no file');
             requires(assert, this.manager, 'file', 'plain', false, 'a bare string is not');
         });
 
