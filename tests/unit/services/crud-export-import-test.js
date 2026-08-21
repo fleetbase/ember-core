@@ -326,4 +326,18 @@ module('Unit | Service | crud (export and import)', function (hooks) {
             assert.deepEqual(seen, []);
         });
     });
+
+    module('a format that was cleared before confirming', function () {
+        test('the download falls back to xlsx', async function (assert) {
+            // setFormat writes null for an empty choice, which is what the `??`
+            // on the confirm path is there to catch.
+            this.service.export('order');
+            this.options().setFormat({ target: { value: '' } });
+
+            await this.options().confirm(this.modal, () => {});
+
+            assert.strictEqual(this.downloads[0].query.format, 'xlsx');
+            assert.true(this.downloads[0].options.fileName.endsWith('.xlsx'));
+        });
+    });
 });

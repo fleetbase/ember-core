@@ -176,12 +176,13 @@ module('Unit | Utility | download', function (hooks) {
     });
 
     module('paths the browser decides', function () {
-        test('a lone argument that does not survive url normalisation is saved, not fetched', function (assert) {
+        test('a lone argument that does not survive url normalisation is saved, not fetched', async function (assert) {
             // `anchor.href` normalises whatever it is given: a value with a space
             // in it comes back percent-encoded, so the href no longer contains
             // the original string and the XHR shortcut is skipped.
             assert.true(download('report 1.csv'));
 
+            await settled();
             assert.strictEqual(this.clicks.length, 1, 'it saved the text rather than fetching a url');
         });
 

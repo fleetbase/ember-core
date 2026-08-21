@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'dummy/tests/helpers';
-import Model, { attr, belongsTo } from '@ember-data/model';
+import Model, { attr, belongsTo, hasMany } from '@ember-data/model';
 
 module('Unit | Serializer | application', function (hooks) {
     setupTest(hooks);
@@ -14,6 +14,7 @@ module('Unit | Serializer | application', function (hooks) {
             @attr('string') name;
             @attr('string') slug;
             @belongsTo('company', { async: false, inverse: null }) company;
+            @hasMany('company', { async: false, inverse: null }) vendors;
         }
 
         this.owner.register('model:company', CompanyModel);
@@ -56,5 +57,23 @@ module('Unit | Serializer | application', function (hooks) {
         this.serializer.removeReadOnlyAttributes(payload);
 
         assert.deepEqual(payload, { name: 'Ron' });
+    });
+
+    test('a hasMany relationship is left alone', function (assert) {
+        // Only belongsTo is rewritten into a `<key>_uuid` column; the serializer
+        // walks every relationship, so a hasMany has to pass through untouched.
+        const vendor = this.store.createRecord('company', { name: 'Acme' });
+        const record = this.store.createRecord('widget', { name: 'Gadget', vendors: [vendor] });
+
+        const json = record.serialize();
+
+        assert.notOk('vendors_uuid' in json, 'no uuid column is invented for it');
+        assert.strictEqual(json.name, 'Gadget', 'and the rest of the payload is unaffected');
+    });
+
+    test('removeReadOnlyAttributes defaults its payload to an empty object', function (assert) {
+        // Nothing calls it that way; the default keeps it from throwing on a
+        // missing payload the way `delete undefined[attr]` would.
+        assert.strictEqual(this.serializer.removeReadOnlyAttributes(), undefined, 'it completes rather than throwing on the missing payload');
     });
 });

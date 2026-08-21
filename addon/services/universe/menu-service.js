@@ -111,8 +111,7 @@ export default class MenuService extends Service.extend(Evented) {
      * @param {Object} options Optional options
      * @returns {Object} Normalized menu panel object
      */
-    /* istanbul ignore next -- registerAdminMenuPanel is the only caller and always forwards all three arguments, so neither default is applied */
-    #normalizeMenuPanel(input, items = [], options = {}) {
+    #normalizeMenuPanel(input, items, options) {
         if (input instanceof MenuPanel) {
             return input.toObject();
         }

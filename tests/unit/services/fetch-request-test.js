@@ -362,4 +362,19 @@ module('Unit | Service | fetch (request shaping)', function (hooks) {
             assert.strictEqual(this.service.getMimeTypeFromResponse(response()), null);
         });
     });
+
+    module('bodies that are left out', function () {
+        test('put, patch and delete each default their data to an empty body', async function (assert) {
+            // post has always been tested this way; the other three verbs
+            // declare the same default and never had it exercised.
+            await this.service.put('orders/1');
+            assert.deepEqual(JSON.parse(this.lastRequest()[2].body), {}, 'put');
+
+            await this.service.patch('orders/1');
+            assert.deepEqual(JSON.parse(this.lastRequest()[2].body), {}, 'patch');
+
+            await this.service.delete('orders/1');
+            assert.deepEqual(JSON.parse(this.lastRequest()[2].body), {}, 'delete');
+        });
+    });
 });

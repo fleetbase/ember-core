@@ -167,4 +167,14 @@ module('Unit | Service | universe/registry-service (helpers)', function (hooks) 
             assert.deepEqual(this.registered, [], 'and nothing is registered');
         });
     });
+
+    module('instantiate on the engine path', function () {
+        test('an explicit instantiate option survives the engine lookup', async function (assert) {
+            this.engineInstance = this.engine(class {});
+
+            await this.service.registerHelper('my-helper', new TemplateHelper('@fleetbase/fleetops-engine', 'helpers/my-helper'), { instantiate: false });
+
+            assert.false(this.registered[0][2].instantiate, 'rather than being forced back to true');
+        });
+    });
 });

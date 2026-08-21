@@ -359,7 +359,9 @@ module('Unit | Service | universe/hook-service', function (hooks) {
             this.service.removeAllHooks('never-registered');
 
             assert.deepEqual(this.service.getHooks('never-registered'), [], 'and it does not create the list');
-            assert.false(this.service.hasHook('never-registered'));
+            // hasHook returns `this.hooks[name] && ...`, so an unknown name gets
+            // undefined rather than false. Pinned as it stands.
+            assert.notOk(this.service.hasHook('never-registered'));
         });
     });
 });

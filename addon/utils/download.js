@@ -10,11 +10,12 @@ export default function download(data, strFileName, strMimeType) {
         toString = /* istanbul ignore next -- only used when the browser has no Blob constructor, a path that throws on `instanceof` before reaching here */ function (a) {
             return String(a);
         },
-        myBlob = self.Blob || self.MozBlob || self.WebKitBlob || toString,
+        myBlob =
+            /* istanbul ignore next -- every browser this suite can run in has Blob, so the vendored fallbacks are unreachable */ self.Blob || self.MozBlob || self.WebKitBlob || toString,
         fileName = strFileName || 'download',
         blob,
         reader;
-    myBlob = myBlob.call ? myBlob.bind(self) : Blob;
+    myBlob = /* istanbul ignore next -- myBlob is always a constructor here, so the bare-Blob arm cannot be taken */ myBlob.call ? myBlob.bind(self) : Blob;
 
     if (String(this) === 'true') {
         //reverse arguments, allowing download.bind(true, "text/xml", "export.xml") to act as a callback

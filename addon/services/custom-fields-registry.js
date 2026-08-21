@@ -121,8 +121,7 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
         return manager;
     }
 
-    /* istanbul ignore next -- forSubject is the only caller and always passes its own defaulted options */
-    #scopeKey(subject, options = {}) {
+    #scopeKey(subject, options) {
         const lo = options.loadOptions || options;
         const groupedFor = lo.groupedFor ?? 'custom_field_group';
         const fieldFor = lo.fieldFor ?? `subject:${getModelName(subject)}`;

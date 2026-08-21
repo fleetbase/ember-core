@@ -237,4 +237,27 @@ module('Unit | Service | session (flows)', function (hooks) {
             assert.strictEqual(this.invalidations, 1);
         });
     });
+
+    module('promiseCurrentUser without a transition to abort', function () {
+        test('no user still invalidates, twice, with nothing to abort', async function (assert) {
+            this.loadResult = null;
+
+            await assert.rejects(this.service.promiseCurrentUser(), /Session authentication failed/);
+
+            assert.strictEqual(this.invalidations, 2, 'the same double invalidation as when a transition is given');
+        });
+
+        test('a rejection carrying no message falls back to the default text', async function (assert) {
+            const messages = [];
+            this.service.invalidateWithLoader = (message) => {
+                messages.push(message);
+                return Promise.resolve();
+            };
+            this.owner.lookup('service:current-user').promiseUser = () => Promise.reject({ code: 'no-message' });
+
+            await assert.rejects(this.service.promiseCurrentUser());
+
+            assert.deepEqual(messages, ['Session authentication failed...'], 'rather than showing "undefined" to the user');
+        });
+    });
 });

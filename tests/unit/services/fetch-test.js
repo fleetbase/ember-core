@@ -263,4 +263,20 @@ module('Unit | Service | fetch', function (hooks) {
             await assert.rejects(this.service.fetchOrderConfigurations(), (error) => error === boom);
         });
     });
+
+    module('responses that say less than expected', function () {
+        test('a content-disposition with no filename leaves the default in place', function (assert) {
+            const response = { headers: { get: () => 'attachment' } };
+
+            assert.strictEqual(this.service.getFilenameFromResponse(response, 'fallback.csv'), 'fallback.csv');
+            assert.strictEqual(this.service.getFilenameFromResponse(response), null, 'and with no default, null');
+        });
+
+        test('jsonToModel with no attributes fails in the store rather than earlier', function (assert) {
+            // Nothing calls it this way; the default exists so a missing payload
+            // becomes a normalize/push error instead of a property read on
+            // undefined. ember-data needs an id, so this is that error.
+            assert.throws(() => this.service.jsonToModel(undefined, 'order-config'), /id/);
+        });
+    });
 });

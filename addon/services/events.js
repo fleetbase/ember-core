@@ -397,7 +397,7 @@ export default class EventsService extends Service.extend(Evented) {
      * @param {Object} props - Base properties
      * @returns {Object} Enriched properties
      */
-    #enrichProperties(props = {}) {
+    #enrichProperties(props) {
         const eventsConfig = config?.events || {};
         const enrichConfig = eventsConfig.enrich || {};
         const enriched = { ...props };

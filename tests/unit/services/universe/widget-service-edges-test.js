@@ -93,4 +93,17 @@ module('Unit | Service | universe/widget-service (edges)', function (hooks) {
             assert.deepEqual(this.service.getDefaultWidgets(), []);
         });
     });
+
+    module('ordering slot dashboards', function () {
+        test('dashboards with no priority sort as zero rather than dropping out', function (assert) {
+            this.service.registerDashboardForSlot('console.home', 'first', { name: 'First' });
+            this.service.registerDashboardForSlot('console.home', 'second', { name: 'Second' });
+            this.service.registerDashboardForSlot('console.home', 'top', { name: 'Top', priority: 5 });
+
+            const dashboards = this.service.getDashboardsForSlot('console.home');
+
+            assert.strictEqual(dashboards[0].id, 'top', 'a declared priority still wins');
+            assert.strictEqual(dashboards.length, 3, 'and the unprioritised two are kept');
+        });
+    });
 });
