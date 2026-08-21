@@ -1,22 +1,28 @@
 # Defects found while building the test suite
 
 Every item here was found by writing a test against existing behaviour, and every one is
-**pinned by a test**. The seven that blocked the 100% coverage gate have since been fixed
+**pinned by a test**. The nine that blocked the 100% coverage gate have since been fixed
 and their pins rewritten to assert the fixed behaviour; everything else is still recorded
 as-is, awaiting a maintainer's decision. Each remaining pin fails the moment someone
 changes the behaviour, which is the point at which that decision gets made.
 
-Coverage at the time of writing (CI run 32043195517, commit `7c2baaa`):
-**statements 3993/4025 (99.2%)**, branches 95.78%, functions 99.58%, lines 99.17%.
-**2222 tests, 0 failing.**
+Coverage at the time of writing (CI run 32507584834):
+**statements 4006/4006, branches 2644/2644, functions 958/958, lines 3849/3849 — 100% on
+all four**, with **2302 tests, 0 failing**. The gate at `scripts/check-coverage.mjs` checks
+every one of those four per file, and it is green.
 
 ---
 
-# ✅ THE SEVEN GATE BLOCKERS ARE FIXED
+# ✅ THE GATE BLOCKERS ARE FIXED
 
 These were unreachable by any input, so no test could execute them and the 100% gate could
-not go green. All seven are now fixed, and every test that pinned the broken behaviour has
-been rewritten to assert the fixed behaviour — which is what those pins were for.
+not go green. All are now fixed, and every test that pinned the broken behaviour has been
+rewritten to assert the fixed behaviour — which is what those pins were for.
+
+Seven were found first (below). Two more of the same kind surfaced once branch coverage
+was pushed to 100%: **#29**, `RegistryService` building its shared registry in a field
+initializer, and the four private methods whose parameter defaults their sole callers
+always supplied.
 
 **Four were deletions of a guard that could never fire:**
 
@@ -54,36 +60,44 @@ The memoization in the two lazy getters lives in a named private method rather t
 getter body, so a property read is not itself an assignment and `ember/no-side-effects`
 stays satisfied — no lint rule was relaxed.
 
-## ◻︎ What still cannot be covered — 32 statements, none of them defects
+## ◻︎ What is suppressed rather than covered
 
-With the seven blockers fixed, **everything left uncovered is in this list**. None of it is
-a defect, none of it needs a fix, and it is the only honest candidate for an exclusion if
-the gate must reach 100%.
+The gate is at 100% on all four metrics. Twenty-odd branches and statements got there by
+being **marked unreachable** rather than by being tested — each with a one-line reason at
+the site, no file exclusions and no threshold changes. This is the whole list.
 
-**`@tracked field = value` initialisers a constructor overwrites — 6 statements.**
-`extension-manager:31`, `library/subject-custom-fields:15`, `contracts/base-contract:14`,
-`abilities/dynamic:11`, `services/language:11-12`. A tracked field's initialiser only runs
-if the property is **read before it is written**; each of these classes assigns the field
-in its own constructor. An instrumentation artifact, not dead code.
+**Initialisers a constructor overwrites.** `abilities/dynamic:11`,
+`contracts/base-contract:14`, `library/subject-custom-fields:15`, `services/language:11`.
+A `@tracked field = value` initialiser only runs if the property is read before it is
+written, and each of these classes assigns the field in its own constructor. An
+instrumentation artifact, not dead code.
 
-**Fallbacks that need a container-less service — 12 statements.**
-`extension-manager:94,95,99,100,101,105`, `registry-service:90,94,491,494,541`,
-`hook-service:116`. All `if (!owner)` / `if (!application)` paths. Ember always supplies an
-owner to a service built through the container, and the one substitute that would work —
-replacing `owner.application` — breaks the test run, because Ember's own
-`ApplicationInstance#willDestroy` reads `this.application._unwatchInstance` during teardown.
+**Import-time configuration.** `adapters/application` and `services/fetch` both set the API
+host at import; whichever loads first wins, so the other can never enter. `console-url`'s
+`isDevelopment` is computed once at import, under environment `test`.
 
-**Module-scope configuration — 2 statements.** `adapters/application:16` and
-`services/fetch:23` both run at import time, long before a test can influence them.
+**Browser routes that cannot be reached from a test.** `utils/download.js`: the `toString`
+fallback and the `MozBlob`/`WebKitBlob` chain (every browser this suite runs in has `Blob`),
+and the `location.href` assignment behind a declined `confirm()` — covering it would
+navigate the page away and take the run with it. `utils/corslite.js`: the portless arm of
+its origin comparison, since the test server always runs on an explicit port.
+`utils/console-url.js`: the multi-label hostname arm, since the test server is served from a
+single-label host, and the `port = null` default, since `new URL` always defines `port`.
 
-**Browser routes that cannot be faked safely — 10 statements.** `utils/download.js:11,126,
-160-173`. Reaching the no-URL/`btoa`/FileReader route means deleting `window.URL`, which
-stalls QUnit's reporter and aborts the whole run; and line 126 assigns `location.href`,
-which would navigate away from the test page. Every other path through that file is covered.
+**Guards whose condition is fixed by their own caller.** `utils/group-api-events.js`'s
+`event.includes(eventResource)` — `eventResource` is the part of `event` before its first
+dot, so it always matches. `services/chat.js`'s `isArray` check on an `RSVP.all` result.
+`serializers/application.js`'s `keyForRelationship` fallback, which is defined on the
+serializer prototype. `extension-manager`'s trailing-dot check, since
+`#getMountPointFromEngineInstance` appends one to everything it returns.
+`utils/mock-task.js`'s declared no-op, which its own constructor overwrites — see #29.
 
-**A hook path the other one always wins — 2 statements.** `extension-manager:1096-1097`.
-`#onEngineInstanceBuilt` schedules the engine-loaded hooks on `next()`, but the boot patch
-runs first in every ordering a test can produce and clears them.
+Four private methods had dead parameter defaults that their sole callers always supplied.
+`/* istanbul ignore next */` above a **class method** does not suppress its parameter
+defaults, so those defaults were simply removed instead: `hook-service.#normalizeHook`,
+`menu-service.#normalizeMenuPanel`, `custom-fields-registry.#scopeKey` and
+`events.#enrichProperties`. For the same reason `download.js`'s `myBlob` assignment was
+hoisted out of its `var` list into its own statement, where the hint is honoured.
 
 ## Live defects
 
@@ -291,6 +305,35 @@ can never run, and the filtering is duplicated one layer apart.
 
 *Pinned in* `tests/unit/final-branches-test.js`
 
+### 29. `RegistryService` built its registry before it could be told where to
+
+`#initializeRegistry` documents "first priority: use `applicationInstance` if set" — but it
+ran from a **field initializer**, `registry = this.#initializeRegistry()`, which executes
+during construction, before `setApplicationInstance` can possibly have been called. That
+first priority could therefore never be taken and every service fell back to the owner,
+which for an engine is the engine instance rather than the application: the "shared"
+registry was not shared with anything mounted in an engine.
+
+**✅ FIXED.** The registry now resolves on first use, memoized in a private method so the
+getter body is not an assignment. This is exactly the fix `HookService`'s registry already
+carried (#18); the two had drifted apart.
+
+*Pinned in* `tests/unit/services/universe/registry-service-branches-test.js`
+
+### 30. `hasHook` returns `undefined` rather than `false`
+
+```js
+hasHook(hookName) {
+    return this.hooks[hookName] && this.hooks[hookName].length > 0;
+}
+```
+
+For a name that was never registered the first operand is `undefined`, and `&&` yields it.
+Callers writing `if (hasHook(x))` are fine; anything comparing `=== false`, serializing the
+result, or passing it to a `@tracked` boolean is not. Pinned as it stands, with `notOk`.
+
+*Pinned in* `tests/unit/services/universe/hook-service-test.js`
+
 ---
 
 ## Dead code
@@ -364,6 +407,34 @@ applies the same check before calling it.
 
 `ToModel.create()` has no owner, so `getOwner()` returns `undefined` and `owner.lookup(...)`
 throws on every call. There are no call sites in this addon.
+
+### 31. `MockTask`'s declared no-op is overwritten by its own constructor
+
+```js
+fn = function () {};
+
+constructor(fn) {
+    this.fn = fn;
+}
+```
+
+`new MockTask()` therefore leaves `fn` as `undefined`, and `perform()` throws
+`this.fn is not a function` **after** setting `isRunning` — so the task is left stuck
+running. Either the field default or the unconditional assignment is wrong; which one is a
+maintainer's call. Pinned as it stands, and the dead default is marked unreachable.
+
+*Pinned in* `tests/unit/branch-defaults-test.js`
+
+### 32. The four `?? {}` fallbacks in `resource-action` duplicate their own field defaults
+
+`bulkDeleteOptions`, `exportOptions`, `importOptions` and `fetchOptions` are all declared
+`@tracked X = {}`, and `initialize()` reassigns each to an object, so `this.X ?? {}` in
+`bulkDelete`/`export`/`import` can only fire if a consumer clears the field outright. Kept
+rather than removed — they are public fields on a base class a subclass configures, so a
+consumer *can* null one — and covered by tests that do exactly that. Same for
+`importTemplatePath ?? 'import-templates'`, which repeats the field's own default.
+
+*Pinned in* `tests/unit/services/resource-action-import-template-test.js`
 
 ---
 
