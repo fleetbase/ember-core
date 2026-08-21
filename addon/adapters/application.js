@@ -12,6 +12,7 @@ import { decompress as decompressJson } from 'compress-json';
 import getUserOptions from '../utils/get-user-options';
 import config from 'ember-get-config';
 
+/* istanbul ignore if -- runs at import; whichever of adapters/application or services/fetch loads first sets the host, so the other can never enter */
 if (isBlank(config.API.host)) {
     config.API.host = `${window.location.protocol}//${window.location.hostname}`;
 }

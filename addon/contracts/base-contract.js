@@ -11,6 +11,7 @@ import { tracked } from '@glimmer/tracking';
  * @class BaseContract
  */
 export default class BaseContract {
+    /* istanbul ignore next -- the constructor assigns _options unconditionally, so this default is never read */
     @tracked _options = {};
 
     constructor(options = {}) {

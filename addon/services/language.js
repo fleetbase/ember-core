@@ -8,6 +8,7 @@ import { task } from 'ember-concurrency';
 export default class LanguageService extends Service {
     @service intl;
     @service fetch;
+    /* istanbul ignore next -- the constructor assigns locales from intl unconditionally, so this default is never read */
     @tracked locales = [];
     @tracked countries = [];
     @tracked currentLocale;

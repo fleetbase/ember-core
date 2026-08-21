@@ -19,6 +19,7 @@ import isEmptyObject from '../utils/is-empty-object';
 import isObject from '../utils/is-object';
 import fetch from 'fetch';
 
+/* istanbul ignore if -- runs at import; whichever of adapters/application or services/fetch loads first sets the host, so the other can never enter */
 if (isBlank(config.API.host)) {
     config.API.host = `${window.location.protocol}//${window.location.hostname}`;
 }
