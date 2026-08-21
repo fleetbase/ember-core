@@ -85,7 +85,7 @@ module('Unit | Utility | download (browser fallbacks)', function (hooks) {
         await settled();
         window.open = this.originalOpen;
         window.confirm = this.originalConfirm;
-        document.querySelectorAll('.download-js-link, iframe[src^="data:"]').forEach((node) => node.remove());
+        document.querySelectorAll('.download-js-link, iframe[src^="data:"], iframe[src^="blob:"]').forEach((node) => node.remove());
     });
 
     module('a browser without a[download]', function () {
@@ -198,6 +198,28 @@ module('Unit | Utility | download (browser fallbacks)', function (hooks) {
             const payload = 'data:text/plain,' + 'a'.repeat(2_100_000);
 
             assert.true(download(payload, 'big.txt', 'text/plain'));
+        });
+    });
+
+    module('a blob url rather than a data url', function () {
+        test('safari opens the object url as it stands', function (assert) {
+            // The data-url rewrite above this only applies to data urls; an
+            // object url is opened unchanged.
+            this.useSafariUserAgent();
+
+            const result = this.withoutDownloadAttribute(() => download(new Blob(['hello']), 'hello.txt', 'text/plain'));
+
+            assert.true(result);
+            assert.strictEqual(this.opened.length, 1);
+            assert.true(this.opened[0].startsWith('blob:'), 'and it is not rewritten into a data url');
+        });
+
+        test('a non-safari browser puts the object url in the iframe unchanged', function (assert) {
+            this.withoutDownloadAttribute(() => download(new Blob(['hello']), 'hello.txt', 'text/plain'));
+
+            const iframe = this.iframes.at(-1);
+            assert.ok(iframe, 'an iframe was created');
+            assert.true(iframe.src.startsWith('blob:'), 'no mime rewrite is needed for an object url');
         });
     });
 });

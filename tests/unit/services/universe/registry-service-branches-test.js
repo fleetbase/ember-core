@@ -179,4 +179,42 @@ module('Unit | Service | universe/registry-service (branches)', function (hooks)
             assert.strictEqual(cleared, 1);
         });
     });
+
+    module('lists and applications that offer less', function () {
+        test('a list with no clear() is left to the section delete', function (assert) {
+            // The lists this service builds are Ember arrays, which do have
+            // clear(); a plain array does not, and must not throw.
+            this.service.createSection('sec');
+            this.service.registries.get('sec').items = ['a', 'b'];
+
+            this.service.clearSection('sec');
+
+            assert.false(this.service.hasSection('sec'), 'the section still goes');
+        });
+
+        test('clearAll steps over a list with no clear() as well', function (assert) {
+            this.service.createSection('sec');
+            this.service.registries.get('sec').items = ['a', 'b'];
+
+            this.service.clearAll();
+
+            assert.strictEqual(this.service.registries.size, 0, 'and every section still goes');
+        });
+
+        test('an explicitly set application instance is used ahead of the owner', function (assert) {
+            let registered = null;
+            const application = {
+                hasRegistration: () => false,
+                register: (key, value) => (registered = { key, value }),
+                resolveRegistration: () => registered?.value,
+            };
+
+            this.service.setApplicationInstance(application);
+            this.service.createSection('sec');
+
+            assert.ok(registered, 'the shared registry was created on the application it was handed');
+            assert.strictEqual(registered.key, 'registry:universe', 'rather than on the owner');
+            assert.true(this.service.hasSection('sec'));
+        });
+    });
 });

@@ -335,4 +335,31 @@ module('Unit | Service | universe/hook-service', function (hooks) {
             assert.strictEqual(this.service.applicationInstance, application);
         });
     });
+
+    module('names and handlers that are not there', function () {
+        test('executeSync on an unknown name yields no results', function (assert) {
+            assert.deepEqual(this.service.executeSync('never-registered'), [], 'the missing list falls back to an empty one');
+        });
+
+        test('a hook whose handler is not a function is skipped', function (assert) {
+            this.service.registerHook({ name: 'evt', id: 'not-callable', handler: 'oops', enabled: true, priority: 0 });
+            this.service.registerHook('evt', () => 'ran');
+
+            assert.deepEqual(this.service.executeSync('evt'), ['ran'], 'only the callable one contributes');
+        });
+
+        test('an async execute skips a non-function handler too', async function (assert) {
+            this.service.registerHook({ name: 'evt', id: 'not-callable', handler: null, enabled: true, priority: 0 });
+            this.service.registerHook('evt', () => 'ran');
+
+            assert.deepEqual(await this.service.execute('evt'), ['ran']);
+        });
+
+        test('removeAllHooks on an unknown name is harmless', function (assert) {
+            this.service.removeAllHooks('never-registered');
+
+            assert.deepEqual(this.service.getHooks('never-registered'), [], 'and it does not create the list');
+            assert.false(this.service.hasHook('never-registered'));
+        });
+    });
 });

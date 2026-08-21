@@ -3,6 +3,7 @@ import { setupTest } from 'dummy/tests/helpers';
 import EmberObject from '@ember/object';
 import Service from '@ember/service';
 import { run } from '@ember/runloop';
+import { setOwner } from '@ember/application';
 import legacyFetchFrom from 'dummy/decorators/legacy-fetch-from';
 
 /**
@@ -128,5 +129,31 @@ module('Unit | Decorator | legacy-fetch-from', function (hooks) {
 
     test('the options must be an object', function (assert) {
         assert.throws(() => legacyFetchFrom('some/endpoint', {}, 'nope'), /third argument of the @fetchFrom decorator must be an object/);
+    });
+
+    test('a target with no init of its own is still given one', async function (assert) {
+        // Every Ember class already has `init`, so the arm that skips the
+        // original is only reachable on a plain class. The decorator wraps
+        // whatever `init` it finds — here, nothing — and still schedules the
+        // fetch, which is what makes it usable outside the Ember object model.
+        const testContext = this;
+
+        class Plain {
+            @legacyFetchFrom('/orders') orders;
+
+            set(key, value) {
+                this[key] = value;
+            }
+        }
+
+        assert.strictEqual(Object.getPrototypeOf(Plain.prototype), Object.prototype, 'there is no inherited init to call');
+
+        const subject = new Plain();
+        setOwner(subject, testContext.owner);
+
+        subject.init();
+        await flush();
+
+        assert.deepEqual(subject.orders, ['a', 'b'], 'the scheduled fetch still landed on the property');
     });
 });

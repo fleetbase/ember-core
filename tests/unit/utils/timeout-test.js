@@ -25,4 +25,14 @@ module('Unit | Utility | timeout', function () {
         await pending;
         assert.true(resolved);
     });
+
+    test('it defaults the delay when none is given', async function (assert) {
+        // The declared default is 300ms; every call site in the addon passes one,
+        // so this is the only exercise the default gets.
+        const started = performance.now();
+
+        assert.true(await timeout());
+
+        assert.true(performance.now() - started >= 250, 'it waited roughly the default delay');
+    });
 });

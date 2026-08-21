@@ -67,4 +67,16 @@ module('Unit | Utility | console-url (branches)', function () {
             assert.deepEqual(extractHostAndPort('not a url'), { host: null, port: null });
         });
     });
+
+    test('an explicit subdomain with no host derives only the host', function (assert) {
+        const url = consoleUrl('/orders', {}, 'fleet', null);
+
+        assert.true(url.includes('fleet.'), 'the subdomain given is kept');
+        assert.true(url.includes(window.location.hostname), 'and the host comes from window.location');
+    });
+
+    test('blank query params produce no query string', function (assert) {
+        // `{}` is not blank, so null is the only way into the empty arm.
+        assert.false(consoleUrl('/orders', null, 'fleet', 'https://example.com').includes('?'));
+    });
 });

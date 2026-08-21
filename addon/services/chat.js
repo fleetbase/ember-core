@@ -57,6 +57,7 @@ export default class ChatService extends Service.extend(Evented) {
         if (isArray(openedChats)) {
             const findAll = openedChats.map((id) => this.store.findRecord('chat-channel', id));
             return all(findAll).then((openedChatRecords) => {
+                /* istanbul ignore else -- RSVP.all resolves with an array on every path, so the else arm is unreachable */
                 if (isArray(openedChatRecords)) {
                     for (let i = 0; i < openedChatRecords.length; i++) {
                         const chatChannelRecord = openedChatRecords[i];

@@ -72,4 +72,15 @@ module('Unit | Decorator | legacy-from-store', function (hooks) {
         assert.deepEqual(subject.records, ['preset']);
         assert.strictEqual(this.queries.length, 0);
     });
+
+    test('the query and options arguments both default when only a model name is given', async function (assert) {
+        class Minimal extends EmberObject {
+            @legacyFromStore('widget') records;
+        }
+
+        Minimal.create(this.owner.ownerInjection()).records;
+        await settled();
+
+        assert.deepEqual(this.queries, [{ modelName: 'widget', query: {}, options: {} }], 'an empty query and empty options are passed through');
+    });
 });

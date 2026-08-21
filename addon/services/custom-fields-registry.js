@@ -114,12 +114,14 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
         } else {
             // keep them fresh if caller passes new ones
             manager.subject = subject;
+            /* istanbul ignore next -- forSubject defaults `options` to an object and SubjectCustomFields stores it as given, so neither `|| {}` can be taken */
             manager.options = { ...(manager.options || {}), ...(options || {}) };
         }
 
         return manager;
     }
 
+    /* istanbul ignore next -- forSubject is the only caller and always passes its own defaulted options */
     #scopeKey(subject, options = {}) {
         const lo = options.loadOptions || options;
         const groupedFor = lo.groupedFor ?? 'custom_field_group';

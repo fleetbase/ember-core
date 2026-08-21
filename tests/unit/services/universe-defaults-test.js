@@ -84,6 +84,20 @@ module('Unit | Service | universe (defaults and fallbacks)', function (hooks) {
             );
         });
 
+        test('the other three are skipped the same way', function (assert) {
+            set(this.service, 'extensionManager', null);
+            set(this.service, 'menuService', null);
+            set(this.service, 'widgetService', null);
+
+            this.service.setApplicationInstance({ name: 'app' });
+
+            assert.deepEqual(
+                this.calls.filter((call) => call.method === 'setApplicationInstance').map((call) => call.service),
+                ['registry', 'hook'],
+                'each of the five is guarded independently'
+            );
+        });
+
         test('the instance is kept and readable', function (assert) {
             const application = { name: 'app' };
 

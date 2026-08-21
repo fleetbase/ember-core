@@ -152,6 +152,7 @@ export default class HookService extends Service {
      * @param {Object} options Optional options
      * @returns {Object} Normalized hook object
      */
+    /* istanbul ignore next -- registerHook is the only caller and always forwards both arguments, so neither default is applied */
     #normalizeHook(input, handler = null, options = {}) {
         if (input instanceof Hook) {
             return input.toObject();

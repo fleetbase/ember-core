@@ -63,16 +63,43 @@ module('Unit | Utility | small utils (defaults and fallbacks)', function () {
         assert.strictEqual(getModelName(proxied, 'order'), 'order');
     });
 
-    test('a MockTask performs its no-op function when none is supplied', function (assert) {
+    test('a MockTask built with no function cannot perform', function (assert) {
+        // The class declares `fn = function () {}` as a default, but the
+        // constructor then assigns `this.fn = fn` unconditionally — so building
+        // one with no argument overwrites the default with `undefined` and the
+        // declared no-op is never callable. Pinned here, flagged in DEFECTS.md.
         const task = new MockTask();
+
+        assert.strictEqual(task.fn, undefined, 'the declared default is overwritten');
+        assert.throws(() => task.perform('an argument'), /not a function/);
+        assert.true(task.isRunning, 'and the task is left stuck running');
+    });
+
+    test('a MockTask runs the function it was given', function (assert) {
+        const calls = [];
+        const task = new MockTask((...args) => calls.push(args));
 
         task.perform('an argument');
 
-        assert.false(task.isRunning, 'it finished');
+        assert.deepEqual(calls, [['an argument']], 'the arguments are forwarded');
+        assert.false(task.isRunning, 'and it finished');
     });
 
-    test('applyContextComponentArguments ignores a context with no model name', function (assert) {
-        const component = { args: { context: ObjectProxy.create({ content: {} }) } };
+    test('getModelName reads _internalModel when the constructor carries no model name', function (assert) {
+        const proxied = ObjectProxy.create({ content: { _internalModel: { modelName: 'order' } } });
+
+        assert.strictEqual(getModelName(proxied), 'order', 'the middle arm of the ?? chain');
+    });
+
+    test('applyContextComponentArguments ignores a context whose model name is empty', function (assert) {
+        // The false arm of `if (contextModelName)` is only reachable with an
+        // EMPTY name, not a missing one: getModelName returns null for a bare
+        // proxy and camelize(null) throws before the guard is ever evaluated.
+        // An empty `constructor.modelName` survives the ?? chain and camelizes
+        // to '', which is the one falsy value that gets that far.
+        class Nameless extends ObjectProxy {}
+        Nameless.modelName = '';
+        const component = { args: { context: Nameless.create({ content: {} }) } };
 
         applyContextComponentArguments(component);
 
@@ -88,7 +115,18 @@ module('Unit | Service | small service defaults', function (hooks) {
     setupTest(hooks);
 
     test('theme removes no classes when given none', function (assert) {
-        for (const name of ['current-user', 'universe', 'router', 'fetch', 'session']) {
+        // theme's currentTheme getter runs the initializer, which asks
+        // currentUser for a stored option — a bare Service stub has no
+        // getOption and the read throws before removeRoutebodyClassNames runs.
+        this.owner.register(
+            'service:current-user',
+            class extends Service {
+                getOption() {
+                    return null;
+                }
+            }
+        );
+        for (const name of ['universe', 'router', 'fetch', 'session']) {
             this.owner.register(`service:${name}`, class extends Service {});
         }
         const service = this.owner.lookup('service:theme');
@@ -157,14 +195,27 @@ module('Unit | Service | small service defaults', function (hooks) {
         for (const name of ['fetch', 'session', 'theme', 'universe', 'socket', 'intl', 'notifications', 'events']) {
             this.owner.register(`service:${name}`, class extends Service {});
         }
-        const service = this.owner.lookup('service:current-user');
+        // authenticatedOptionOwnerId is a getter, so the chain is walked by
+        // taking its two inputs away: an unauthenticated session stub, and no
+        // stored ember-simple-auth session. `id` is an alias of userSnapshot.id.
+        const storedSession = window.localStorage.getItem('ember_simple_auth-session');
+        window.localStorage.removeItem('ember_simple_auth-session');
 
-        service.authenticatedOptionOwnerId = null;
-        service.id = 'user-1';
-        assert.strictEqual(service.optionsPrefix, 'user-1:', 'the user id is the second choice');
+        try {
+            const service = this.owner.lookup('service:current-user');
 
-        service.id = null;
-        assert.strictEqual(service.optionsPrefix, 'anon:', 'and anon the last');
+            assert.strictEqual(service.authenticatedOptionOwnerId, null, 'with no session there is no authenticated owner');
+
+            service.userSnapshot = { id: 'user-1' };
+            assert.strictEqual(service.optionsPrefix, 'user-1:', 'the user id is the second choice');
+
+            service.userSnapshot = {};
+            assert.strictEqual(service.optionsPrefix, 'anon:', 'and anon the last');
+        } finally {
+            if (storedSession !== null) {
+                window.localStorage.setItem('ember_simple_auth-session', storedSession);
+            }
+        }
     });
 
     test('filters ignores a controller whose query params are not a list', function (assert) {

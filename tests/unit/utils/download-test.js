@@ -174,4 +174,51 @@ module('Unit | Utility | download', function (hooks) {
             }
         });
     });
+
+    module('paths the browser decides', function () {
+        test('a lone argument that does not survive url normalisation is saved, not fetched', function (assert) {
+            // `anchor.href` normalises whatever it is given: a value with a space
+            // in it comes back percent-encoded, so the href no longer contains
+            // the original string and the XHR shortcut is skipped.
+            assert.true(download('report 1.csv'));
+
+            assert.strictEqual(this.clicks.length, 1, 'it saved the text rather than fetching a url');
+        });
+
+        test('a browser offering msSaveBlob is handed the decoded blob', function (assert) {
+            const saved = [];
+            navigator.msSaveBlob = (blob, name) => {
+                saved.push({ type: blob.type, name });
+                return 'saved by ie';
+            };
+
+            try {
+                assert.strictEqual(download('data:text/plain;base64,aGVsbG8=', 'hello.txt', 'text/plain'), 'saved by ie');
+                assert.strictEqual(saved.length, 1, 'and it never reaches the anchor');
+                assert.strictEqual(saved[0].name, 'hello.txt');
+            } finally {
+                delete navigator.msSaveBlob;
+            }
+        });
+
+        test('a large data url with no mime type falls back to the download mime', async function (assert) {
+            // Over ~2MB the url is decoded into a blob first; a `data:,` url
+            // carries no type, so the blob has none either and the default
+            // octet-stream mime is what makes the browser save it.
+            assert.true(download('data:,' + 'a'.repeat(2_100_000), 'big.txt', 'text/plain'));
+
+            await settled();
+            assert.strictEqual(this.clicks.length, 1);
+        });
+
+        test('a large data url declaring a charset still decodes as base64', async function (assert) {
+            // The charset segment shifts the encoding to the fourth field, which
+            // is the only reason dataUrlToBlob counts fields rather than reading
+            // the last one.
+            assert.true(download('data:text/plain;charset=utf-8;base64,' + 'a'.repeat(2_100_000), 'big.txt', 'text/plain'));
+
+            await settled();
+            assert.strictEqual(this.clicks.length, 1);
+        });
+    });
 });

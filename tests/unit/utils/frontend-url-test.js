@@ -80,4 +80,11 @@ module('Unit | Utility | frontend-url', function (hooks) {
             assert.strictEqual(frontendUrl('signup', { plan: 'pro' }), 'https://staging.fleetbase.io/signup?plan=pro');
         });
     });
+
+    test('a blank query params argument produces no query string', function (assert) {
+        // isBlank({}) is false — an empty object is not blank — so the empty arm
+        // is only reached by handing it null or undefined outright.
+        assert.strictEqual(frontendUrl('signup', null), frontendUrl('signup'));
+        assert.false(frontendUrl('signup', null).includes('?'));
+    });
 });

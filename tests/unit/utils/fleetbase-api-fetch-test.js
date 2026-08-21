@@ -131,4 +131,15 @@ module('Unit | Utility | fleetbase-api-fetch', function (hooks) {
 
         await assert.rejects(fleetbaseApiFetch('GET', 'orders', null), /Failed to fetch/);
     });
+
+    test('params and fetch options both default when omitted', async function (assert) {
+        this.respondWith({ body: { data: 'ok' } });
+
+        const result = await fleetbaseApiFetch('GET', 'orders');
+
+        assert.deepEqual(result, { data: 'ok' });
+        const { url, options } = this.calls[0];
+        assert.true(url.includes(`/${config.API.namespace}/orders?`), 'the namespace falls back to config and the empty params still build a query string');
+        assert.strictEqual(options.mode, 'cors', 'and the safe defaults are applied');
+    });
 });

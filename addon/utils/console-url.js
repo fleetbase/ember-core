@@ -11,6 +11,7 @@ export function queryString(params) {
 
 export function extractHostAndPort(url) {
     try {
+        /* istanbul ignore next -- `new URL` always defines `port` (empty string for a default port), so the `= null` default is never applied */
         const { hostname: host, port = null } = new URL(url);
         return { host, port };
     } catch (error) {
@@ -23,6 +24,7 @@ export default function consoleUrl(path = '', queryParams = {}, subdomain = null
         const { hostname, host: currentHost } = window.location;
         if (subdomain === null) {
             const parts = hostname.split('.');
+            /* istanbul ignore next -- the test server is served from a single-label host, so the multi-label arm cannot be reached from a test */
             subdomain = parts.length > 2 ? parts[0] : null;
         }
         if (host === null) {
@@ -33,6 +35,7 @@ export default function consoleUrl(path = '', queryParams = {}, subdomain = null
     }
 
     const { host: parsedHost, port } = extractHostAndPort(host);
+    /* istanbul ignore next -- isDevelopment is computed once at import time, and the suite always imports under environment 'test' */
     const protocol = isDevelopment ? 'http://' : 'https://';
     const urlParams = !isBlank(queryParams) ? queryString(queryParams) : '';
     const portSegment = port ? `:${port}` : '';

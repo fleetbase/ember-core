@@ -222,4 +222,38 @@ module('Unit | Utility | lookup-user-ip', function (hooks) {
             assert.strictEqual(JSON.parse(window.localStorage.getItem(CACHE_KEY)).city, 'Cached City', 'and not written');
         });
     });
+
+    module('browser-derived fallbacks', function () {
+        test('a browser reporting no timezone yields null rather than an empty string', function (assert) {
+            // Intl is replaced around the CALL only — the framework formats dates
+            // between tests and a permanently broken Intl takes the run with it.
+            const originalDateTimeFormat = Intl.DateTimeFormat;
+            Intl.DateTimeFormat = function () {
+                return { resolvedOptions: () => ({}) };
+            };
+
+            try {
+                assert.strictEqual(getBrowserTimezone(), null);
+            } finally {
+                Intl.DateTimeFormat = originalDateTimeFormat;
+            }
+        });
+
+        test('a browser reporting no language falls back to en-US', async function (assert) {
+            const originalLanguage = Object.getOwnPropertyDescriptor(window.navigator, 'language') ?? Object.getOwnPropertyDescriptor(Navigator.prototype, 'language');
+            Object.defineProperty(window.navigator, 'language', { value: '', configurable: true });
+            this.respondWith([() => Promise.reject(new Error('offline')), () => Promise.reject(new Error('offline'))]);
+
+            try {
+                const whois = await lookupUserIp({ cache: false });
+
+                assert.deepEqual(whois.languages[0], { code: 'en', name: 'en-US' }, 'the declared default stands in');
+                assert.strictEqual(whois.ip, null, 'and the rest of the fallback shape is empty');
+            } finally {
+                if (originalLanguage) {
+                    Object.defineProperty(window.navigator, 'language', originalLanguage);
+                }
+            }
+        });
+    });
 });

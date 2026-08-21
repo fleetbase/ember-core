@@ -318,4 +318,22 @@ module('Unit | Utility | corslite', function (hooks) {
             assert.strictEqual(FakeXHR.instances.length, 1, 'withCredentials is present, so no fallback');
         });
     });
+
+    module('progress', function () {
+        test('onprogress is a no-op that leaves the callback alone', function (assert) {
+            // IE9 required onprogress to be a distinct function, so corslite
+            // assigns an empty one. Nothing else ever calls it; driving the fake
+            // transport is the only way to see that it does nothing.
+            corslite('https://example.com/api', this.callback);
+            const [xhr] = FakeXHR.instances;
+
+            xhr.onprogress();
+
+            assert.deepEqual(this.calls, [], 'no callback yet');
+
+            xhr.onload();
+
+            assert.deepEqual(this.calls, [[null, xhr]], 'and completion still works afterwards');
+        });
+    });
 });
