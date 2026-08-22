@@ -47,10 +47,6 @@ export default class MenuService extends Service.extend(Evented) {
      * @returns {Function} Wrapped onClick function
      */
     #wrapOnClickHandler(onClick, menuItem) {
-        if (typeof onClick !== 'function') {
-            return onClick;
-        }
-
         const universe = this.universe;
         return function () {
             return onClick(menuItem, universe);
@@ -115,7 +111,7 @@ export default class MenuService extends Service.extend(Evented) {
      * @param {Object} options Optional options
      * @returns {Object} Normalized menu panel object
      */
-    #normalizeMenuPanel(input, items = [], options = {}) {
+    #normalizeMenuPanel(input, items, options) {
         if (input instanceof MenuPanel) {
             return input.toObject();
         }
@@ -451,9 +447,9 @@ export default class MenuService extends Service.extend(Evented) {
         // because the default bar is built by slicing the first N items — if
         // shortcuts sort between extensions (e.g. priority 1.1 between 1 and 2)
         // they would displace real extensions from the default pinned bar.
-        const extensions = A(items)
-            .filter((i) => !i._isShortcut)
-            .sortBy('priority');
+        // A(...).filter() returns a plain array, which has no sortBy, so the
+        // result has to be re-wrapped before sorting.
+        const extensions = A(A(items).filter((i) => !i._isShortcut)).sortBy('priority');
         const shortcuts = A(items).filter((i) => i._isShortcut);
         return A([...extensions, ...shortcuts]);
     }

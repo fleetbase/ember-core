@@ -1,1 +1,1 @@
-export { default } from '@fleetbase/ember-core/utils/array-utils';
+export * from '@fleetbase/ember-core/utils/array-utils';

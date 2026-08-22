@@ -13,6 +13,15 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
     #cache = new WeakMap();
     modelNamePath = 'label';
 
+    constructor() {
+        super(...arguments);
+        // Without this the base class keeps `modelName = null`, so
+        // `createNewInstance` reaches `store.createRecord(undefined)` and every
+        // create path below throws. `modelNamePath` is already set by the class
+        // field above, and `initialize` preserves it.
+        this.initialize('custom-field');
+    }
+
     panel = {
         create: (attributes = {}, options = {}, saveOptions = {}) => {
             saveOptions = { ...(options?.saveOptions ?? {}), ...saveOptions };
@@ -105,13 +114,14 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
         } else {
             // keep them fresh if caller passes new ones
             manager.subject = subject;
+            /* istanbul ignore next -- forSubject defaults `options` to an object and SubjectCustomFields stores it as given, so neither `|| {}` can be taken */
             manager.options = { ...(manager.options || {}), ...(options || {}) };
         }
 
         return manager;
     }
 
-    #scopeKey(subject, options = {}) {
+    #scopeKey(subject, options) {
         const lo = options.loadOptions || options;
         const groupedFor = lo.groupedFor ?? 'custom_field_group';
         const fieldFor = lo.fieldFor ?? `subject:${getModelName(subject)}`;
@@ -127,8 +137,12 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
     }
 
     // Optional proxy methods if you prefer service ergonomics:
+    // NOTE: `set`, `get` and `setProperties` shadow the EmberObject methods of
+    // the same name that this service inherits, and take a different first
+    // argument. Anything calling `registry.get('somePropertyName')` reaches
+    // this instead of the property lookup it expected.
     set(subject, fieldOrId, value, valueType) {
-        return this.forSubject(subject).set(fieldOrId, value, valueType);
+        return this.forSubject(subject).setField(fieldOrId, value, valueType);
     }
 
     setProperties(subject, entries) {
@@ -136,7 +150,7 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
     }
 
     get(subject, customFieldId) {
-        return this.forSubject(subject).get(customFieldId);
+        return this.forSubject(subject).getValue(customFieldId);
     }
 
     getProperties(subject) {

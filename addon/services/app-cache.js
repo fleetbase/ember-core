@@ -47,19 +47,25 @@ export default class AppCacheService extends Service {
         return value;
     }
 
+    // Reads storage directly rather than going through `get`, which substitutes
+    // its default for a missing value and so would report every key as present.
+    _isStored(key) {
+        return this.localCache.get(`${this.cachePrefix}${dasherize(key)}`) !== undefined;
+    }
+
     @action has(key) {
         if (isArray(key)) {
-            return key.every((k) => this.get(k) !== undefined);
+            return key.every((k) => this._isStored(k));
         }
 
-        return this.get(key) !== undefined;
+        return this._isStored(key);
     }
 
     @action doesntHave(key) {
         if (isArray(key)) {
-            return key.every((k) => this.get(k) === undefined);
+            return key.every((k) => !this._isStored(k));
         }
 
-        return this.get(key) === undefined;
+        return !this._isStored(key);
     }
 }

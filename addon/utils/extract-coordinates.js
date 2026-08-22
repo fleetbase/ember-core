@@ -24,7 +24,7 @@ export default function extractCoordinates(coordinates = [], format = 'latlng') 
     }
 
     if (longitude === null) {
-        latitude = 0;
+        longitude = 0;
     }
 
     if (format === 'lnglat') {

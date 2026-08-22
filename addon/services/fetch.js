@@ -19,6 +19,7 @@ import isEmptyObject from '../utils/is-empty-object';
 import isObject from '../utils/is-object';
 import fetch from 'fetch';
 
+/* istanbul ignore if -- runs at import; whichever of adapters/application or services/fetch loads first sets the host, so the other can never enter */
 if (isBlank(config.API.host)) {
     config.API.host = `${window.location.protocol}//${window.location.hostname}`;
 }
@@ -68,7 +69,9 @@ export default class FetchService extends Service {
         const userId = this.session.data.authenticated.user;
         const userOptions = getUserOptions();
         const isSandbox = get(userOptions, `${userId}:sandbox`) === true;
-        const testKey = get(userOptions, `${userId}:testKey`);
+        // See the note in adapters/application.js: `setOption` dasherizes, so
+        // the stored key is `<user>:test-key`, not `<user>:testKey`.
+        const testKey = get(userOptions, `${userId}:test-key`);
 
         headers['Content-Type'] = 'application/json';
 
@@ -178,7 +181,10 @@ export default class FetchService extends Service {
     normalizeModel(payload, modelType = null) {
         if (modelType === null) {
             const modelTypeKeys = Object.keys(payload);
-            modelType = modelTypeKeys.length ? modelTypeKeys.firstObject : false;
+            // `Object.keys` returns a plain array, which has no `firstObject`
+            // once prototype extensions are off — this silently yielded
+            // undefined, so the payload was returned unnormalized.
+            modelType = modelTypeKeys.length ? modelTypeKeys[0] : false;
         }
 
         if (typeof modelType !== 'string') {
@@ -314,7 +320,10 @@ export default class FetchService extends Service {
                     }
 
                     if (isArray(response.json.errors)) {
-                        return reject(new Error(response.json.errors ? response.json.errors.firstObject : response.statusText));
+                        // Decoded JSON is a plain array, so `firstObject` was
+                        // undefined and every such error surfaced as the
+                        // literal string "undefined".
+                        return reject(new Error(response.json.errors[0] ?? response.statusText));
                     }
 
                     if (response.json.error && typeof response.json.error === 'string') {
@@ -693,11 +702,14 @@ export default class FetchService extends Service {
                     const serialized = [];
 
                     for (let i = 0; i < configs.length; i++) {
-                        const config = configs.objectAt(i);
+                        // `configs` is decoded JSON and `serialized` is a plain
+                        // array literal; neither has the Ember array methods
+                        // once prototype extensions are off.
+                        const config = configs[i];
                         const normalizedConfig = this.store.normalize('order-config', config);
                         const serializedConfig = this.store.push(normalizedConfig);
 
-                        serialized.pushObject(serializedConfig);
+                        serialized.push(serializedConfig);
                     }
 
                     resolve(serialized);

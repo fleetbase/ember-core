@@ -138,7 +138,10 @@ export default class CrudService extends Service {
             count,
             modelName,
             remove: (model) => {
-                selected.removeObject(model);
+                // `selected` is a plain array whenever resolveModelName ran above,
+                // and a plain array has no removeObject. Filtering works for both
+                // shapes, and the setOption below publishes the new reference.
+                selected = selected.filter((item) => item !== model);
                 this.modalsManager.setOption('selected', selected);
             },
             confirm: async (modal) => {
@@ -325,7 +328,7 @@ export default class CrudService extends Service {
                                 type: 'import-source',
                             },
                             (uploadedFile) => {
-                                uploadedFiles.pushObject(uploadedFile);
+                                uploadedFiles.push(uploadedFile);
                                 resolve(uploadedFile);
                             }
                         );

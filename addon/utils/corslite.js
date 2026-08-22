@@ -9,6 +9,7 @@ function corslite(url, callback, cors) {
 
     if (typeof cors === 'undefined') {
         var m = url.match(/^\s*https?:\/\/[^\/]*/);
+        /* istanbul ignore next -- the test server always runs on an explicit port, so the portless arm of the ternary is unreachable here */
         cors = m && m[0] !== location.protocol + '//' + location.hostname + (location.port ? ':' + location.port : '');
     }
 

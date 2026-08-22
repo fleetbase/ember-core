@@ -12,6 +12,7 @@ export default class SubjectCustomFields {
     @tracked groups = [];
     @tracked fields = [];
     @tracked values = Object.create(null);
+    /* istanbul ignore next -- the constructor assigns options unconditionally, so this default is never read */
     @tracked options = {};
 
     constructor({ owner, subject, options = {} }) {

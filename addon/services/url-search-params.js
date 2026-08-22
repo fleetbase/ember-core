@@ -12,13 +12,45 @@ import hasJsonStructure from '../utils/has-json-structure';
  */
 export default class UrlSearchParamsService extends Service {
     /**
-     * Getter for `urlParams` that ensures it's always up-to-date with the current URL.
+     * The working set of query parameters.
+     *
+     * Rebuilt from `window.location.search` whenever the browser's search string
+     * differs from the one these params were built from, so a navigation is
+     * picked up; otherwise the same instance is handed back, so `setParam`,
+     * `addParam` and `removeParam` actually persist until `updateUrl` publishes
+     * them.
      *
      * @type {URLSearchParams}
      * @private
      */
+    #params = null;
+    #builtFrom = null;
+
     get urlParams() {
-        return new URLSearchParams(window.location.search);
+        return this.#currentParams();
+    }
+
+    /**
+     * Rebuild-if-stale, kept out of the getter body so a property read is not
+     * itself an assignment.
+     *
+     * @private
+     * @returns {URLSearchParams}
+     */
+    #currentParams() {
+        const search = window.location.search;
+
+        if (this.#params === null || this.#builtFrom !== search) {
+            this.#params = new URLSearchParams(search);
+            this.#builtFrom = search;
+        }
+
+        return this.#params;
+    }
+
+    set urlParams(value) {
+        this.#params = value;
+        this.#builtFrom = window.location.search;
     }
 
     /**

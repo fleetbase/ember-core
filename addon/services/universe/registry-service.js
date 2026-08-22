@@ -41,12 +41,38 @@ export default class RegistryService extends Service {
      */
     @tracked applicationInstance = null;
 
+    #registry = null;
+
     /**
-     * The singleton UniverseRegistry instance.
+     * The singleton UniverseRegistry instance, resolved on first use.
      * Initialized once and shared across the app and all engines.
+     *
+     * This is deliberately lazy. It was a field initializer, which runs during
+     * construction — before setApplicationInstance can possibly have been
+     * called — so #initializeRegistry's documented first choice, an explicitly
+     * set applicationInstance, could never be taken and every service fell back
+     * to the owner. HookService's registry was made lazy for the same reason.
+     *
      * @type {UniverseRegistry}
      */
-    registry = this.#initializeRegistry();
+    get registry() {
+        return this.#resolveRegistry();
+    }
+
+    /**
+     * Memoized resolution, kept out of the getter body so a property read is not
+     * itself an assignment.
+     *
+     * @private
+     * @returns {UniverseRegistry}
+     */
+    #resolveRegistry() {
+        if (!this.#registry) {
+            this.#registry = this.#initializeRegistry();
+        }
+
+        return this.#registry;
+    }
 
     /**
      * Getter for the registries TrackedMap.
@@ -535,12 +561,8 @@ export default class RegistryService extends Service {
      * @returns {Promise<Function|Class|null>} The loaded helper or null if failed
      */
     async #loadHelperFromEngine(templateHelper) {
-        const owner = this.applicationInstance || getOwner(this);
-
-        if (!owner) {
-            return null;
-        }
-
+        // No owner check here: registerHelper is the only caller and has already
+        // returned on the identical expression, so a second one could never fire.
         try {
             // Ensure the engine is loaded (will load if not already loaded)
             const engineInstance = await this.extensionManager.ensureEngineLoaded(templateHelper.engineName);
