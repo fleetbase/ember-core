@@ -23,9 +23,10 @@ module('Unit | Utility | small utils (defaults and fallbacks)', function () {
     test('apiUrl builds a host from config when none is given', function (assert) {
         const derived = apiUrl('orders');
         const explicit = apiUrl('orders', {}, null, 'https://api.example.com/v1');
+        const explicitHost = new URL(explicit).hostname;
 
         assert.true(derived.includes('/orders'));
-        assert.true(explicit.includes('api.example.com'), 'an explicit host skips the config lookup');
+        assert.strictEqual(explicitHost, 'api.example.com', 'an explicit host skips the config lookup');
     });
 
     test('frontendUrl appends query params only when there are some', function (assert) {
