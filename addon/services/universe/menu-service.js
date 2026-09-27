@@ -197,6 +197,9 @@ export default class MenuService extends Service.extend(Evented) {
                     // ── Behaviour ─────────────────────────────────────────────
                     onClick: sc.onClick ?? null,
                     disabled: sc.disabled ?? false,
+                    // Shortcuts without their own permission inherit the parent's,
+                    // so the header never offers a module the user cannot open.
+                    permission: sc.permission ?? menuItem.permission ?? null,
                     type: sc.type ?? 'default',
                     buttonType: sc.buttonType ?? null,
 
