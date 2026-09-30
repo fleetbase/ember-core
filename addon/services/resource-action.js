@@ -112,6 +112,64 @@ export default class ResourceActionService extends Service {
     @tracked mountPrefix = 'fleet-ops';
 
     /**
+     * The engine that owns this resource's views, used in its registry names.
+     * Derived from `mountPrefix` (`console.fleet-ops` → `fleet-ops`).
+     */
+    @tracked registryExtension = 'fleet-ops';
+
+    /**
+     * The resource segment of this resource's registry names. Derived from the
+     * model name without its engine prefix (`ledger-invoice` → `invoice`).
+     */
+    @tracked registryResource = null;
+
+    /**
+     * The shared resource view registry service.
+     *
+     * Looked up rather than injected: an engine built against an older
+     * ember-core does not list it as a dependency, and a missing registry must
+     * leave the view exactly as it was.
+     */
+    get resourceView() {
+        return getOwner(this).lookup('service:universe/resource-view-service') ?? null;
+    }
+
+    /**
+     * The table registry prefix for this resource, e.g. `fleet-ops:table:driver`.
+     * Pass it to `<Layout::Resource::Tabular @registry=…>`.
+     */
+    get tableRegistry() {
+        return this.registryResource ? `${this.registryExtension}:table:${this.registryResource}` : null;
+    }
+
+    /**
+     * The details registry prefix for this resource, e.g. `fleet-ops:details:driver`.
+     * Pass it to `<Layout::Resource::Panel @registry=…>`.
+     */
+    get detailsRegistry() {
+        return this.registryResource ? `${this.registryExtension}:details:${this.registryResource}` : null;
+    }
+
+    /**
+     * Merge what extensions registered into one of this resource's view slots.
+     * Returns the built-in items unchanged when nothing is registered.
+     *
+     * @param {String} surface 'table' or 'details'
+     * @param {String} slot e.g. 'columns', 'actions', 'menu'
+     * @param {Array} baseItems The view's built-in items
+     * @param {Object} context Extra view context (`resource`, `controller`, …)
+     * @returns {Array}
+     */
+    mergeRegistered(surface, slot, baseItems = [], context = {}) {
+        const prefix = surface === 'details' ? this.detailsRegistry : this.tableRegistry;
+        if (!prefix || !this.resourceView) {
+            return baseItems;
+        }
+
+        return this.resourceView.mergeSlot(prefix, slot, baseItems, context);
+    }
+
+    /**
      * Initialize the service for store actions
      */
     initialize(modelName, options = {}) {
@@ -127,6 +185,8 @@ export default class ResourceActionService extends Service {
         this.baseAssetUrl = options.baseAssetUrl ?? this.baseAssetUrl;
         this.permissionPrefix = options.permissionPrefix ?? 'fleet-ops';
         this.mountPrefix = options.mountPrefix ?? `console.${this.permissionPrefix}`;
+        this.registryExtension = options.registryExtension ?? this.mountPrefix.replace(/^console\./, '');
+        this.registryResource = options.registryResource ?? modelName?.replace(new RegExp(`^${this.registryExtension}-`), '') ?? null;
 
         return this;
     }

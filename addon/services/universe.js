@@ -30,6 +30,7 @@ export default class UniverseService extends Service.extend(Evented) {
     @service('universe/menu-service') menuService;
     @service('universe/widget-service') widgetService;
     @service('universe/hook-service') hookService;
+    @service('universe/resource-view-service') resourceViewService;
     @service router;
     @service intl;
     @service urlSearchParams;
@@ -78,6 +79,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * - "hooks" or "hook" -> universe/hook-service
      * - "widgets" or "widget" -> universe/widget-service
      * - "registry" -> universe/registry-service
+     * - "resource-view" or "resourceView" -> universe/resource-view-service
      *
      * @method getService
      * @param {String} serviceName Service name in various formats
@@ -104,6 +106,9 @@ export default class UniverseService extends Service.extend(Evented) {
                 'widget-service': 'widget-service',
                 registry: 'registry-service',
                 'registry-service': 'registry-service',
+                'resource-view': 'resource-view-service',
+                'resource-views': 'resource-view-service',
+                'resource-view-service': 'resource-view-service',
             };
 
             const mappedName = nameMapping[kebabCase] || kebabCase;
@@ -306,6 +311,49 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     lookupFromRegistry(registryName, key, listName = 'menu-item') {
         return this.registryService.lookup(registryName, listName, key);
+    }
+
+    // ============================================================================
+    // Resource View Registries (delegates to ResourceViewService)
+    // ============================================================================
+
+    /**
+     * Register columns, actions or buttons into a table or details view slot.
+     *
+     * @method registerInResourceView
+     * @param {String} registryName e.g. 'fleet-ops:table:driver:columns'
+     * @param {Object|Array} items TableColumn, ResourceAction or ActionButton contracts
+     * @returns {Boolean}
+     *
+     * @example
+     * universe.registerInResourceView('ledger:details:invoice:menu', new ResourceAction({ id: 'acme-print', label: 'Print', fn: (invoice) => … }));
+     */
+    registerInResourceView(registryName, items) {
+        return this.resourceViewService.register(registryName, items);
+    }
+
+    registerTableColumn(extension, resource, column) {
+        return this.resourceViewService.registerTableColumn(extension, resource, column);
+    }
+
+    registerRowAction(extension, resource, action) {
+        return this.resourceViewService.registerRowAction(extension, resource, action);
+    }
+
+    registerBulkAction(extension, resource, action) {
+        return this.resourceViewService.registerBulkAction(extension, resource, action);
+    }
+
+    registerTableAction(extension, resource, button) {
+        return this.resourceViewService.registerTableAction(extension, resource, button);
+    }
+
+    registerDetailsAction(extension, resource, button) {
+        return this.resourceViewService.registerDetailsAction(extension, resource, button);
+    }
+
+    registerDetailsMenuItem(extension, resource, action) {
+        return this.resourceViewService.registerDetailsMenuItem(extension, resource, action);
     }
 
     // ============================================================================
