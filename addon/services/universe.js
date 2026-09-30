@@ -275,10 +275,11 @@ export default class UniverseService extends Service.extend(Evented) {
      *
      * @method getRegistry
      * @param {String} name Registry name
+     * @param {String} listName The list within the registry (default 'menu-item', as createRegistry)
      * @returns {Array} Registry items
      */
-    getRegistry(name) {
-        return this.registryService.getRegistry(name);
+    getRegistry(name, listName = 'menu-item') {
+        return this.registryService.getRegistry(name, listName);
     }
 
     /**
@@ -288,9 +289,10 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {String} registryName Registry name
      * @param {String} key Item key
      * @param {*} value Item value
+     * @param {String} listName The list within the registry (default 'menu-item', as createRegistry)
      */
-    registerInRegistry(registryName, key, value) {
-        this.registryService.register(registryName, key, value);
+    registerInRegistry(registryName, key, value, listName = 'menu-item') {
+        this.registryService.register(registryName, listName, key, value);
     }
 
     /**
@@ -299,10 +301,11 @@ export default class UniverseService extends Service.extend(Evented) {
      * @method lookupFromRegistry
      * @param {String} registryName Registry name
      * @param {String} key Item key
+     * @param {String} listName The list within the registry (default 'menu-item', as createRegistry)
      * @returns {*} The registered item
      */
-    lookupFromRegistry(registryName, key) {
-        return this.registryService.lookup(registryName, key);
+    lookupFromRegistry(registryName, key, listName = 'menu-item') {
+        return this.registryService.lookup(registryName, listName, key);
     }
 
     // ============================================================================
@@ -701,7 +704,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Array} Menu items
      */
     getMenuItemsFromRegistry(registryName) {
-        return this.registryService.getRegistry(registryName) || A([]);
+        return this.menuService.getMenuItems(registryName) || A([]);
     }
 
     /**
@@ -713,7 +716,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Array} Menu panels
      */
     getMenuPanelsFromRegistry(registryName) {
-        return this.registryService.getRegistry(`${registryName}:panels`) || A([]);
+        return this.menuService.getMenuPanels(registryName) || A([]);
     }
 
     /**
