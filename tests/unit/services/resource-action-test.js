@@ -89,6 +89,20 @@ module('Unit | Service | resource-action', function (hooks) {
         assert.deepEqual(service.mergeRegisteredColumns().length, 1, 'defaults to no built-in columns');
     });
 
+    test('queryParamsFor adds registered filter params', function (assert) {
+        const service = this.owner.lookup('service:resource-action');
+        const views = this.owner.lookup('service:universe/resource-view-service');
+        const base = ['page', 'query'];
+
+        assert.strictEqual(service.queryParamsFor(base), base, 'unchanged before initialize');
+
+        service.initialize('ledger-invoice', { permissionPrefix: 'ledger', mountPrefix: 'console.ledger' });
+        views.register('ledger:table:invoice:columns', { id: 'po', filterable: true, filterParam: 'po_number' });
+
+        assert.deepEqual(service.queryParamsFor(base), ['page', 'query', 'po_number']);
+        assert.deepEqual(service.queryParamsFor(), ['po_number']);
+    });
+
     test('mergeRegistered leaves items alone without the registry service', function (assert) {
         const service = this.owner.lookup('service:resource-action');
         service.initialize('driver');
@@ -97,5 +111,6 @@ module('Unit | Service | resource-action', function (hooks) {
         const base = [{ id: 'edit' }];
         assert.strictEqual(service.mergeRegistered('details', 'actions', base), base);
         assert.strictEqual(service.mergeRegisteredColumns(base), base);
+        assert.strictEqual(service.queryParamsFor(base), base);
     });
 });

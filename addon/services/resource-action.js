@@ -188,6 +188,22 @@ export default class ResourceActionService extends Service {
     }
 
     /**
+     * The query params this resource's index controller must declare: its
+     * own, plus the filter params of filterable registered columns. Use it for
+     * the controller's `queryParams` class field.
+     *
+     * @param {Array} baseQueryParams
+     * @returns {Array}
+     */
+    queryParamsFor(baseQueryParams = []) {
+        if (!this.registryResource || !this.resourceView) {
+            return baseQueryParams;
+        }
+
+        return this.resourceView.queryParamsFor(this.registryExtension, this.registryResource, baseQueryParams);
+    }
+
+    /**
      * Initialize the service for store actions
      */
     initialize(modelName, options = {}) {
