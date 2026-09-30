@@ -304,15 +304,19 @@ export default class ResourceViewService extends Service {
     }
 
     #buildContext(parsed, context) {
-        return {
+        const base = {
             registry: parsed.name,
             extension: parsed.extension,
             surface: parsed.surface,
             resourceName: parsed.resource,
             slot: parsed.slot,
             owner: getOwner(this),
-            ...context,
         };
+
+        // Copy descriptors rather than spreading: a view may pass lazy getters
+        // (its table is set up after first render), and a spread would read
+        // them now, during the render that merges.
+        return Object.defineProperties(base, Object.getOwnPropertyDescriptors(context ?? {}));
     }
 
     #can(permission) {

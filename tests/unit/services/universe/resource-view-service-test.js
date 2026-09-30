@@ -114,6 +114,25 @@ module('Unit | Service | universe/resource-view-service', function (hooks) {
         assert.strictEqual(received.owner, this.owner);
     });
 
+    test('merge keeps context getters lazy', function (assert) {
+        let reads = 0;
+        const context = {
+            get table() {
+                reads++;
+                return 'table';
+            },
+        };
+
+        let received;
+        this.service.register('fleet-ops:table:driver:row-actions', { id: 'sync', fn: (row, ctx) => (received = ctx) });
+        const [action] = this.service.merge('fleet-ops:table:driver:row-actions', [], context);
+
+        assert.strictEqual(reads, 0, 'merging does not read the getter');
+        action.fn({});
+        assert.strictEqual(received.table, 'table');
+        assert.strictEqual(reads, 1, 'the handler reads it when it runs');
+    });
+
     test('merge drops columns the user cannot access', function (assert) {
         this.owner.register(
             'service:abilities',

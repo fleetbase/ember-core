@@ -66,6 +66,29 @@ module('Unit | Service | resource-action', function (hooks) {
         );
     });
 
+    test('mergeRegisteredColumns merges columns and row actions', function (assert) {
+        const service = this.owner.lookup('service:resource-action');
+        const views = this.owner.lookup('service:universe/resource-view-service');
+        const columns = [{ id: 'name' }, { cellComponent: 'table/cell/dropdown', actions: [{ id: 'view' }] }];
+
+        assert.strictEqual(service.mergeRegisteredColumns(columns), columns, 'unchanged before initialize');
+
+        service.initialize('vehicle');
+        views.register('fleet-ops:table:vehicle:columns', { id: 'score' });
+        views.register('fleet-ops:table:vehicle:row-actions', { id: 'ping' });
+
+        const merged = service.mergeRegisteredColumns(columns);
+        assert.deepEqual(
+            merged.map((column) => column.id),
+            ['name', 'score', undefined]
+        );
+        assert.deepEqual(
+            merged[2].actions.map((action) => action.id),
+            ['view', 'ping']
+        );
+        assert.deepEqual(service.mergeRegisteredColumns().length, 1, 'defaults to no built-in columns');
+    });
+
     test('mergeRegistered leaves items alone without the registry service', function (assert) {
         const service = this.owner.lookup('service:resource-action');
         service.initialize('driver');
@@ -73,5 +96,6 @@ module('Unit | Service | resource-action', function (hooks) {
         Object.defineProperty(service, 'resourceView', { value: null });
         const base = [{ id: 'edit' }];
         assert.strictEqual(service.mergeRegistered('details', 'actions', base), base);
+        assert.strictEqual(service.mergeRegisteredColumns(base), base);
     });
 });

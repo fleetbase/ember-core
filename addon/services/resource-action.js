@@ -170,6 +170,24 @@ export default class ResourceActionService extends Service {
     }
 
     /**
+     * This resource's table columns with registered columns and row actions
+     * merged in. For views that render their own `<Table>` rather than
+     * `<Layout::Resource::Tabular @registry=…>`, which merges by itself.
+     *
+     * @param {Array} columns The view's built-in columns
+     * @param {Object} context Extra view context (`controller`, `table`, …)
+     * @returns {Array}
+     */
+    mergeRegisteredColumns(columns = [], context = {}) {
+        if (!this.tableRegistry || !this.resourceView) {
+            return columns;
+        }
+
+        const merged = this.resourceView.mergeSlot(this.tableRegistry, 'columns', columns, context);
+        return this.resourceView.mergeRowActions(this.tableRegistry, merged, context);
+    }
+
+    /**
      * Initialize the service for store actions
      */
     initialize(modelName, options = {}) {
