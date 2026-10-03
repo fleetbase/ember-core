@@ -43,6 +43,7 @@ export default class ApplicationSerializer extends RESTSerializer {
             if (kind === 'belongsTo') {
                 const relationSnapshot = snapshot.belongsTo(key);
 
+                /* istanbul ignore next -- keyForRelationship is defined on the serializer prototype, so the fallback arm is unreachable */
                 key = this.keyForRelationship ? this.keyForRelationship(key, 'belongsTo', 'serialize') : key;
 
                 if (isNone(relationSnapshot)) {

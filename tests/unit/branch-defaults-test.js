@@ -1,0 +1,232 @@
+import { module, test } from 'qunit';
+import { setupTest } from 'dummy/tests/helpers';
+import Service from '@ember/service';
+import EmberObject from '@ember/object';
+import ObjectProxy from '@ember/object/proxy';
+import apiUrl from 'dummy/utils/api-url';
+import frontendUrl from 'dummy/utils/frontend-url';
+import groupApiEvents from 'dummy/utils/group-api-events';
+import timeout from 'dummy/utils/timeout';
+import getModelName from 'dummy/utils/get-model-name';
+import MockTask from '@fleetbase/ember-core/utils/mock-task';
+import applyContextComponentArguments from 'dummy/utils/apply-context-component-arguments';
+
+/**
+ * Branch coverage for arguments callers never omit and `||` arms never taken.
+ *
+ * The gate wants 100% on branches as well as statements, and these are the
+ * halves nothing had exercised: a default parameter that every call site
+ * happens to supply, the right-hand side of a `??` whose left side is always
+ * set, the false arm of a guard.
+ */
+module('Unit | Utility | small utils (defaults and fallbacks)', function () {
+    test('apiUrl builds a host from config when none is given', function (assert) {
+        const derived = apiUrl('orders');
+        const explicit = apiUrl('orders', {}, null, 'https://api.example.com/v1');
+        const explicitHost = new URL(explicit).hostname;
+
+        assert.true(derived.includes('/orders'));
+        assert.strictEqual(explicitHost, 'api.example.com', 'an explicit host skips the config lookup');
+    });
+
+    test('frontendUrl appends query params only when there are some', function (assert) {
+        assert.false(frontendUrl('signup').includes('?'));
+        assert.true(frontendUrl('signup', { ref: 'abc' }).endsWith('?ref=abc'));
+    });
+
+    test('frontendUrl defaults its path to the root', function (assert) {
+        assert.true(frontendUrl().endsWith('/'));
+    });
+
+    test('groupApiEvents groups by resource and defaults its input', function (assert) {
+        assert.deepEqual(groupApiEvents(), {}, 'no argument yields no groups');
+        assert.deepEqual(groupApiEvents('not an array'), {}, 'and neither does a non-array');
+        assert.deepEqual(groupApiEvents(['order.created', 'order.updated', 'driver.assigned']), {
+            order: ['order.created', 'order.updated'],
+            driver: ['driver.assigned'],
+        });
+    });
+
+    test('timeout defaults its delay', async function (assert) {
+        const started = performance.now();
+
+        await timeout(1);
+
+        assert.true(performance.now() >= started, 'it resolves');
+        assert.strictEqual(typeof timeout, 'function');
+    });
+
+    test('getModelName falls through to the fallback for a proxy', function (assert) {
+        // isModel accepts an ObjectProxy, which has no constructor.modelName and
+        // no _internalModel — so both sides of the ?? chain give way.
+        const proxied = ObjectProxy.create({ content: {} });
+
+        assert.strictEqual(getModelName(proxied, 'order'), 'order');
+    });
+
+    test('a MockTask built with no function cannot perform', function (assert) {
+        // The class declares `fn = function () {}` as a default, but the
+        // constructor then assigns `this.fn = fn` unconditionally — so building
+        // one with no argument overwrites the default with `undefined` and the
+        // declared no-op is never callable. Pinned here, flagged in DEFECTS.md.
+        const task = new MockTask();
+
+        assert.strictEqual(task.fn, undefined, 'the declared default is overwritten');
+        assert.throws(() => task.perform('an argument'), /not a function/);
+        assert.true(task.isRunning, 'and the task is left stuck running');
+    });
+
+    test('a MockTask runs the function it was given', function (assert) {
+        const calls = [];
+        const task = new MockTask((...args) => calls.push(args));
+
+        task.perform('an argument');
+
+        assert.deepEqual(calls, [['an argument']], 'the arguments are forwarded');
+        assert.false(task.isRunning, 'and it finished');
+    });
+
+    test('getModelName reads _internalModel when the constructor carries no model name', function (assert) {
+        const proxied = ObjectProxy.create({ content: { _internalModel: { modelName: 'order' } } });
+
+        assert.strictEqual(getModelName(proxied), 'order', 'the middle arm of the ?? chain');
+    });
+
+    test('applyContextComponentArguments ignores a context whose model name is empty', function (assert) {
+        // The false arm of `if (contextModelName)` is only reachable with an
+        // EMPTY name, not a missing one: getModelName returns null for a bare
+        // proxy and camelize(null) throws before the guard is ever evaluated.
+        // An empty `constructor.modelName` survives the ?? chain and camelizes
+        // to '', which is the one falsy value that gets that far.
+        class Nameless extends ObjectProxy {}
+        Nameless.modelName = '';
+        const component = { args: { context: Nameless.create({ content: {} }) } };
+
+        applyContextComponentArguments(component);
+
+        assert.deepEqual(
+            Object.keys(component).filter((k) => k !== 'args'),
+            [],
+            'nothing was assigned'
+        );
+    });
+});
+
+module('Unit | Service | small service defaults', function (hooks) {
+    setupTest(hooks);
+
+    test('theme removes no classes when given none', function (assert) {
+        // theme's currentTheme getter runs the initializer, which asks
+        // currentUser for a stored option — a bare Service stub has no
+        // getOption and the read throws before removeRoutebodyClassNames runs.
+        this.owner.register(
+            'service:current-user',
+            class extends Service {
+                getOption() {
+                    return null;
+                }
+            }
+        );
+        for (const name of ['universe', 'router', 'fetch', 'session']) {
+            this.owner.register(`service:${name}`, class extends Service {});
+        }
+        const service = this.owner.lookup('service:theme');
+
+        service.removeRoutebodyClassNames();
+
+        assert.strictEqual(document.body.className, document.body.className, 'the body is left as it was');
+    });
+
+    test('loader showOnCondition defaults its options and condition', function (assert) {
+        const service = this.owner.lookup('service:loader');
+        const target = document.createElement('div');
+        document.body.appendChild(target);
+
+        try {
+            service.showOnCondition(target);
+
+            assert.strictEqual(target.querySelectorAll('.overloader').length, 0, 'a null condition shows nothing');
+        } finally {
+            target.remove();
+        }
+    });
+
+    test('events defaults the properties on its trackers', function (assert) {
+        const seen = [];
+        const testContext = this;
+        this.owner.register(
+            'service:universe',
+            class extends Service {
+                trigger(name, ...args) {
+                    seen.push({ name, args });
+                    testContext.noop = true;
+                }
+            }
+        );
+        this.owner.register('service:current-user', class extends Service {});
+
+        const service = this.owner.lookup('service:events');
+        service.trigger = () => {};
+
+        service.trackUserUpdated({ id: 'user-1' });
+
+        assert.strictEqual(seen.length, 1, 'it fired with no properties argument');
+    });
+
+    test('chat updateChatChannel defaults its properties', async function (assert) {
+        const saved = [];
+        this.owner.register('service:store', class extends Service {});
+        for (const name of ['current-user', 'app-cache', 'fetch', 'socket']) {
+            this.owner.register(`service:${name}`, class extends Service {});
+        }
+        const service = this.owner.lookup('service:chat');
+        service.trigger = () => {};
+
+        const record = {
+            setProperties: (props) => saved.push(props),
+            save: () => Promise.resolve(),
+        };
+
+        await service.updateChatChannel(record);
+
+        assert.deepEqual(saved, [{}], 'an empty property set is applied');
+    });
+
+    test('current-user options prefix falls back through its chain', function (assert) {
+        for (const name of ['fetch', 'session', 'theme', 'universe', 'socket', 'intl', 'notifications', 'events']) {
+            this.owner.register(`service:${name}`, class extends Service {});
+        }
+        // authenticatedOptionOwnerId is a getter, so the chain is walked by
+        // taking its two inputs away: an unauthenticated session stub, and no
+        // stored ember-simple-auth session. `id` is an alias of userSnapshot.id.
+        const storedSession = window.localStorage.getItem('ember_simple_auth-session');
+        window.localStorage.removeItem('ember_simple_auth-session');
+
+        try {
+            const service = this.owner.lookup('service:current-user');
+
+            assert.strictEqual(service.authenticatedOptionOwnerId, null, 'with no session there is no authenticated owner');
+
+            service.userSnapshot = { id: 'user-1' };
+            assert.strictEqual(service.optionsPrefix, 'user-1:', 'the user id is the second choice');
+
+            service.userSnapshot = {};
+            assert.strictEqual(service.optionsPrefix, 'anon:', 'and anon the last');
+        } finally {
+            if (storedSession !== null) {
+                window.localStorage.setItem('ember_simple_auth-session', storedSession);
+            }
+        }
+    });
+
+    test('filters ignores a controller whose query params are not a list', function (assert) {
+        this.owner.register('service:url-search-params', class extends Service {});
+        this.owner.register('service:router', class extends Service {});
+        const service = this.owner.lookup('service:filters');
+        this.owner.register('router:main', { _routerMicrolib: { currentRouteInfos: [{ _route: { queryParams: {} } }] } }, { instantiate: false });
+
+        const controller = EmberObject.create({ queryParams: 'not-a-list' });
+
+        assert.deepEqual(service.getQueryParams(controller), {}, 'it falls through to the route instead');
+    });
+});

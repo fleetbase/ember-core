@@ -235,9 +235,6 @@ export default class Widget extends BaseContract {
      * @returns {Widget} This instance for chaining
      */
     withTitle(title) {
-        if (!this.options) {
-            this.options = {};
-        }
         this.options.title = title;
         this._options.options = this.options;
         return this;
@@ -251,9 +248,6 @@ export default class Widget extends BaseContract {
      * @returns {Widget} This instance for chaining
      */
     withRefreshInterval(milliseconds) {
-        if (!this.options) {
-            this.options = {};
-        }
         this.options.refreshInterval = milliseconds;
         this._options.options = this.options;
         return this;

@@ -8,6 +8,7 @@ export default class extends Ability {
     @tracked service;
     @tracked resource;
     @tracked ability;
+    /* istanbul ignore next -- the constructor assigns permissions unconditionally, so this default is never read */
     @tracked permissions = new Set();
 
     constructor() {

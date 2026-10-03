@@ -1,5 +1,5 @@
 import consoleUrl from './console-url';
-import config from '@fleetbase/console/config/environment';
+import config from 'ember-get-config';
 import { get } from '@ember/object';
 
 export default function apiUrl(path, queryParams = {}, subdomain = null, host = null) {

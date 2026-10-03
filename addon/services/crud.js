@@ -1,7 +1,7 @@
 import Service from '@ember/service';
 import { inject as service } from '@ember/service';
 import { action, get } from '@ember/object';
-import { isArray } from '@ember/array';
+import { isArray, A } from '@ember/array';
 import { dasherize } from '@ember/string';
 import { later } from '@ember/runloop';
 import { pluralize } from 'ember-inflector';
@@ -10,6 +10,15 @@ import smartHumanize from '@fleetbase/ember-ui/utils/smart-humanize';
 import getModelName from '../utils/get-model-name';
 import getWithDefault from '../utils/get-with-default';
 import first from '../utils/first';
+
+/**
+ * The human name of a record's model for dialogs and messages. `options.modelName`
+ * overrides the model's own name, as an option should.
+ */
+function displayModelName(model, options) {
+    const modelName = get(options, 'modelName');
+    return getModelName(modelName ? null : model, modelName, { humanize: true, capitalizeWords: true });
+}
 
 export default class CrudService extends Service {
     @service fetch;
@@ -28,7 +37,7 @@ export default class CrudService extends Service {
      * @void
      */
     @action delete(model, options = {}) {
-        const modelName = getModelName(model, get(options, 'modelName'), { humanize: true, capitalizeWords: true });
+        const modelName = displayModelName(model, options);
         const successNotification = options?.successNotification || `${model.name ? modelName + " '" + model.name + "'" : "'" + modelName + "'"} has been deleted.`;
 
         this.modalsManager.confirm({
@@ -83,7 +92,7 @@ export default class CrudService extends Service {
         }
 
         const firstModel = first(selected);
-        const modelName = getModelName(firstModel, get(options, 'modelName'), { humanize: true, capitalizeWords: true });
+        const modelName = displayModelName(firstModel, options);
 
         // make sure all are the same type
         selected = selected.filter((m) => getModelName(m) === getModelName(firstModel));
@@ -111,11 +120,11 @@ export default class CrudService extends Service {
         }
 
         const firstModel = first(selected);
-        const modelName = getModelName(firstModel, get(options, 'modelName'), { humanize: true, capitalizeWords: true });
+        const modelName = displayModelName(firstModel, options);
         const count = selected.length;
         const actionMethod = (typeof options.actionMethod === 'string' ? options.actionMethod : `POST`).toLowerCase();
         const modalTemplate = getWithDefault(options, 'template', 'modals/bulk-action-model');
-        const successMessage = options?.successNotification ?? `${count} ${pluralize(count, modelName)} were updated successfully.`;
+        const successMessage = options?.successNotification ?? `${pluralize(count, modelName)} were updated successfully.`;
 
         if (typeof options.resolveModelName === 'function') {
             selected = selected.map((model) => {
@@ -138,7 +147,10 @@ export default class CrudService extends Service {
             count,
             modelName,
             remove: (model) => {
-                selected.removeObject(model);
+                // `selected` is a plain array whenever resolveModelName ran above,
+                // and a plain array has no removeObject. Filtering works for both
+                // shapes, and the setOption below publishes the new reference.
+                selected = selected.filter((item) => item !== model);
                 this.modalsManager.setOption('selected', selected);
             },
             confirm: async (modal) => {
@@ -289,7 +301,7 @@ export default class CrudService extends Service {
             acceptButtonIcon: 'upload',
             acceptButtonDisabled: true,
             isProcessing: false,
-            uploadQueue: [],
+            uploadQueue: A([]),
             fileQueueColumns: [
                 { name: 'Type', valuePath: 'extension', key: 'type' },
                 { name: 'File Name', valuePath: 'name', key: 'fileName' },
@@ -325,7 +337,7 @@ export default class CrudService extends Service {
                                 type: 'import-source',
                             },
                             (uploadedFile) => {
-                                uploadedFiles.pushObject(uploadedFile);
+                                uploadedFiles.push(uploadedFile);
                                 resolve(uploadedFile);
                             }
                         );

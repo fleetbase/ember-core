@@ -1,116 +1,190 @@
 import { module, test } from 'qunit';
-import Service from '@ember/service';
 import { setupTest } from 'dummy/tests/helpers';
-import { setupUniverseRegistryStubs } from 'dummy/tests/helpers/universe-registry-stubs';
+import Service from '@ember/service';
+import Model, { attr } from '@ember-data/model';
 
+/**
+ * ResourceActionService is the base every model-specific action service extends
+ * (custom-fields-registry and report-actions today). These tests cover the
+ * synchronous surface it provides to subclasses — configuration, record naming,
+ * permission strings and instantiation — rather than the ember-concurrency
+ * tasks, which are driven through modals and the network.
+ */
 module('Unit | Service | resource-action', function (hooks) {
     setupTest(hooks);
-    setupUniverseRegistryStubs(hooks);
 
     hooks.beforeEach(function () {
-        // Provided by @fleetbase/ember-ui in a real console, which this addon's dummy app lacks.
-        this.owner.register('service:modals-manager', class extends Service {});
-        this.owner.register('service:resource-context-panel', class extends Service {});
-        // Their modules import ember-ui and `fetch`, which the dummy app cannot resolve.
-        this.owner.register('service:crud', class extends Service {});
-        this.owner.register('service:fetch', class extends Service {});
-        this.owner.lookup('service:universe/registry-service').clearAll();
-    });
+        this.abilityChecks = [];
+        this.allowed = true;
+        const testContext = this;
 
-    test('it exists', function (assert) {
-        let service = this.owner.lookup('service:resource-action');
-        assert.ok(service);
-    });
-
-    test('it derives registry names from the mount prefix and model name', function (assert) {
-        const service = this.owner.lookup('service:resource-action');
-        assert.strictEqual(service.tableRegistry, null, 'no registry before initialize');
-        assert.strictEqual(service.detailsRegistry, null);
-
-        service.initialize('driver');
-        assert.strictEqual(service.registryExtension, 'fleet-ops');
-        assert.strictEqual(service.tableRegistry, 'fleet-ops:table:driver');
-        assert.strictEqual(service.detailsRegistry, 'fleet-ops:details:driver');
-
-        service.initialize('ledger-invoice', { permissionPrefix: 'ledger', mountPrefix: 'console.ledger' });
-        assert.strictEqual(service.tableRegistry, 'ledger:table:invoice', 'the engine prefix is stripped from the model name');
-
-        service.initialize('api-credential', { permissionPrefix: 'developers', mountPrefix: 'console.developers', registryResource: 'api-key' });
-        assert.strictEqual(service.detailsRegistry, 'developers:details:api-key');
-
-        service.initialize('contact', { registryExtension: 'acme', registryResource: 'customer' });
-        assert.strictEqual(service.tableRegistry, 'acme:table:customer');
-
-        service.initialize(undefined);
-        assert.strictEqual(service.tableRegistry, null);
-    });
-
-    test('mergeRegistered merges into the resource slot', function (assert) {
-        const service = this.owner.lookup('service:resource-action');
-        const views = this.owner.lookup('service:universe/resource-view-service');
-        const base = [{ id: 'edit' }];
-
-        assert.strictEqual(service.mergeRegistered('details', 'actions', base), base, 'unchanged before initialize');
-
-        service.initialize('driver');
-        views.register('fleet-ops:details:driver:actions', { id: 'print' });
-        views.register('fleet-ops:table:driver:actions', { id: 'import' });
-
-        assert.deepEqual(
-            service.mergeRegistered('details', 'actions', base).map((b) => b.id),
-            ['edit', 'print']
+        this.owner.register(
+            'service:abilities',
+            class extends Service {
+                can(permission) {
+                    testContext.abilityChecks.push(permission);
+                    return testContext.allowed;
+                }
+            }
         );
-        assert.deepEqual(
-            service.mergeRegistered('table', 'actions').map((b) => b.id),
-            ['import']
-        );
+
+        for (const name of ['notifications', 'intl', 'modals-manager', 'crud', 'fetch', 'current-user', 'table-context', 'resource-context-panel', 'universe', 'events']) {
+            this.owner.register(`service:${name}`, class extends Service {});
+        }
+
+        class WidgetModel extends Model {
+            @attr('string') name;
+            @attr('string') display_name;
+            @attr('string') public_id;
+            @attr('string') label;
+        }
+
+        this.owner.register('model:widget', WidgetModel);
+        this.store = this.owner.lookup('service:store');
+        this.service = this.owner.lookup('service:resource-action');
     });
 
-    test('mergeRegisteredColumns merges columns and row actions', function (assert) {
-        const service = this.owner.lookup('service:resource-action');
-        const views = this.owner.lookup('service:universe/resource-view-service');
-        const columns = [{ id: 'name' }, { cellComponent: 'table/cell/dropdown', actions: [{ id: 'view' }] }];
+    module('initialize', function () {
+        test('it sets the model name and returns the service for chaining', function (assert) {
+            assert.strictEqual(this.service.initialize('widget'), this.service);
+            assert.strictEqual(this.service.modelName, 'widget');
+        });
 
-        assert.strictEqual(service.mergeRegisteredColumns(columns), columns, 'unchanged before initialize');
+        test('it applies the documented defaults', function (assert) {
+            this.service.initialize('widget');
 
-        service.initialize('vehicle');
-        views.register('fleet-ops:table:vehicle:columns', { id: 'score' });
-        views.register('fleet-ops:table:vehicle:row-actions', { id: 'ping' });
+            assert.strictEqual(this.service.modelNamePath, 'name');
+            assert.strictEqual(this.service.permissionPrefix, 'fleet-ops');
+            assert.strictEqual(this.service.mountPrefix, 'console.fleet-ops');
+        });
 
-        const merged = service.mergeRegisteredColumns(columns);
-        assert.deepEqual(
-            merged.map((column) => column.id),
-            ['name', 'score', undefined]
-        );
-        assert.deepEqual(
-            merged[2].actions.map((action) => action.id),
-            ['view', 'ping']
-        );
-        assert.deepEqual(service.mergeRegisteredColumns().length, 1, 'defaults to no built-in columns');
+        test('the mount prefix follows the permission prefix', function (assert) {
+            this.service.initialize('widget', { permissionPrefix: 'storefront' });
+
+            assert.strictEqual(this.service.mountPrefix, 'console.storefront');
+        });
+
+        test('an explicit mount prefix wins over the derived one', function (assert) {
+            this.service.initialize('widget', { permissionPrefix: 'storefront', mountPrefix: 'console.custom' });
+
+            assert.strictEqual(this.service.mountPrefix, 'console.custom');
+        });
+
+        test('option objects are merged into the defaults rather than replacing them', function (assert) {
+            this.service.defaultAttributes = { type: 'default', status: 'draft' };
+
+            this.service.initialize('widget', { defaultAttributes: { status: 'active' } });
+
+            assert.deepEqual(this.service.defaultAttributes, { type: 'default', status: 'active' }, 'existing keys survive and the supplied one wins');
+        });
+
+        test('a custom model name path is honoured', function (assert) {
+            this.service.initialize('widget', { modelNamePath: 'label' });
+
+            assert.strictEqual(this.service.modelNamePath, 'label');
+        });
     });
 
-    test('queryParamsFor adds registered filter params', function (assert) {
-        const service = this.owner.lookup('service:resource-action');
-        const views = this.owner.lookup('service:universe/resource-view-service');
-        const base = ['page', 'query'];
+    module('getRecordName', function () {
+        test('it prefers the configured model name path', function (assert) {
+            this.service.initialize('widget', { modelNamePath: 'label' });
+            const record = this.store.createRecord('widget', { label: 'Labelled', name: 'Named' });
 
-        assert.strictEqual(service.queryParamsFor(base), base, 'unchanged before initialize');
+            assert.strictEqual(this.service.getRecordName(record), 'Labelled');
+        });
 
-        service.initialize('ledger-invoice', { permissionPrefix: 'ledger', mountPrefix: 'console.ledger' });
-        views.register('ledger:table:invoice:columns', { id: 'po', filterable: true, filterParam: 'po_number' });
+        test('it falls back through name, display_name and public_id', function (assert) {
+            this.service.initialize('widget', { modelNamePath: 'missing' });
 
-        assert.deepEqual(service.queryParamsFor(base), ['page', 'query', 'po_number']);
-        assert.deepEqual(service.queryParamsFor(), ['po_number']);
+            assert.strictEqual(this.service.getRecordName(this.store.createRecord('widget', { name: 'Named' })), 'Named');
+            assert.strictEqual(this.service.getRecordName(this.store.createRecord('widget', { display_name: 'Displayed' })), 'Displayed');
+            assert.strictEqual(this.service.getRecordName(this.store.createRecord('widget', { public_id: 'PUB-1' })), 'PUB-1');
+        });
+
+        test('with nothing else to go on it falls back to the model name', function (assert) {
+            this.service.initialize('widget', { modelNamePath: 'missing' });
+
+            assert.strictEqual(this.service.getRecordName(this.store.createRecord('widget', {})), 'widget');
+        });
     });
 
-    test('mergeRegistered leaves items alone without the registry service', function (assert) {
-        const service = this.owner.lookup('service:resource-action');
-        service.initialize('driver');
-        // An engine built against an older ember-core has no such service.
-        Object.defineProperty(service, 'resourceView', { value: null });
-        const base = [{ id: 'edit' }];
-        assert.strictEqual(service.mergeRegistered('details', 'actions', base), base);
-        assert.strictEqual(service.mergeRegisteredColumns(base), base);
-        assert.strictEqual(service.queryParamsFor(base), base);
+    module('permissions', function () {
+        test('the permission getters compose prefix, verb and model', function (assert) {
+            this.service.initialize('widget');
+
+            assert.strictEqual(this.service.createPermission, 'fleet-ops create widget');
+            assert.strictEqual(this.service.savePermission, 'fleet-ops update widget');
+            assert.strictEqual(this.service.deletePermission, 'fleet-ops delete widget');
+            assert.strictEqual(this.service.viewPermission, 'fleet-ops view widget');
+        });
+
+        test('they follow a custom permission prefix', function (assert) {
+            this.service.initialize('widget', { permissionPrefix: 'storefront' });
+
+            assert.strictEqual(this.service.createPermission, 'storefront create widget');
+        });
+
+        test('can asks the abilities service with the composed permission', function (assert) {
+            this.service.initialize('widget');
+
+            assert.true(this.service.can('view'));
+            assert.deepEqual(this.abilityChecks, ['fleet-ops view widget']);
+        });
+
+        test('can accepts an explicit resource', function (assert) {
+            this.service.initialize('widget');
+
+            this.service.can('view', 'order');
+
+            assert.deepEqual(this.abilityChecks, ['fleet-ops view order']);
+        });
+
+        test('cannot is the inverse of can', function (assert) {
+            this.service.initialize('widget');
+
+            this.allowed = false;
+            assert.false(this.service.can('view'));
+            assert.true(this.service.cannot('view'));
+
+            this.allowed = true;
+            assert.false(this.service.cannot('view'));
+        });
+    });
+
+    module('createNewInstance', function () {
+        test('it creates a record of the configured model', function (assert) {
+            this.service.initialize('widget');
+
+            const record = this.service.createNewInstance({ name: 'New' });
+
+            assert.strictEqual(record.constructor.modelName, 'widget');
+            assert.strictEqual(record.name, 'New');
+        });
+
+        test('it applies the default attributes', function (assert) {
+            this.service.initialize('widget', { defaultAttributes: { name: 'Default' } });
+
+            assert.strictEqual(this.service.createNewInstance().name, 'Default');
+        });
+
+        test('supplied attributes win over the defaults', function (assert) {
+            this.service.initialize('widget', { defaultAttributes: { name: 'Default' } });
+
+            assert.strictEqual(this.service.createNewInstance({ name: 'Explicit' }).name, 'Explicit');
+        });
+    });
+
+    module('router resolution', function () {
+        test('it prefers the host router when an engine provides one', function (assert) {
+            const hostRouter = Service.extend().create();
+            this.owner.register('service:host-router', hostRouter, { instantiate: false });
+
+            assert.strictEqual(this.service.router, hostRouter);
+            assert.strictEqual(this.service.hostRouter, hostRouter, 'hostRouter aliases router');
+        });
+
+        test('it falls back to the application router', function (assert) {
+            assert.strictEqual(this.service.router, this.owner.lookup('service:router'));
+        });
     });
 });

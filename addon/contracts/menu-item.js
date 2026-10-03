@@ -33,7 +33,7 @@ import isObject from '../utils/is-object';
  * // Menu item with component
  * new MenuItem('Settings')
  *   .withComponent(new ExtensionComponent('@fleetbase/my-engine', 'components/settings'))
- *   .onClick((menuItem, router) => {
+ *   .withOnClick((menuItem, router) => {
  *     router.transitionTo('virtual', menuItem.slug);
  *   })
  *
@@ -248,13 +248,17 @@ export default class MenuItem extends BaseContract {
     }
 
     /**
-     * Set a click handler for the menu item
+     * Set a click handler for the menu item.
      *
-     * @method onClick
+     * `onClick` itself is the handler property every consumer calls, so the setter
+     * cannot share its name: an instance's `onClick` field would shadow it.
+     *
+     * @method withOnClick
      * @param {Function} handler Click handler function
      * @returns {MenuItem} This instance for chaining
      */
-    onClick(handler) {
+    withOnClick(handler) {
+        this.onClick = handler;
         this._options.onClick = handler;
         return this;
     }

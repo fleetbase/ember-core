@@ -6,8 +6,8 @@ export default function contextComponentCallback(component, name, ...params) {
         callbackInvoked = true;
     }
 
-    // now do for context options
-    if (typeof component.args.options === 'object' && typeof component.args.options[name] === 'function') {
+    // now do for context options; `typeof null` is also 'object', so guard for it
+    if (component.args.options && typeof component.args.options === 'object' && typeof component.args.options[name] === 'function') {
         component.args.options[name](...params);
         callbackInvoked = true;
     }

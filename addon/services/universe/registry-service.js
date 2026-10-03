@@ -31,6 +31,20 @@ import UniverseRegistry from '../../contracts/universe-registry';
  * @class RegistryService
  * @extends Service
  */
+/**
+ * Whether a helper is a class to instantiate (a `Helper` subclass) rather than a function.
+ */
+function isHelperClass(value) {
+    return typeof value.prototype?.compute === 'function';
+}
+
+/**
+ * Whether a registry item can carry a `_registryKey`: any object, or a class.
+ */
+function isKeyable(value) {
+    return (typeof value === 'object' && value !== null) || typeof value === 'function';
+}
+
 export default class RegistryService extends Service {
     @service('universe/extension-manager') extensionManager;
 
@@ -41,12 +55,38 @@ export default class RegistryService extends Service {
      */
     @tracked applicationInstance = null;
 
+    #registry = null;
+
     /**
-     * The singleton UniverseRegistry instance.
+     * The singleton UniverseRegistry instance, resolved on first use.
      * Initialized once and shared across the app and all engines.
+     *
+     * This is deliberately lazy. It was a field initializer, which runs during
+     * construction — before setApplicationInstance can possibly have been
+     * called — so #initializeRegistry's documented first choice, an explicitly
+     * set applicationInstance, could never be taken and every service fell back
+     * to the owner. HookService's registry was made lazy for the same reason.
+     *
      * @type {UniverseRegistry}
      */
-    registry = this.#initializeRegistry();
+    get registry() {
+        return this.#resolveRegistry();
+    }
+
+    /**
+     * Memoized resolution, kept out of the getter body so a property read is not
+     * itself an assignment.
+     *
+     * @private
+     * @returns {UniverseRegistry}
+     */
+    #resolveRegistry() {
+        if (!this.#registry) {
+            this.#registry = this.#initializeRegistry();
+        }
+
+        return this.#registry;
+    }
 
     /**
      * Getter for the registries TrackedMap.
@@ -152,14 +192,15 @@ export default class RegistryService extends Service {
     register(sectionName, listName, key, value) {
         const registry = this.getOrCreateList(sectionName, listName);
 
-        // Store the key with the value for lookups
-        if (typeof value === 'object' && value !== null) {
+        // Store the key with the value for lookups. A class (a renderable component) is
+        // keyed too, or nothing could look it up by name.
+        if (isKeyable(value)) {
             value._registryKey = key;
         }
 
         // Check if already exists
         const existing = registry.find((item) => {
-            if (typeof item === 'object' && item !== null) {
+            if (isKeyable(item)) {
                 return item._registryKey === key || item.slug === key || item.id === key || item.widgetId === key;
             }
             return false;
@@ -217,7 +258,7 @@ export default class RegistryService extends Service {
         const registry = this.getRegistry(sectionName, listName);
         return (
             registry.find((item) => {
-                if (typeof item === 'object' && item !== null) {
+                if (isKeyable(item)) {
                     return item._registryKey === key || item.slug === key || item.id === key || item.widgetId === key;
                 }
                 return false;
@@ -518,7 +559,8 @@ export default class RegistryService extends Service {
             }
         } else {
             // Direct function or class registration
-            const instantiate = options.instantiate !== undefined ? options.instantiate : typeof helperClassOrTemplateHelper !== 'function' || helperClassOrTemplateHelper.prototype;
+            // A Helper subclass is instantiated; a plain function helper is not, however it was written.
+            const instantiate = options.instantiate !== undefined ? options.instantiate : typeof helperClassOrTemplateHelper !== 'function' || isHelperClass(helperClassOrTemplateHelper);
 
             owner.register(`helper:${helperName}`, helperClassOrTemplateHelper, {
                 instantiate,
@@ -535,12 +577,8 @@ export default class RegistryService extends Service {
      * @returns {Promise<Function|Class|null>} The loaded helper or null if failed
      */
     async #loadHelperFromEngine(templateHelper) {
-        const owner = this.applicationInstance || getOwner(this);
-
-        if (!owner) {
-            return null;
-        }
-
+        // No owner check here: registerHelper is the only caller and has already
+        // returned on the identical expression, so a second one could never fire.
         try {
             // Ensure the engine is loaded (will load if not already loaded)
             const engineInstance = await this.extensionManager.ensureEngineLoaded(templateHelper.engineName);

@@ -18,6 +18,32 @@ module.exports = function (environment) {
             // Here you can pass flags/options to your application instance
             // when it is created
         },
+
+        // Mirrors the env var ember-cli-code-coverage instruments on, so the test
+        // suite only pays the cost of collecting and shipping coverage when asked.
+        coverageEnabled: process.env.COVERAGE === 'true',
+
+        // Configuration a host application is expected to provide. Several addon
+        // modules read these at import time (the fetch service touches
+        // API.host as soon as it is evaluated), so the dummy app has to supply
+        // them for those modules to be loadable at all.
+        API: {
+            host: 'https://api.fleetbase.test',
+            namespace: 'v1',
+        },
+
+        socket: {
+            hostname: 'socket.fleetbase.test',
+            secure: false,
+        },
+
+        osrm: {
+            host: 'https://routing.fleetbase.test',
+            servers: {
+                us: 'https://routing-us.fleetbase.test',
+                ca: 'https://routing-ca.fleetbase.test',
+            },
+        },
     };
 
     if (environment === 'development') {

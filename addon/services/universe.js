@@ -313,48 +313,7 @@ export default class UniverseService extends Service.extend(Evented) {
         return this.registryService.lookup(registryName, listName, key);
     }
 
-    // ============================================================================
-    // Resource View Registries (delegates to ResourceViewService)
-    // ============================================================================
-
-    /**
-     * Register columns, actions or buttons into a table or details view slot.
-     *
-     * @method registerInResourceView
-     * @param {String} registryName e.g. 'fleet-ops:table:driver:columns'
-     * @param {Object|Array} items TableColumn, ResourceAction or ActionButton contracts
-     * @returns {Boolean}
-     *
-     * @example
-     * universe.registerInResourceView('ledger:details:invoice:menu', new ResourceAction({ id: 'acme-print', label: 'Print', fn: (invoice) => … }));
-     */
-    registerInResourceView(registryName, items) {
-        return this.resourceViewService.register(registryName, items);
-    }
-
-    registerTableColumn(extension, resource, column) {
-        return this.resourceViewService.registerTableColumn(extension, resource, column);
-    }
-
-    registerRowAction(extension, resource, action) {
-        return this.resourceViewService.registerRowAction(extension, resource, action);
-    }
-
-    registerBulkAction(extension, resource, action) {
-        return this.resourceViewService.registerBulkAction(extension, resource, action);
-    }
-
-    registerTableAction(extension, resource, button) {
-        return this.resourceViewService.registerTableAction(extension, resource, button);
-    }
-
-    registerDetailsAction(extension, resource, button) {
-        return this.resourceViewService.registerDetailsAction(extension, resource, button);
-    }
-
-    registerDetailsMenuItem(extension, resource, action) {
-        return this.resourceViewService.registerDetailsMenuItem(extension, resource, action);
-    }
+    // =====================================================================    }
 
     // ============================================================================
     // Application Container Registration (delegates to RegistryService)
@@ -595,8 +554,10 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     get dashboardWidgets() {
         return {
-            defaultWidgets: this.widgetService.getDefaultWidgets(),
-            widgets: this.widgetService.getWidgets(),
+            // The dashboard the deprecated registerDashboardWidgets() and
+            // registerDefaultDashboardWidgets() register into.
+            defaultWidgets: this.widgetService.getDefaultWidgets('dashboard'),
+            widgets: this.widgetService.getWidgets('dashboard'),
         };
     }
 
@@ -688,25 +649,22 @@ export default class UniverseService extends Service.extend(Evented) {
      * @method transitionMenuItem
      * @param {String} route Route name
      * @param {Object} menuItem Menu item object with slug, view, and optional section
+     * @param {Object} options
+     * @param {Object} options.queryParams Query params to carry into the transition
      * @returns {Transition} The router transition
      */
     @action
-    transitionMenuItem(route, menuItem) {
+    transitionMenuItem(route, menuItem, options = {}) {
         const { slug, view, section } = menuItem;
+        const params = section && slug ? [section, slug] : [slug];
+        // The menu item's own view wins over a `view` among the carried query params.
+        const queryParams = { ...options.queryParams, ...(view ? { view } : {}) };
 
-        if (section && slug && view) {
-            return this.router.transitionTo(route, section, slug, { queryParams: { view } });
+        if (Object.keys(queryParams).length) {
+            return this.router.transitionTo(route, ...params, { queryParams });
         }
 
-        if (section && slug) {
-            return this.router.transitionTo(route, section, slug);
-        }
-
-        if (slug && view) {
-            return this.router.transitionTo(route, slug, { queryParams: { view } });
-        }
-
-        return this.router.transitionTo(route, slug);
+        return this.router.transitionTo(route, ...params);
     }
 
     /**
@@ -833,7 +791,7 @@ export default class UniverseService extends Service.extend(Evented) {
         if (options.type) menuItem.withType(options.type);
         if (options.wrapperClass) menuItem.withWrapperClass(options.wrapperClass);
         if (options.queryParams) menuItem.withQueryParams(options.queryParams);
-        if (options.onClick) menuItem.onClick(options.onClick);
+        if (options.onClick) menuItem.withOnClick(options.onClick);
 
         return menuItem.toObject();
     }

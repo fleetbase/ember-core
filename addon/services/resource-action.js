@@ -300,7 +300,6 @@ export default class ResourceActionService extends Service {
      */
     @action bulkDelete(selected = [], options = {}) {
         selected = [...(isArray(selected) ? selected : []), ...this.tableContext.getSelectedRows()];
-        if (!selected) return;
 
         options = { ...options, ...(this.bulkDeleteOptions ?? {}) };
         // if no direct fetchOptions use global fetch options if applicable
@@ -324,7 +323,6 @@ export default class ResourceActionService extends Service {
      */
     @action export(selections = [], options = {}) {
         selections = [...(isArray(selections) ? selections : []), ...this.tableContext.getSelectedIds()];
-        if (!selections) return;
 
         options = { ...options, ...(this.exportOptions ?? {}) };
         // if no direct fetchOptions use global fetch options if applicable

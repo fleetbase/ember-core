@@ -4,7 +4,7 @@ import getWithDefault from '../utils/get-with-default';
 
 export default class NotificationsService extends EmberNotificationsService {
     serverError(error, fallbackMessage = 'Oops! Something went wrong with your request.', options = {}) {
-        if (isArray(error.errors)) {
+        if (error && isArray(error.errors)) {
             const errors = getWithDefault(error, 'errors');
             const errorMessage = getWithDefault(errors, '0', fallbackMessage);
 
