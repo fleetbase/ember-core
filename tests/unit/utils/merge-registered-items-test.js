@@ -11,6 +11,7 @@ module('Unit | Utility | merge-registered-items', function () {
         assert.deepEqual(merged, base);
         assert.notStrictEqual(merged, base, 'the base array is not modified in place');
         assert.deepEqual(mergeRegisteredItems(null, null), []);
+        assert.deepEqual(mergeRegisteredItems(), [], 'every argument is optional');
         assert.deepEqual(mergeRegisteredItems(A([{ id: 'a' }]), A([{ id: 'b' }])).length, 2, 'Ember arrays are accepted');
     });
 

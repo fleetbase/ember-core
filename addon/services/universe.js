@@ -313,7 +313,48 @@ export default class UniverseService extends Service.extend(Evented) {
         return this.registryService.lookup(registryName, listName, key);
     }
 
-    // =====================================================================    }
+    // ============================================================================
+    // Resource View Registries (delegates to ResourceViewService)
+    // ============================================================================
+
+    /**
+     * Register columns, actions or buttons into a table or details view slot.
+     *
+     * @method registerInResourceView
+     * @param {String} registryName e.g. 'fleet-ops:table:driver:columns'
+     * @param {Object|Array} items TableColumn, ResourceAction or ActionButton contracts
+     * @returns {Boolean}
+     *
+     * @example
+     * universe.registerInResourceView('ledger:details:invoice:menu', new ResourceAction({ id: 'acme-print', label: 'Print', fn: (invoice) => … }));
+     */
+    registerInResourceView(registryName, items) {
+        return this.resourceViewService.register(registryName, items);
+    }
+
+    registerTableColumn(extension, resource, column) {
+        return this.resourceViewService.registerTableColumn(extension, resource, column);
+    }
+
+    registerRowAction(extension, resource, action) {
+        return this.resourceViewService.registerRowAction(extension, resource, action);
+    }
+
+    registerBulkAction(extension, resource, action) {
+        return this.resourceViewService.registerBulkAction(extension, resource, action);
+    }
+
+    registerTableAction(extension, resource, button) {
+        return this.resourceViewService.registerTableAction(extension, resource, button);
+    }
+
+    registerDetailsAction(extension, resource, button) {
+        return this.resourceViewService.registerDetailsAction(extension, resource, button);
+    }
+
+    registerDetailsMenuItem(extension, resource, action) {
+        return this.resourceViewService.registerDetailsMenuItem(extension, resource, action);
+    }
 
     // ============================================================================
     // Application Container Registration (delegates to RegistryService)

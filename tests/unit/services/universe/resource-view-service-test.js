@@ -2,6 +2,7 @@ import { module, test } from 'qunit';
 import { setupTest } from 'dummy/tests/helpers';
 import { setupUniverseRegistryStubs } from 'dummy/tests/helpers/universe-registry-stubs';
 import Service from '@ember/service';
+import { A } from '@ember/array';
 import { TableColumn, ResourceAction, ActionButton, MenuItem } from '@fleetbase/ember-core/contracts';
 
 module('Unit | Service | universe/resource-view-service', function (hooks) {
@@ -99,6 +100,7 @@ module('Unit | Service | universe/resource-view-service', function (hooks) {
         assert.deepEqual(this.service.merge('invalid', base), base);
         assert.deepEqual(this.service.merge('invalid'), []);
         assert.deepEqual(this.service.merge('fleet-ops:table:driver:row-actions', null), []);
+        assert.deepEqual(this.service.merge('fleet-ops:table:driver:row-actions', A([{ id: 'view' }])), [{ id: 'view' }], 'an Ember array comes back as a plain one');
 
         let received;
         this.service.register('fleet-ops:table:driver:row-actions', { id: 'sync', fn: (row, ctx) => (received = ctx) });
@@ -159,6 +161,11 @@ module('Unit | Service | universe/resource-view-service', function (hooks) {
             ['edit', 'print']
         );
         assert.deepEqual(this.service.mergeSlot('bad', 'actions', [{ id: 'edit' }]), [{ id: 'edit' }]);
+        assert.deepEqual(
+            this.service.mergeSlot('ledger:details:invoice', 'actions').map((b) => b.id),
+            ['print'],
+            'the built-in items are optional'
+        );
     });
 
     test('mergeRowActions merges into the dropdown column only', function (assert) {
@@ -167,6 +174,7 @@ module('Unit | Service | universe/resource-view-service', function (hooks) {
         assert.deepEqual(this.service.mergeRowActions('bad', columns), columns);
 
         this.service.register('fleet-ops:table:driver:row-actions', { id: 'sync' });
+        assert.deepEqual(this.service.mergeRowActions('fleet-ops:table:driver'), [], 'the columns are optional');
         const merged = this.service.mergeRowActions('fleet-ops:table:driver', columns);
         assert.strictEqual(merged[0], columns[0]);
         assert.deepEqual(

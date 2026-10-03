@@ -5,6 +5,7 @@ module('Unit | Contracts | resource view items', function () {
     test('every item requires an id', function (assert) {
         assert.throws(() => new TableColumn({ label: 'No id' }), /TableColumn requires an id/);
         assert.throws(() => new ResourceAction(), /ResourceAction requires an id/);
+        assert.throws(() => new TableColumn(), /TableColumn requires an id/);
         assert.throws(() => new ActionButton('not-an-object'), /ActionButton requires an id/);
     });
 

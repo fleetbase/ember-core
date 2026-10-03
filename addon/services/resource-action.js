@@ -113,9 +113,9 @@ export default class ResourceActionService extends Service {
 
     /**
      * The engine that owns this resource's views, used in its registry names.
-     * Derived from `mountPrefix` (`console.fleet-ops` → `fleet-ops`).
+     * Set by `initialize`, from `mountPrefix` (`console.fleet-ops` → `fleet-ops`).
      */
-    @tracked registryExtension = 'fleet-ops';
+    @tracked registryExtension;
 
     /**
      * The resource segment of this resource's registry names. Derived from the
@@ -128,10 +128,10 @@ export default class ResourceActionService extends Service {
      *
      * Looked up rather than injected: an engine built against an older
      * ember-core does not list it as a dependency, and a missing registry must
-     * leave the view exactly as it was.
+     * leave the view exactly as it was. Undefined when there is none.
      */
     get resourceView() {
-        return getOwner(this).lookup('service:universe/resource-view-service') ?? null;
+        return getOwner(this).lookup('service:universe/resource-view-service');
     }
 
     /**

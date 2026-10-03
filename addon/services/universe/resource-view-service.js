@@ -316,7 +316,7 @@ export default class ResourceViewService extends Service {
         // Copy descriptors rather than spreading: a view may pass lazy getters
         // (its table is set up after first render), and a spread would read
         // them now, during the render that merges.
-        return Object.defineProperties(base, Object.getOwnPropertyDescriptors(context ?? {}));
+        return Object.defineProperties(base, Object.getOwnPropertyDescriptors(context));
     }
 
     #can(permission) {

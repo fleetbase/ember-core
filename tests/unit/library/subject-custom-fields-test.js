@@ -379,6 +379,7 @@ module('Unit | Library | subject-custom-fields', function (hooks) {
             requires(assert, this.manager, 'file', 'file:0c1a-uuid', true, 'so is a file staged since the last save');
             requires(assert, this.manager, 'file', 'file:', false, 'but the bare prefix carries no file');
             requires(assert, this.manager, 'file', 'plain', false, 'a bare string is not');
+            requires(assert, this.manager, 'file', { url: 'x' }, false, 'nor is anything that is not a string');
         });
 
         test('an unrecognised type accepts any non-empty value', function (assert) {

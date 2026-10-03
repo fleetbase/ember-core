@@ -100,7 +100,7 @@ module('Unit | Utility | lookup-user-ip', function (hooks) {
             await lookupUserIp({ cache: false });
 
             assert.strictEqual(this.requested.length, 1);
-            assert.strictEqual(new URL(this.requested[0]).hostname, 'geoiplookup.io');
+            assert.strictEqual(new URL(this.requested[0]).hostname, 'json.geoiplookup.io');
         });
 
         test('a missing timezone falls back to the browser', async function (assert) {
