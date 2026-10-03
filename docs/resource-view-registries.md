@@ -7,14 +7,14 @@ Extensions can add **columns, row actions, bulk actions and toolbar buttons** to
 Every registry name follows one rule:
 
 ```
-<extension>:<surface>:<resource>:<slot>
+<extension>:<resource>:<surface>:<slot>
 ```
 
 | Segment     | Meaning                                                                                       | Examples                                                 |
 | ----------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | `extension` | The engine that **owns the view**. Always its console mount segment, as in `console.<extension>`. | `fleet-ops`, `storefront`, `ledger`, `iam`, `developers` |
-| `surface`   | `table` (an index or list view) or `details` (a details panel, page or dialog)                | `table`, `details`                                       |
 | `resource`  | The resource, singular and dasherized, with no engine prefix                                  | `driver`, `work-order`, `invoice`, `api-key`             |
+| `surface`   | `table` (an index or list view) or `details` (a details panel, page or dialog)                | `table`, `details`                                       |
 | `slot`      | What is being added (see below)                                                               | `columns`, `menu`                                        |
 
 | Surface   | Slot           | Adds                                     | Contract         |
@@ -25,12 +25,13 @@ Every registry name follows one rule:
 | `table`   | `actions`      | Toolbar buttons                          | `ActionButton`   |
 | `details` | `actions`      | Header buttons                           | `ActionButton`   |
 | `details` | `menu`         | Items in the header's "…" menu           | `ResourceAction` |
+| `details` | `tabs`         | Details tabs                             | `MenuItem`       |
 
 **`actions` are always header buttons.** Dropdown items are `row-actions`, `bulk-actions` or `menu`.
 
-Examples: `fleet-ops:table:driver:columns`, `ledger:details:invoice:menu`, `iam:table:user:row-actions`, `developers:details:webhook:actions`.
+Examples: `fleet-ops:driver:table:columns`, `ledger:invoice:details:menu`, `iam:user:table:row-actions`, `developers:webhook:details:actions`.
 
-Details **tabs** keep their original registry, `<extension>:component:<resource>:details`, registered with `menuService.registerMenuItem` or `resourceView.registerDetailsTab(extension, resource, menuItem)`.
+Details **tabs** are stored in their original registry, `<extension>:component:<resource>:details`. `<extension>:<resource>:details:tabs` is an alias for it, so `views.register('fleet-ops:driver:details:tabs', menuItem)`, `resourceView.registerDetailsTab('fleet-ops', 'driver', menuItem)` and `menuService.registerMenuItem('fleet-ops:component:driver:details', menuItem)` all add the same kind of tab, and `views.get('fleet-ops:driver:details:tabs')` lists them all.
 
 Names are validated. A name that breaks the rule, an item without an `id`, or a contract in the wrong slot is rejected with a warning.
 
@@ -46,7 +47,7 @@ export default {
         const views = universe.getService('resource-view');
 
         views.register(
-            'fleet-ops:table:driver:columns',
+            'fleet-ops:driver:table:columns',
             new TableColumn({ id: 'safety-score', label: 'Safety Score', valuePath: 'meta.safety_score' })
                 .after('status')
                 .withCellComponent(new ExtensionComponent('@acme/engine', 'cell/safety-score'))
@@ -54,15 +55,15 @@ export default {
         );
 
         views.register(
-            'fleet-ops:table:driver:row-actions',
+            'fleet-ops:driver:table:row-actions',
             new ResourceAction({ id: 'acme-sync', label: 'Sync to Acme', icon: 'sync', permission: 'acme sync driver' })
                 .withHandler((driver, ctx) => ctx.owner.lookup('service:acme').sync(driver))
                 .before('delete')
         );
 
-        views.register('ledger:table:invoice:bulk-actions', new ResourceAction({ id: 'acme-export', label: 'Export to Acme', fn: (invoices) => {} }));
-        views.register('iam:table:user:actions', new ActionButton({ id: 'acme-import', text: 'Import from Acme', icon: 'download', onClick: (ctx) => {} }));
-        views.register('storefront:details:order:menu', new ResourceAction({ id: 'acme-print', label: 'Print label', fn: (order) => {} }));
+        views.register('ledger:invoice:table:bulk-actions', new ResourceAction({ id: 'acme-export', label: 'Export to Acme', fn: (invoices) => {} }));
+        views.register('iam:user:table:actions', new ActionButton({ id: 'acme-import', text: 'Import from Acme', icon: 'download', onClick: (ctx) => {} }));
+        views.register('storefront:order:details:menu', new ResourceAction({ id: 'acme-print', label: 'Print label', fn: (order) => {} }));
 
         // The same, with the name built for you:
         views.registerRowAction('fleet-ops', 'vehicle', new ResourceAction({ id: 'acme-ping', label: 'Ping tracker', fn: (vehicle) => {} }));
@@ -115,10 +116,10 @@ A column's `valuePath` only works if the API resource returns that field. For ex
 
 **Built into the layout components.** Pass `@registry` with the surface prefix. Registered items are then merged automatically:
 
-- `<Layout::Resource::Tabular @registry="ledger:table:invoice">`: columns, row actions, bulk actions and toolbar buttons.
+- `<Layout::Resource::Tabular @registry="ledger:invoice:table">`: columns, row actions, bulk actions and toolbar buttons.
 - `<Layout::Resource::TabularActions @registry=…>`: toolbar buttons and bulk actions.
-- `<Layout::Resource::Panel @registry="ledger:details:invoice">`: header buttons and menu items.
-- `resourceContextPanel.open({ registry: 'storefront:details:order', … })`: header buttons and menu items.
+- `<Layout::Resource::Panel @registry="ledger:invoice:details">`: header buttons and menu items.
+- `resourceContextPanel.open({ registry: 'storefront:order:details', … })`: header buttons and menu items.
 
 **In views that render their own markup:**
 

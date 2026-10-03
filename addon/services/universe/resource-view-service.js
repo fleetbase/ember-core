@@ -4,7 +4,7 @@ import { isArray } from '@ember/array';
 import { getOwner } from '@ember/application';
 import mergeRegisteredItems from '../../utils/merge-registered-items';
 import isObject from '../../utils/is-object';
-import { parseRegistryName, parseRegistryPrefix, buildRegistryName, resourceRegistryNames, detailsTabsRegistryName } from '../../utils/resource-view-registry';
+import { parseRegistryName, parseRegistryPrefix, buildRegistryName, resourceRegistryNames } from '../../utils/resource-view-registry';
 
 /**
  * ResourceViewService
@@ -12,7 +12,7 @@ import { parseRegistryName, parseRegistryPrefix, buildRegistryName, resourceRegi
  * Lets extensions add columns, actions and buttons to the table and details
  * views of any engine, and lets those views merge them in.
  *
- * Registry names follow `<extension>:<surface>:<resource>:<slot>`:
+ * Registry names follow `<extension>:<resource>:<surface>:<slot>`:
  *
  * | surface   | slot           | adds                                     | contract         |
  * |-----------|----------------|------------------------------------------|------------------|
@@ -22,14 +22,17 @@ import { parseRegistryName, parseRegistryPrefix, buildRegistryName, resourceRegi
  * | `table`   | `actions`      | toolbar buttons                          | `ActionButton`   |
  * | `details` | `actions`      | details header buttons                   | `ActionButton`   |
  * | `details` | `menu`         | items in the details header's "…" menu   | `ResourceAction` |
+ * | `details` | `tabs`         | details tabs                             | `MenuItem`       |
  *
  * Items are stored in the shared universe registry: the section is the full
  * registry name and the list is the contract type, e.g.
- * `registryService.getRegistry('fleet-ops:table:driver:columns', 'table-column')`.
+ * `registryService.getRegistry('fleet-ops:driver:table:columns', 'table-column')`.
+ * Tabs are the exception: `<extension>:<resource>:details:tabs` is an alias for the
+ * legacy tab registry, `<extension>:component:<resource>:details`.
  *
  * @example
  * const views = universe.getService('resource-view');
- * views.register('fleet-ops:table:driver:row-actions', new ResourceAction({ id: 'acme-sync', label: 'Sync', fn: (driver) => … }));
+ * views.register('fleet-ops:driver:table:row-actions', new ResourceAction({ id: 'acme-sync', label: 'Sync', fn: (driver) => … }));
  * views.registerTableColumn('ledger', 'invoice', new TableColumn({ id: 'po', label: 'PO', valuePath: 'meta.po' }));
  *
  * @class ResourceViewService
@@ -70,7 +73,10 @@ export default class ResourceViewService extends Service {
      */
     declare(extension, resources = []) {
         const names = resources.flatMap((resource) => resourceRegistryNames(extension, resource));
-        names.forEach((name) => this.registryService.getOrCreateList(name, parseRegistryName(name).list));
+        names.forEach((name) => {
+            const { section, list } = parseRegistryName(name);
+            this.registryService.getOrCreateList(section, list);
+        });
         return names;
     }
 
@@ -84,14 +90,14 @@ export default class ResourceViewService extends Service {
      * Rejects, with a warning, a name that does not follow the convention, an
      * item without an `id`, and a contract that does not belong in the slot.
      *
-     * @param {String} registryName e.g. `fleet-ops:table:driver:columns`
+     * @param {String} registryName e.g. `fleet-ops:driver:table:columns`
      * @param {Object|Array} items Contracts or plain objects
      * @returns {Boolean} Whether every item was registered
      */
     register(registryName, items) {
         const parsed = parseRegistryName(registryName);
         if (!parsed) {
-            warn(`[resource-view] "${registryName}" is not a valid registry name. Use <extension>:<table|details>:<resource>:<slot>.`, false, {
+            warn(`[resource-view] "${registryName}" is not a valid registry name. Use <extension>:<resource>:<table|details>:<slot>.`, false, {
                 id: 'resource-view.invalid-name',
             });
             return false;
@@ -101,37 +107,37 @@ export default class ResourceViewService extends Service {
     }
 
     registerTableColumn(extension, resource, column) {
-        return this.register(buildRegistryName(extension, 'table', resource, 'columns'), column);
+        return this.register(buildRegistryName(extension, resource, 'table', 'columns'), column);
     }
 
     registerRowAction(extension, resource, action) {
-        return this.register(buildRegistryName(extension, 'table', resource, 'row-actions'), action);
+        return this.register(buildRegistryName(extension, resource, 'table', 'row-actions'), action);
     }
 
     registerBulkAction(extension, resource, action) {
-        return this.register(buildRegistryName(extension, 'table', resource, 'bulk-actions'), action);
+        return this.register(buildRegistryName(extension, resource, 'table', 'bulk-actions'), action);
     }
 
     registerTableAction(extension, resource, button) {
-        return this.register(buildRegistryName(extension, 'table', resource, 'actions'), button);
+        return this.register(buildRegistryName(extension, resource, 'table', 'actions'), button);
     }
 
     registerDetailsAction(extension, resource, button) {
-        return this.register(buildRegistryName(extension, 'details', resource, 'actions'), button);
+        return this.register(buildRegistryName(extension, resource, 'details', 'actions'), button);
     }
 
     registerDetailsMenuItem(extension, resource, action) {
-        return this.register(buildRegistryName(extension, 'details', resource, 'menu'), action);
+        return this.register(buildRegistryName(extension, resource, 'details', 'menu'), action);
     }
 
     /**
-     * Register a details tab. Tabs keep their original registry name,
-     * `<extension>:component:<resource>:details`.
+     * Register a details tab, through `<extension>:<resource>:details:tabs`, the
+     * alias for `<extension>:component:<resource>:details`.
      *
-     * @returns {void}
+     * @returns {Boolean}
      */
     registerDetailsTab(extension, resource, menuItem) {
-        return this.menuService.registerMenuItem(detailsTabsRegistryName(extension, resource), menuItem);
+        return this.register(buildRegistryName(extension, resource, 'details', 'tabs'), menuItem);
     }
 
     /**
@@ -147,12 +153,12 @@ export default class ResourceViewService extends Service {
             return false;
         }
 
-        const item = this.registryService.lookup(registryName, parsed.list, id);
+        const item = this.registryService.lookup(parsed.section, parsed.list, id);
         if (!item) {
             return false;
         }
 
-        this.registryService.getRegistry(registryName, parsed.list).removeObject(item);
+        this.registryService.getRegistry(parsed.section, parsed.list).removeObject(item);
         return true;
     }
 
@@ -168,7 +174,7 @@ export default class ResourceViewService extends Service {
      */
     get(registryName) {
         const parsed = parseRegistryName(registryName);
-        return parsed ? this.registryService.getRegistry(registryName, parsed.list) : [];
+        return parsed ? this.registryService.getRegistry(parsed.section, parsed.list) : [];
     }
 
     /**
@@ -200,7 +206,7 @@ export default class ResourceViewService extends Service {
 
     /**
      * Merge one slot of a surface, addressed by the `@registry` prefix a layout
-     * component receives (`fleet-ops:table:driver`) plus the slot name.
+     * component receives (`fleet-ops:driver:table`) plus the slot name.
      *
      * @param {String} prefix
      * @param {String} slot
@@ -221,7 +227,7 @@ export default class ResourceViewService extends Service {
      * A table's row-actions column with registered row actions merged into its
      * `actions`. Returns the column list unchanged when nothing is registered.
      *
-     * @param {String} prefix A table prefix, e.g. `fleet-ops:table:driver`
+     * @param {String} prefix A table prefix, e.g. `fleet-ops:driver:table`
      * @param {Array} columns
      * @param {Object} context
      * @returns {Array}
@@ -259,7 +265,7 @@ export default class ResourceViewService extends Service {
      * @returns {Array}
      */
     queryParamsFor(extension, resource, baseQueryParams = []) {
-        const registryName = buildRegistryName(extension, 'table', resource, 'columns');
+        const registryName = buildRegistryName(extension, resource, 'table', 'columns');
         this.#resolvedQueryParams.add(registryName);
 
         const queryParams = [...baseQueryParams];
@@ -277,6 +283,18 @@ export default class ResourceViewService extends Service {
     // ========================================================================
 
     #registerItem(parsed, item) {
+        // Tabs go to the legacy tab registry, through the menu service, which keys and
+        // wraps menu items as every other tab registration expects.
+        if (parsed.slot === 'tabs') {
+            if (!isObject(item)) {
+                warn(`[resource-view] Tabs registered into "${parsed.name}" must be MenuItems or menu item objects.`, false, { id: 'resource-view.invalid-tab' });
+                return false;
+            }
+
+            this.menuService.registerMenuItem(parsed.section, item);
+            return true;
+        }
+
         const value = normalizeItem(item);
 
         if (!value || !value.id) {
@@ -299,7 +317,7 @@ export default class ResourceViewService extends Service {
             );
         }
 
-        this.registryService.register(parsed.name, parsed.list, value.id, { ...value, _contractType: parsed.list });
+        this.registryService.register(parsed.section, parsed.list, value.id, { ...value, _contractType: parsed.list });
         return true;
     }
 

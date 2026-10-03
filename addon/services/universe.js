@@ -321,12 +321,12 @@ export default class UniverseService extends Service.extend(Evented) {
      * Register columns, actions or buttons into a table or details view slot.
      *
      * @method registerInResourceView
-     * @param {String} registryName e.g. 'fleet-ops:table:driver:columns'
+     * @param {String} registryName e.g. 'fleet-ops:driver:table:columns'
      * @param {Object|Array} items TableColumn, ResourceAction or ActionButton contracts
      * @returns {Boolean}
      *
      * @example
-     * universe.registerInResourceView('ledger:details:invoice:menu', new ResourceAction({ id: 'acme-print', label: 'Print', fn: (invoice) => … }));
+     * universe.registerInResourceView('ledger:invoice:details:menu', new ResourceAction({ id: 'acme-print', label: 'Print', fn: (invoice) => … }));
      */
     registerInResourceView(registryName, items) {
         return this.resourceViewService.register(registryName, items);

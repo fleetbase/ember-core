@@ -15,7 +15,7 @@ module('Unit | Service | universe (resource view facade)', function (hooks) {
     test('the resource view facade delegates to the resource view service', function (assert) {
         const views = this.owner.lookup('service:universe/resource-view-service');
 
-        assert.true(this.universe.registerInResourceView('fleet-ops:table:driver:columns', new TableColumn({ id: 'a' })));
+        assert.true(this.universe.registerInResourceView('fleet-ops:driver:table:columns', new TableColumn({ id: 'a' })));
         assert.true(this.universe.registerTableColumn('fleet-ops', 'driver', new TableColumn({ id: 'b' })));
         assert.true(this.universe.registerRowAction('fleet-ops', 'driver', new ResourceAction({ id: 'c' })));
         assert.true(this.universe.registerBulkAction('fleet-ops', 'driver', new ResourceAction({ id: 'd' })));

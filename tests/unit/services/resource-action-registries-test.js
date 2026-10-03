@@ -24,17 +24,17 @@ module('Unit | Service | resource-action (registries)', function (hooks) {
 
         service.initialize('driver');
         assert.strictEqual(service.registryExtension, 'fleet-ops');
-        assert.strictEqual(service.tableRegistry, 'fleet-ops:table:driver');
-        assert.strictEqual(service.detailsRegistry, 'fleet-ops:details:driver');
+        assert.strictEqual(service.tableRegistry, 'fleet-ops:driver:table');
+        assert.strictEqual(service.detailsRegistry, 'fleet-ops:driver:details');
 
         service.initialize('ledger-invoice', { permissionPrefix: 'ledger', mountPrefix: 'console.ledger' });
-        assert.strictEqual(service.tableRegistry, 'ledger:table:invoice', 'the engine prefix is stripped from the model name');
+        assert.strictEqual(service.tableRegistry, 'ledger:invoice:table', 'the engine prefix is stripped from the model name');
 
         service.initialize('api-credential', { permissionPrefix: 'developers', mountPrefix: 'console.developers', registryResource: 'api-key' });
-        assert.strictEqual(service.detailsRegistry, 'developers:details:api-key');
+        assert.strictEqual(service.detailsRegistry, 'developers:api-key:details');
 
         service.initialize('contact', { registryExtension: 'acme', registryResource: 'customer' });
-        assert.strictEqual(service.tableRegistry, 'acme:table:customer');
+        assert.strictEqual(service.tableRegistry, 'acme:customer:table');
 
         service.initialize(undefined);
         assert.strictEqual(service.tableRegistry, null);
@@ -48,8 +48,8 @@ module('Unit | Service | resource-action (registries)', function (hooks) {
         assert.strictEqual(service.mergeRegistered('details', 'actions', base), base, 'unchanged before initialize');
 
         service.initialize('driver');
-        views.register('fleet-ops:details:driver:actions', { id: 'print' });
-        views.register('fleet-ops:table:driver:actions', { id: 'import' });
+        views.register('fleet-ops:driver:details:actions', { id: 'print' });
+        views.register('fleet-ops:driver:table:actions', { id: 'import' });
 
         assert.deepEqual(
             service.mergeRegistered('details', 'actions', base).map((b) => b.id),
@@ -69,8 +69,8 @@ module('Unit | Service | resource-action (registries)', function (hooks) {
         assert.strictEqual(service.mergeRegisteredColumns(columns), columns, 'unchanged before initialize');
 
         service.initialize('vehicle');
-        views.register('fleet-ops:table:vehicle:columns', { id: 'score' });
-        views.register('fleet-ops:table:vehicle:row-actions', { id: 'ping' });
+        views.register('fleet-ops:vehicle:table:columns', { id: 'score' });
+        views.register('fleet-ops:vehicle:table:row-actions', { id: 'ping' });
 
         const merged = service.mergeRegisteredColumns(columns);
         assert.deepEqual(
@@ -92,7 +92,7 @@ module('Unit | Service | resource-action (registries)', function (hooks) {
         assert.strictEqual(service.queryParamsFor(base), base, 'unchanged before initialize');
 
         service.initialize('ledger-invoice', { permissionPrefix: 'ledger', mountPrefix: 'console.ledger' });
-        views.register('ledger:table:invoice:columns', { id: 'po', filterable: true, filterParam: 'po_number' });
+        views.register('ledger:invoice:table:columns', { id: 'po', filterable: true, filterParam: 'po_number' });
 
         assert.deepEqual(service.queryParamsFor(base), ['page', 'query', 'po_number']);
         assert.deepEqual(service.queryParamsFor(), ['po_number']);

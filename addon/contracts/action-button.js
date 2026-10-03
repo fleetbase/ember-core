@@ -2,8 +2,8 @@ import ResourceViewItem from './resource-view-item';
 
 /**
  * A header button an extension adds to a view: the table toolbar
- * (`<extension>:table:<resource>:actions`) or the details header
- * (`<extension>:details:<resource>:actions`).
+ * (`<extension>:<resource>:table:actions`) or the details header
+ * (`<extension>:<resource>:details:actions`).
  *
  * Renders as a plain button calling `onClick(ctx)`, as a dropdown when it has
  * `items` (each an action receiving `(resource, ctx)`), or as `component`, which

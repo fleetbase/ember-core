@@ -135,19 +135,19 @@ export default class ResourceActionService extends Service {
     }
 
     /**
-     * The table registry prefix for this resource, e.g. `fleet-ops:table:driver`.
+     * The table registry prefix for this resource, e.g. `fleet-ops:driver:table`.
      * Pass it to `<Layout::Resource::Tabular @registry=…>`.
      */
     get tableRegistry() {
-        return this.registryResource ? `${this.registryExtension}:table:${this.registryResource}` : null;
+        return this.registryResource ? `${this.registryExtension}:${this.registryResource}:table` : null;
     }
 
     /**
-     * The details registry prefix for this resource, e.g. `fleet-ops:details:driver`.
+     * The details registry prefix for this resource, e.g. `fleet-ops:driver:details`.
      * Pass it to `<Layout::Resource::Panel @registry=…>`.
      */
     get detailsRegistry() {
-        return this.registryResource ? `${this.registryExtension}:details:${this.registryResource}` : null;
+        return this.registryResource ? `${this.registryExtension}:${this.registryResource}:details` : null;
     }
 
     /**

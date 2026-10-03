@@ -2,7 +2,7 @@ import ResourceViewItem from './resource-view-item';
 
 /**
  * A column an extension adds to a table view, registered into
- * `<extension>:table:<resource>:columns`.
+ * `<extension>:<resource>:table:columns`.
  *
  * Accepts every key a built-in column does (`label`, `valuePath`,
  * `cellComponent`, `width`, `sticky`, `sortable`, `resizable`, `hidden`, and the

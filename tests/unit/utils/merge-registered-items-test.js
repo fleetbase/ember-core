@@ -79,7 +79,7 @@ module('Unit | Utility | merge-registered-items', function () {
     });
 
     test('row and bulk actions receive the target then the context', function (assert) {
-        const context = { registry: 'fleet-ops:table:driver:row-actions' };
+        const context = { registry: 'fleet-ops:driver:table:row-actions' };
         const calls = [];
         const [action] = mergeRegisteredItems([], [{ id: 'sync', fn: (...args) => calls.push(args), isVisible: (row, ctx) => row.active && ctx === context }], {
             slot: 'row-actions',
