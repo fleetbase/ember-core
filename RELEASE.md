@@ -1,4 +1,4 @@
-> v0.3.25 ~ "Resource view registries: extensions can add columns, actions and buttons to any table or details view"
+> v0.3.25 ~ "Resource view registries, 100% test coverage, and fixes for every recorded defect"
 
 ---
 ## Highlights
@@ -9,6 +9,24 @@
   - New `ResourceActionService` helpers: `tableRegistry`, `detailsRegistry`, `mergeRegisteredColumns()` and `queryParamsFor()`.
   - Guide: `docs/resource-view-registries.md`.
   - Rendering ships in fleetbase/ember-ui v0.4.5.
+- **Verified 100% test coverage.** Statements, branches, functions and lines are all at 100%, checked per file by a CI gate, with results on Codecov. Writing the tests turned up the defects listed in `DEFECTS.md`, and every one is fixed in this release.
+- **Fixes from `DEFECTS.md`:**
+  - `crud`:
+    - bulk-action messages no longer print the count twice;
+    - the import dialog accepts files;
+    - a `modelName` option now overrides the model's own name.
+  - `fetch`:
+    - a bare `Content-Type` such as `text/csv` is read correctly;
+    - a filename the caller passes wins over the `content-disposition` header;
+    - `cachedGet` expires a month-old cache.
+  - `filters` understand Ember's mapped query params.
+  - The organization and user account menus no longer show each other's items.
+  - Sign-in failures abort and invalidate once, and the session's seconds remaining is positive until it expires.
+  - The user is warned when their location cannot be detected.
+  - Reopening a chat keeps the other open chats.
+  - Menu items registered by title no longer replace each other.
+  - `MenuItem`'s chaining click setter is now `withOnClick()`.
+  - `loadSubjectCustomFields` rejects when loading fails, so callers can tell a failure from a subject with no custom fields.
 - **Header shortcuts keep their permission.** `registerHeaderMenuItem` now carries `permission` onto each shortcut, or inherits the parent's, so the header can hide shortcuts a user cannot open.
 - **Fix: a required file custom field rejected a file uploaded in the same session.** A freshly staged `file:<uuid>` value now counts as present.
 - **Fix: the universe registry facade.** `getRegistry`, `registerInRegistry`, `lookupFromRegistry`, `getMenuItemsFromRegistry` and `getMenuPanelsFromRegistry` passed the wrong arguments and returned nothing.
