@@ -24,6 +24,7 @@ export const hostServices = [
     'universe/registry-service',
     'universe/hook-service',
     'universe/widget-service',
+    'universe/resource-view-service',
     'universe/extension-manager',
     'events',
     'intl',

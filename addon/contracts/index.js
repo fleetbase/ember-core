@@ -15,3 +15,7 @@ export { default as MenuPanel } from './menu-panel';
 export { default as Hook } from './hook';
 export { default as Widget } from './widget';
 export { default as Registry } from './registry';
+export { default as ResourceViewItem } from './resource-view-item';
+export { default as TableColumn } from './table-column';
+export { default as ResourceAction } from './resource-action';
+export { default as ActionButton } from './action-button';

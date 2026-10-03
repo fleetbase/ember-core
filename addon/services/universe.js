@@ -30,6 +30,7 @@ export default class UniverseService extends Service.extend(Evented) {
     @service('universe/menu-service') menuService;
     @service('universe/widget-service') widgetService;
     @service('universe/hook-service') hookService;
+    @service('universe/resource-view-service') resourceViewService;
     @service router;
     @service intl;
     @service urlSearchParams;
@@ -78,6 +79,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * - "hooks" or "hook" -> universe/hook-service
      * - "widgets" or "widget" -> universe/widget-service
      * - "registry" -> universe/registry-service
+     * - "resource-view" or "resourceView" -> universe/resource-view-service
      *
      * @method getService
      * @param {String} serviceName Service name in various formats
@@ -104,6 +106,9 @@ export default class UniverseService extends Service.extend(Evented) {
                 'widget-service': 'widget-service',
                 registry: 'registry-service',
                 'registry-service': 'registry-service',
+                'resource-view': 'resource-view-service',
+                'resource-views': 'resource-view-service',
+                'resource-view-service': 'resource-view-service',
             };
 
             const mappedName = nameMapping[kebabCase] || kebabCase;
@@ -307,6 +312,8 @@ export default class UniverseService extends Service.extend(Evented) {
     lookupFromRegistry(registryName, key, listName = 'menu-item') {
         return this.registryService.lookup(registryName, listName, key);
     }
+
+    // =====================================================================    }
 
     // ============================================================================
     // Application Container Registration (delegates to RegistryService)
