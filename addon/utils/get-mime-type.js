@@ -1,25 +1,23 @@
+const MIME_TYPES = {
+    pdf: 'application/pdf',
+    zip: 'application/zip',
+    doc: 'application/msword',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    png: 'image/png',
+    jpeg: 'image/jpeg',
+    jpg: 'image/jpeg',
+    csv: 'text/csv',
+};
+
+/**
+ * The mime type for a file name, from its extension, or null when it is not one we know.
+ *
+ * @param {String} fileName
+ * @returns {String|null}
+ */
 export default function getMimeType(fileName) {
-    const map = {
-        pdf: 'application/pdf',
-        zip: 'application/zip',
-        doc: 'application/msword',
-        xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        png: 'image/png',
-        jpeg: 'image/jpg',
-        jpg: 'image/jpg',
-        csv: 'text/csv',
-    };
+    const extension = String(fileName).split('.').pop().toLowerCase();
 
-    const extensions = Object.keys(map);
-
-    for (let index = 0; index < extensions.length; index++) {
-        const ext = extensions.objectAt(index);
-
-        if (fileName.endsWith(ext)) {
-            return ext;
-        }
-    }
-
-    return null;
+    return MIME_TYPES[extension] ?? null;
 }

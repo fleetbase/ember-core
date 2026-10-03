@@ -30,7 +30,7 @@ const serialize = (model) => {
     let serializerMethods = ['toJSON', 'toJson', 'serialize'];
 
     for (let i = 0; i < serializerMethods.length; i++) {
-        const serializer = serializerMethods.objectAt(i);
+        const serializer = serializerMethods[i];
         const serialized = invoke(model, serializer);
 
         if (!_isEmpty(serialized)) {

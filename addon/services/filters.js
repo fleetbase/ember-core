@@ -18,14 +18,12 @@ export default class FiltersService extends Service {
         const queryParams = this.getQueryParams();
         const activeQueryParams = [];
 
+        // getQueryParams has already dropped managed and blank params, so there
+        // is nothing left to filter here.
         for (let queryParam in queryParams) {
             const value = get(queryParams, queryParam);
 
-            if (isBlank(value) || this.managedQueryParams.includes(queryParam)) {
-                continue;
-            }
-
-            activeQueryParams.pushObject({ queryParam, label: queryParam, value });
+            activeQueryParams.push({ queryParam, label: queryParam, value });
         }
 
         return activeQueryParams;
@@ -161,9 +159,11 @@ export default class FiltersService extends Service {
             const controllerQueryParams = getWithDefault(controller, 'queryParams', []);
 
             if (isArray(controllerQueryParams)) {
-                for (let i = 0; i < controllerQueryParams.length; i++) {
-                    const qp = controllerQueryParams.objectAt(i);
+                // An entry is a property name, or Ember's mapped form, e.g. `{ category: 'cat' }`,
+                // whose keys are the property names. Filters read and set properties.
+                const propertyNames = controllerQueryParams.flatMap((qp) => (typeof qp === 'string' ? [qp] : Object.keys(qp)));
 
+                for (const qp of propertyNames) {
                     if (this.managedQueryParams.includes(qp)) {
                         continue;
                     }
@@ -178,7 +178,7 @@ export default class FiltersService extends Service {
         const currentRouteQueryParams = Object.keys(currentRoute.queryParams);
 
         for (let i = 0; i < currentRouteQueryParams.length; i++) {
-            const queryParam = currentRouteQueryParams.objectAt(i);
+            const queryParam = currentRouteQueryParams[i];
             const value = this.urlSearchParams.get(queryParam);
 
             if (this.managedQueryParams.includes(queryParam)) {

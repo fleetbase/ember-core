@@ -2,9 +2,21 @@ import leafletPointsFromCoordinates from 'dummy/utils/leaflet-points-from-coordi
 import { module, test } from 'qunit';
 
 module('Unit | Utility | leaflet-points-from-coordinates', function () {
-    // TODO: Replace this with your real tests.
-    test('it works', function (assert) {
-        let result = leafletPointsFromCoordinates();
-        assert.ok(result);
+    test('it turns GeoJSON [lng, lat] coordinates into Leaflet [lat, lng] points', function (assert) {
+        assert.deepEqual(
+            leafletPointsFromCoordinates([
+                [103.8, 1.35],
+                [103.9, 1.3],
+            ]),
+            [
+                [1.35, 103.8],
+                [1.3, 103.9],
+            ]
+        );
+    });
+
+    test('anything but an array yields no points', function (assert) {
+        assert.deepEqual(leafletPointsFromCoordinates(), []);
+        assert.deepEqual(leafletPointsFromCoordinates(null), []);
     });
 });
