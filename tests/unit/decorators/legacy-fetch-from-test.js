@@ -41,19 +41,14 @@ module('Unit | Decorator | legacy-fetch-from', function (hooks) {
         this.build = (Klass) => Klass.create(this.owner.ownerInjection());
     });
 
-    test('on a native class field the property starts undefined, not null', function (assert) {
-        // Worth knowing before relying on `=== null` as "not loaded yet".
-        // The decorator defines a symbol-backed accessor on the prototype and
-        // seeds it with null, but a native class field installs an own property
-        // on the instance, which shadows that accessor. The seeded null is
-        // therefore never observed. This decorator predates native class
-        // fields — it wraps `init`, so it was written for `.extend()` classes,
-        // where the accessor is not shadowed and the null default does apply.
+    test('on a native class field the property starts null until the fetch lands', function (assert) {
+        // `null` is the "not loaded yet" value. The decorator replaces the field with its
+        // accessor; left as a field, an own property would shadow it and read `undefined`.
         class Host extends EmberObject {
             @legacyFetchFrom('some/endpoint') data;
         }
 
-        assert.strictEqual(this.build(Host).data, undefined, 'the instance field shadows the seeded null');
+        assert.strictEqual(this.build(Host).data, null);
     });
 
     test('the request is issued after render and the result assigned', async function (assert) {

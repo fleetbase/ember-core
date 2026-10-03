@@ -11,6 +11,7 @@ export default function fetchFrom(endpoint, query = {}, options = {}) {
     return decoratorWithRequiredParams(function (target, key) {
         const symbol = Symbol(`__${key}_fetchFrom`);
 
+        // `null` until the fetch resolves: the "not loaded yet" value.
         Object.defineProperty(target, symbol, {
             configurable: true,
             enumerable: false,
@@ -18,7 +19,11 @@ export default function fetchFrom(endpoint, query = {}, options = {}) {
             value: null,
         });
 
-        Object.defineProperty(target, key, {
+        // The accessor is defined on the prototype and also returned as the field's
+        // descriptor. Returning it is what matters for a native class field: it replaces
+        // the field, which would otherwise be an own property of each instance, shadow
+        // the prototype accessor and start out `undefined`.
+        const accessor = {
             configurable: true,
             enumerable: true,
             get() {
@@ -27,7 +32,8 @@ export default function fetchFrom(endpoint, query = {}, options = {}) {
             set(value) {
                 this[symbol] = value;
             },
-        });
+        };
+        Object.defineProperty(target, key, accessor);
 
         const originalInit = target.init;
 
@@ -51,5 +57,7 @@ export default function fetchFrom(endpoint, query = {}, options = {}) {
                     });
             });
         };
+
+        return accessor;
     }, 'fetchFrom')(endpoint, query, options);
 }

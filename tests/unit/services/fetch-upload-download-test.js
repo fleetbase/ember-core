@@ -186,12 +186,16 @@ module('Unit | Service | fetch (upload and download)', function (hooks) {
             assert.strictEqual(options.fileName, 'orders.csv');
         });
 
-        test('the header OVERRIDES a caller-supplied filename', async function (assert) {
-            // The parameter is named defaultFilename, and it is only that: the
-            // content-disposition header is applied over the top whenever one is
-            // present, so a caller cannot force a name for a response that
-            // supplies its own.
+        test('a caller-supplied filename wins over the header', async function (assert) {
             const options = { fileName: 'mine.csv' };
+
+            await this.service.download('orders/export', {}, options);
+
+            assert.strictEqual(options.fileName, 'mine.csv');
+        });
+
+        test('the header names the file when the caller does not', async function (assert) {
+            const options = {};
 
             await this.service.download('orders/export', {}, options);
 
@@ -207,19 +211,21 @@ module('Unit | Service | fetch (upload and download)', function (hooks) {
             assert.strictEqual(options.fileName, 'mine.csv');
         });
 
-        test('a bare content type is NOT parsed, so the mime type falls back to the extension', async function (assert) {
-            // Pinned, not fixed. getMimeTypeFromResponse extracts with
-            //     /(.*)?;/.exec(contentType)
-            // which requires a trailing semicolon, so a header of exactly
-            // 'text/csv' matches nothing and the mime type stays null. It then
-            // falls through to getMimeType(fileName), which returns the
-            // EXTENSION rather than a mime type — so the download is handed
-            // 'csv' where 'text/csv' was meant.
+        test('a bare content type is the mime type', async function (assert) {
             const options = {};
 
             await this.service.download('orders/export', {}, options);
 
-            assert.strictEqual(options.mimeType, 'csv');
+            assert.strictEqual(options.mimeType, 'text/csv');
+        });
+
+        test('without a content type the mime type comes from the file name', async function (assert) {
+            this.responseHeaders = { 'content-disposition': 'attachment; filename="report.pdf"' };
+            const options = {};
+
+            await this.service.download('orders/export', {}, options);
+
+            assert.strictEqual(options.mimeType, 'application/pdf');
         });
 
         test('a content type WITH parameters is parsed', async function (assert) {

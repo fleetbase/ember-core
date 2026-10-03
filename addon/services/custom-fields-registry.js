@@ -31,12 +31,13 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
                 title: 'Create a new custom field',
                 panelContentClass: 'py-2 px-4',
                 useDefaultSaveTask: true,
+                customField,
+                ...options,
+                // After the options, which carry the raw saveOptions this merged.
                 saveOptions: {
                     callback: this.refresh,
                     ...saveOptions,
                 },
-                customField,
-                ...options,
             });
         },
         edit: (customField, options = {}, saveOptions = {}) => {
@@ -47,8 +48,9 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
                 panelContentClass: 'py-2 px-4',
                 useDefaultSaveTask: true,
                 customField,
-                saveOptions,
                 ...options,
+                // After the options, which carry the raw saveOptions this merged.
+                saveOptions,
             });
         },
     };
@@ -86,8 +88,9 @@ export default class CustomFieldsRegistryService extends ResourceActionService {
             yield manager.load({ group: true });
             return manager;
         } catch (err) {
-            console.error(err);
             debug('[Custom Fields Registry] Unable to load custom fields manager: ' + err.message);
+            // Rethrown so a caller can tell a failed load from a subject with no custom fields.
+            throw err;
         }
     }
 

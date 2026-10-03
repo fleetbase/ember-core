@@ -214,17 +214,18 @@ module('Unit | Service | filters (clearing and lookups)', function (hooks) {
     });
 
     module('getQueryParams and Ember mapped query params', function () {
-        test('a controller declaring a mapped query param is not understood', function (assert) {
-            // Pinned, not fixed. Ember lets a controller rename a query param with
-            // an object entry — `queryParams: ['status', { category: 'cat' }]` — and
-            // that is the documented way to give a property a different name in the
-            // url. getQueryParams walks the array and hands each entry straight to
-            // `get(controller, qp)`, which requires a string or number. The object
-            // entry therefore fails the assertion rather than being unwrapped, so
-            // any controller using the mapped form cannot be filtered at all.
+        test('a mapped query param is read by its property name', function (assert) {
+            // `queryParams: ['status', { category: 'cat' }]` gives `category` the url key
+            // `cat`. Filters read and set the controller property, so it is keyed `category`.
             const controller = EmberObject.create({ queryParams: ['status', { category: 'cat' }], status: 'active', category: 'boxes' });
 
-            assert.throws(() => this.service.getQueryParams(controller), /must be a string or number/);
+            assert.deepEqual(this.service.getQueryParams(controller), { status: 'active', category: 'boxes' });
+        });
+
+        test('a mapped entry can name several properties, and managed ones are still skipped', function (assert) {
+            const controller = EmberObject.create({ queryParams: [{ category: 'cat', page: 'p' }], category: 'boxes', page: 2 });
+
+            assert.deepEqual(this.service.getQueryParams(controller), { category: 'boxes' });
         });
 
         test('the plain string form is handled', function (assert) {

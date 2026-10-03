@@ -13,6 +13,52 @@ every one of those four per file, and it is green.
 
 ---
 
+# ✅ RESOLVED FOR v0.3.25
+
+Every live defect (#2–#15) and the latent ones (#24–#26) are fixed. Each pin was rewritten to
+assert the fixed behaviour, which is what it was there for.
+
+| # | fix |
+|---|---|
+| 2 | `crud.bulkAction` builds its message from `pluralize(count, word)` alone, which already includes the count |
+| 3 | (fixed earlier in this PR) |
+| 4 | `filters.getQueryParams` unwraps Ember's mapped form, `{ category: 'cat' }`, to its property names |
+| 5 | the mime type is everything before the first `;`, so `text/csv` is read as such |
+| 6 | `RegistryService.register` keys classes too, so a class registered as a renderable component can be looked up |
+| 7 | the universe facade passes list names (`'menu-item'` by default), the menu readers ask the menu service, and `dashboardWidgets` reads `'dashboard'`, the dashboard the deprecated registration methods use |
+| 8 | `loadWhois` warns whenever the result is the fallback, since `lookupUserIp` returns one rather than rejecting; a failed storage write is logged and the data still kept in memory |
+| 9 | `promiseCurrentUser` aborts and invalidates exactly once, whichever way authentication fails |
+| 10 | `getSessionSecondsRemaining` is `expiry − now` (no callers anywhere depended on the old sign) |
+| 11 | `crud.import`'s default queue is `A([])` |
+| 12 | only a `Helper` subclass (it has `prototype.compute`) is instantiated; a function helper is not, however it is written |
+| 13 | `rememberOpenedChannel` leaves the list alone when the channel is already in it |
+| 14 | `writeFieldValue` checks for a field before staging anything |
+| 15 | a filename the caller passes wins over `content-disposition`; every caller passes the name it wants |
+| 24 | the chaining setter is `MenuItem.withOnClick()`; `onClick` stays the handler property every consumer calls. Nothing outside ember-core used the chaining form |
+| 25 | `getOrganizationMenuItems` / `getUserMenuItems` filter by the `organization:` / `user:` key prefixes registration already uses |
+| 26 | see below |
+
+**#26, item by item:**
+- items registered by title keep the `~` slug (their URL is `virtual/~?view=<view>`, so existing links work) but are **keyed** by view or title. Keyed by `~`, each replaced the one before it.
+- `transitionMenuItem(route, menuItem, { queryParams })` carries query params; `virtualRouteRedirect` passes them. The menu item's own `view` wins.
+- `replace-table-row` replaces a match at index 0 and leaves the table alone on a miss.
+- `get-mime-type` returns the mime type for the whole extension (`.docx` is no longer read as `.doc`), and `jpg` is `image/jpeg`.
+- `custom-fields-registry`'s `panel.create` and `panel.edit` spread `options` before the merged `saveOptions`, so neither the merge nor the refresh callback is lost.
+- `sameIds` is called with its options object.
+- `loadSubjectCustomFields` logs and **rethrows**. Nine of its ten callers already wrap it in try/catch, written for exactly this; the tenth (fleetops `order/form`) gains one in fleetbase/fleetops.
+- `crud`'s `modelName` option overrides the model's own name, in dialogs and the bulk endpoint. No caller passed it.
+- the stub utils do what their names say: `ison` and `hason-structure` are aliases of `is-json` and `has-json-structure` (they were misspelt duplicates), `is-function` checks the type, `reverse-point` swaps GeoJSON `[lng, lat]` and Leaflet `[lat, lng]`, and `leaflet-points-from-coordinates` maps a coordinate list with it. None had a caller.
+- `legacy-from-store` re-exports `from-store`.
+- `legacy-fetch-from` replaces the field with its accessor, so `null` ("not loaded yet") is what a native class field reads before the fetch lands.
+
+**Found while fixing these: `fetch.cachedGet` never expired a month-old cache.** It compared the
+`days` component of `intervalToDuration`, which is 0 for an age of exactly one month, so the cache
+lived on. Expiry is now measured as elapsed time (`now > version + interval`). The pinning test
+failed on any date exactly 30 days after the start of a month, which is how it surfaced. The
+`make-dataset` tests also no longer depend on the machine's timezone.
+
+---
+
 # ✅ THE GATE BLOCKERS ARE FIXED
 
 These were unreachable by any input, so no test could execute them and the 100% gate could
@@ -125,7 +171,7 @@ is a no-op; any caller of `clear()` gets an exception.
 
 *Pinned in* `tests/unit/services/url-search-params-branches-test.js`
 
-### 2. `crud.bulkAction`'s success message prints the count twice
+### 2. ✅ FIXED — `crud.bulkAction`'s success message prints the count twice
 
 ```js
 `${count} ${pluralize(count, modelName)} were updated successfully.`
@@ -137,7 +183,7 @@ single-argument form is used correctly a few lines above.
 
 *Pinned in* `tests/unit/services/crud-bulk-action-confirm-test.js`
 
-### 3. The sandbox test key has never been sent — cross-package
+### 3. ✅ FIXED — The sandbox test key has never been sent — cross-package
 
 `currentUser.setOption` dasherizes before storing, so `dev-engine`'s
 `setOption('testKey', …)` lands under `<user>:test-key`. Both readers
@@ -147,7 +193,7 @@ that half worked and masked it.
 
 *Fixed earlier in this PR, before the flag-only directive.*
 
-### 4. `filters.getQueryParams` breaks on Ember's mapped query-param form
+### 4. ✅ FIXED — `filters.getQueryParams` breaks on Ember's mapped query-param form
 
 A controller may rename a param — `queryParams: ['status', { category: 'cat' }]` — which is
 the documented way to give a property a different name in the URL. `getQueryParams` hands
@@ -157,7 +203,7 @@ mapped form cannot be filtered at all.
 
 *Pinned in* `tests/unit/services/filters-actions-test.js`
 
-### 5. `getMimeTypeFromResponse` needs a semicolon it usually will not get
+### 5. ✅ FIXED — `getMimeTypeFromResponse` needs a semicolon it usually will not get
 
 ```js
 const results = /(.*)?;/.exec(contentType);
@@ -170,7 +216,7 @@ the browser is handed `'csv'` where `'text/csv'` was meant.
 
 *Pinned in* `tests/unit/services/fetch-upload-download-test.js`
 
-### 6. A class registered as a renderable component loses its key
+### 6. ✅ FIXED — A class registered as a renderable component loses its key
 
 `registerRenderableComponent` computes the key correctly (`component.name` → `'OrderCard'`),
 but `register` only stamps it when the value is an object:
@@ -186,7 +232,7 @@ same reason. The component is stored and nothing can retrieve it by name.
 
 *Pinned in* `tests/unit/services/universe/registry-service-branches-test.js`
 
-### 7. The universe facade calls six sub-service methods with the wrong arity
+### 7. ✅ FIXED — The universe facade calls six sub-service methods with the wrong arity
 
 None throw — the sub-services return empty collections for unknown lists — so these APIs
 silently never work:
@@ -204,7 +250,7 @@ silently never work:
 
 *Pinned in* `tests/unit/services/universe-delegation-test.js`
 
-### 8. `current-user.loadWhois` can never warn the user
+### 8. ✅ FIXED — `current-user.loadWhois` can never warn the user
 
 `loadWhois` wraps `lookupUserIp` in a try/catch whose catch warns *"Unable to detect your
 location"* and builds a fallback. But `lookupUserIp` absorbs every failure itself and
@@ -217,7 +263,7 @@ trigger, and that is what the pin uses.)*
 
 *Pinned in* `tests/unit/services/current-user-whois-fallback-test.js`
 
-### 9. `promiseCurrentUser` aborts and invalidates twice
+### 9. ✅ FIXED — `promiseCurrentUser` aborts and invalidates twice
 
 The no-user branch aborts the transition, invalidates, then throws — but the throw is inside
 the same `try`, so its own `catch` runs the identical abort-and-invalidate again before
@@ -226,14 +272,14 @@ different code path.
 
 *Pinned in* `tests/unit/services/session-flows-test.js`
 
-### 10. `getSessionSecondsRemaining` has its operands reversed
+### 10. ✅ FIXED — `getSessionSecondsRemaining` has its operands reversed
 
 `Math.round((now - date) / 1000)` — a session that has **not** expired reports a negative
 number; an expired one reports positive.
 
 *Pinned in* `tests/unit/services/session-behaviour-test.js`
 
-### 11. `crud.import` cannot accept a file
+### 11. ✅ FIXED — `crud.import` cannot accept a file
 
 The default `uploadQueue` is a plain `[]`, but `queueFile`, `removeFile` and `confirm` all
 call `pushObject` / `removeObject` / `objectAt` on it. With prototype extensions off (the
@@ -242,7 +288,7 @@ array get through.
 
 *Pinned in* `tests/unit/services/crud-import-queue-test.js`
 
-### 12. Helper instantiation depends on how the helper was written
+### 12. ✅ FIXED — Helper instantiation depends on how the helper was written
 
 ```js
 typeof value !== 'function' || value.prototype
@@ -254,7 +300,7 @@ class. Two behaviourally identical helpers register differently based only on sy
 
 *Pinned in* `tests/unit/services/universe/registry-service-helpers-test.js`
 
-### 13. `chat.rememberOpenedChannel` discards the rest of the list
+### 13. ✅ FIXED — `chat.rememberOpenedChannel` discards the rest of the list
 
 ```js
 if (isArray(openedChats) && !openedChats.includes(id)) { append }
@@ -267,7 +313,7 @@ In the second it replaces the whole list with that one id. Latent today only bec
 
 *Pinned in* `tests/unit/services/chat-recall-test.js`
 
-### 14. `subject-custom-fields.writeFieldValue` checks its guard too late
+### 14. ✅ FIXED — `subject-custom-fields.writeFieldValue` checks its guard too late
 
 ```js
 this.setFieldValue(value, customField);
@@ -281,7 +327,7 @@ its own guard.
 
 *Pinned in* `tests/unit/library/subject-custom-fields-edges-test.js`
 
-### 15. The content-disposition header overrides a caller-supplied filename
+### 15. ✅ FIXED — The content-disposition header overrides a caller-supplied filename
 
 `getFilenameFromResponse(response, defaultFilename)` applies the header over the top whenever
 one is present, so a caller cannot force a name for a response that supplies its own. Named
@@ -440,7 +486,7 @@ consumer *can* null one — and covered by tests that do exactly that. Same for
 
 ## Latent and behavioural
 
-### 24. `MenuItem`'s constructor shadows its own `onClick` method
+### 24. ✅ FIXED — `MenuItem`'s constructor shadows its own `onClick` method
 
 `MenuItem` declares `onClick(handler)` as a chaining setter **and** its constructor assigns
 `this.onClick = null`. Every instance shadows the method with a null field, so
@@ -448,14 +494,14 @@ consumer *can* null one — and covered by tests that do exactly that. Same for
 and `universe._createMenuItem`. Calling it off the prototype shows the method itself is
 correct — only unreachable.
 
-### 25. The two account-menu getters do not separate the two menus
+### 25. ✅ FIXED — The two account-menu getters do not separate the two menus
 
 `getOrganizationMenuItems` and `getUserMenuItems` are byte-identical and each return the whole
 `console:account` registry unfiltered — so the organization menu lists user items and vice
 versa. Registration deliberately namespaces the keys (`organization:<slug>` / `user:<slug>`),
 and the registry already does prefix filtering, so the fix is available.
 
-### 26. Smaller pinned behaviours
+### 26. ✅ FIXED — Smaller pinned behaviours
 
 - `registerMenuItem` defaults `slug` to `'~'` rather than deriving it from the title, so an
   item registered into a custom registry cannot be looked up by its title slug.

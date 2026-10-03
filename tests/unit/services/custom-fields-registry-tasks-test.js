@@ -5,9 +5,8 @@ import Service from '@ember/service';
 /**
  * loadSubjectCustomFields, and the confirm callback on the edit modal.
  *
- * The task swallows its own failure — it logs and returns undefined rather than
- * rejecting — so the caller cannot tell a failed load from a subject with no
- * custom fields. That is asserted rather than assumed.
+ * A failed load rejects, so a caller can tell it from a subject with no custom
+ * fields.
  */
 module('Unit | Service | custom-fields-registry (tasks)', function (hooks) {
     setupTest(hooks);
@@ -99,18 +98,16 @@ module('Unit | Service | custom-fields-registry (tasks)', function (hooks) {
             assert.deepEqual(this.forSubjectArgs.options, {});
         });
 
-        test('a failed load resolves with undefined rather than rejecting', async function (assert) {
+        test('a failed load rejects, so a caller can tell it from a subject with no fields', async function (assert) {
             this.loadRejects = true;
 
-            const manager = await this.service.loadSubjectCustomFields.perform({ id: 'order-1' });
-
-            assert.strictEqual(manager, undefined, 'a caller cannot tell this from a subject with no fields');
+            await assert.rejects(this.service.loadSubjectCustomFields.perform({ id: 'order-1' }), /load failed/);
         });
 
-        test('a failure building the manager is swallowed the same way', async function (assert) {
+        test('a failure building the manager rejects the same way', async function (assert) {
             this.forSubjectThrows = true;
 
-            assert.strictEqual(await this.service.loadSubjectCustomFields.perform({ id: 'order-1' }), undefined);
+            await assert.rejects(this.service.loadSubjectCustomFields.perform({ id: 'order-1' }), /no subject/);
         });
     });
 

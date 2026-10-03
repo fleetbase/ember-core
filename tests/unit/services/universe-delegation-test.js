@@ -132,19 +132,17 @@ module('Unit | Service | universe (delegation)', function (hooks) {
             assert.strictEqual(this.lastCall().method, 'registerDefaultDashboardWidgets');
         });
 
-        test('the dashboardWidgets getter asks for no particular dashboard', function (assert) {
-            // Pinned, not fixed. The widget service keys everything by dashboard
-            // name and returns [] when given none, so this getter can only ever
-            // report empty lists.
+        test('the dashboardWidgets getter reads the default dashboard', function (assert) {
+            // 'dashboard' is where the deprecated registerDashboardWidgets() and
+            // registerDefaultDashboardWidgets() register.
             const widgets = this.service.dashboardWidgets;
 
             assert.deepEqual(
                 this.calls.map((c) => ({ method: c.method, args: c.args })),
                 [
-                    { method: 'getDefaultWidgets', args: [] },
-                    { method: 'getWidgets', args: [] },
-                ],
-                'neither call names a dashboard'
+                    { method: 'getDefaultWidgets', args: ['dashboard'] },
+                    { method: 'getWidgets', args: ['dashboard'] },
+                ]
             );
             assert.ok(widgets, 'the shape is still returned');
         });
@@ -216,44 +214,42 @@ module('Unit | Service | universe (delegation)', function (hooks) {
         });
     });
 
-    module('the generic registry API is wired with the wrong arity', function () {
-        test('registerInRegistry drops the value', function (assert) {
-            // Pinned, not fixed. registry-service takes
-            // (sectionName, listName, key, value) but only three arguments are
-            // forwarded, so the key lands in listName, the value lands in key,
-            // and the value itself is never passed at all.
+    module('the generic registry API', function () {
+        test('registerInRegistry forwards the value into the menu-item list by default', function (assert) {
             this.service.registerInRegistry('my-registry', 'my-key', { some: 'value' });
 
             assert.deepEqual(this.lastCall(), {
                 service: 'registry',
                 method: 'register',
-                args: ['my-registry', 'my-key', { some: 'value' }],
+                args: ['my-registry', 'menu-item', 'my-key', { some: 'value' }],
             });
-            assert.strictEqual(this.lastCall().args.length, 3, 'register expects four');
+
+            this.service.registerInRegistry('my-registry', 'my-key', { some: 'value' }, 'widgets');
+            assert.deepEqual(this.lastCall().args, ['my-registry', 'widgets', 'my-key', { some: 'value' }], 'or the list named');
         });
 
-        test('getRegistry never names a list', function (assert) {
-            // registry-service takes (sectionName, listName) and returns an
-            // empty array when the list is undefined, so this can only ever
-            // come back empty.
+        test('getRegistry names a list', function (assert) {
             this.service.getRegistry('my-registry');
+            assert.deepEqual(this.lastCall().args, ['my-registry', 'menu-item']);
 
-            assert.deepEqual(this.lastCall().args, ['my-registry'], 'no list name is supplied');
+            this.service.getRegistry('my-registry', 'widgets');
+            assert.deepEqual(this.lastCall().args, ['my-registry', 'widgets']);
         });
 
-        test('lookupFromRegistry shifts the key into the list slot', function (assert) {
-            // registry-service takes (sectionName, listName, key).
+        test('lookupFromRegistry passes the list before the key', function (assert) {
             this.service.lookupFromRegistry('my-registry', 'my-key');
+            assert.deepEqual(this.lastCall().args, ['my-registry', 'menu-item', 'my-key']);
 
-            assert.deepEqual(this.lastCall().args, ['my-registry', 'my-key'], 'the key is read as a list name');
+            this.service.lookupFromRegistry('my-registry', 'my-key', 'widgets');
+            assert.deepEqual(this.lastCall().args, ['my-registry', 'widgets', 'my-key']);
         });
 
-        test('the menu-registry readers have the same problem', function (assert) {
+        test('the menu-registry readers ask the menu service', function (assert) {
             this.service.getMenuItemsFromRegistry('engine:fleet-ops');
-            assert.deepEqual(this.lastCall().args, ['engine:fleet-ops'], 'no list name');
+            assert.deepEqual(this.lastCall(), { service: 'menu', method: 'getMenuItems', args: ['engine:fleet-ops'] });
 
             this.service.getMenuPanelsFromRegistry('engine:fleet-ops');
-            assert.deepEqual(this.lastCall().args, ['engine:fleet-ops:panels'], 'the list is folded into the section name instead');
+            assert.deepEqual(this.lastCall(), { service: 'menu', method: 'getMenuPanels', args: ['engine:fleet-ops'] });
         });
 
         test('createRegistry and createRegistries forward as-is', function (assert) {

@@ -1,4 +1,5 @@
 import { module, test } from 'qunit';
+import Helper from '@ember/component/helper';
 import { setupTest } from 'dummy/tests/helpers';
 import Service from '@ember/service';
 import TemplateHelper from '@fleetbase/ember-core/contracts/template-helper';
@@ -59,18 +60,10 @@ module('Unit | Service | universe/registry-service (helpers)', function (hooks) 
 
             assert.strictEqual(this.registered[0][0], 'helper:my-helper');
             assert.strictEqual(this.registered[0][1], helper);
-            assert.strictEqual(this.registered[0][2].instantiate, undefined, 'an arrow function has no prototype, so the expression yields undefined');
+            assert.false(this.registered[0][2].instantiate);
         });
 
-        test('whether a helper is instantiated depends on how it was WRITTEN', async function (assert) {
-            // Pinned, not fixed. The flag is
-            //   typeof value !== 'function' || value.prototype
-            // which is never a boolean for a function: an arrow function has no
-            // prototype and yields undefined (falsy, not instantiated), while an
-            // equivalent `function` declaration has one and yields that object
-            // (truthy, instantiated as if it were a class). Two helpers with
-            // identical behaviour are registered differently based only on their
-            // syntax.
+        test('a function helper is registered the same way however it was written', async function (assert) {
             const arrow = () => 'result';
             function declared() {
                 return 'result';
@@ -79,16 +72,20 @@ module('Unit | Service | universe/registry-service (helpers)', function (hooks) 
             await this.service.registerHelper('arrow-helper', arrow);
             await this.service.registerHelper('declared-helper', declared);
 
-            assert.strictEqual(this.registered[0][2].instantiate, undefined, 'arrow: not instantiated');
-            assert.strictEqual(this.registered[1][2].instantiate, declared.prototype, 'declared: instantiated');
+            assert.false(this.registered[0][2].instantiate, 'arrow: not instantiated');
+            assert.false(this.registered[1][2].instantiate, 'declared: not instantiated either');
         });
 
-        test('a class is registered with instantiation', async function (assert) {
-            class MyHelper {}
+        test('a Helper subclass is registered with instantiation', async function (assert) {
+            class MyHelper extends Helper {
+                compute() {
+                    return 'result';
+                }
+            }
 
             await this.service.registerHelper('my-helper', MyHelper);
 
-            assert.strictEqual(this.registered[0][2].instantiate, MyHelper.prototype, 'a prototype is truthy, so it instantiates');
+            assert.true(this.registered[0][2].instantiate);
         });
 
         test('an explicit instantiate option wins', async function (assert) {

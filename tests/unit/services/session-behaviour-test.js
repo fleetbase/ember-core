@@ -95,25 +95,20 @@ module('Unit | Service | session (fleetbase behaviour)', function (hooks) {
             assert.true(Number.isNaN(this.service.getExpiresAtDate().getTime()));
         });
 
-        test('seconds remaining comes back negative for a future expiry', function (assert) {
-            // Pinned, not fixed. The subtraction is `now - expiry`, so a session
-            // that expires in the future reports a negative number of seconds
-            // remaining and one that has already expired reports a positive one.
-            // The operands are the wrong way round.
+        test('seconds remaining is positive for a future expiry', function (assert) {
             const inOneHour = new Date(Date.now() + 60 * 60 * 1000);
             this.setData({ authenticated: { expires_at: inOneHour.toISOString() } });
 
             const remaining = this.service.getSessionSecondsRemaining();
 
-            assert.true(remaining < 0, `${remaining} is negative for a session that has not expired`);
-            assert.true(Math.abs(remaining + 3600) < 5, 'the magnitude is right, only the sign is wrong');
+            assert.true(Math.abs(remaining - 3600) < 5, `${remaining} is about an hour`);
         });
 
-        test('an already-expired session reports a positive number', function (assert) {
+        test('an already-expired session reports a negative number', function (assert) {
             const anHourAgo = new Date(Date.now() - 60 * 60 * 1000);
             this.setData({ authenticated: { expires_at: anHourAgo.toISOString() } });
 
-            assert.true(this.service.getSessionSecondsRemaining() > 0, 'the inversion again, from the other side');
+            assert.true(this.service.getSessionSecondsRemaining() < 0);
         });
     });
 

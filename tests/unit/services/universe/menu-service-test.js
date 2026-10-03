@@ -38,6 +38,10 @@ class RegistryStubService extends Service {
     lookup(section, list, key) {
         return this.getRegistry(section, list).find((item) => item._registryKey === key) ?? null;
     }
+
+    getAllFromPrefix(section, list, prefix) {
+        return this.getRegistry(section, list).filter((item) => item._registryKey?.startsWith(prefix));
+    }
 }
 
 module('Unit | Service | universe/menu-service', function (hooks) {
@@ -206,14 +210,14 @@ module('Unit | Service | universe/menu-service', function (hooks) {
             assert.strictEqual(this.service.getHeaderMenuItems()[0].onClick, 'not a function');
         });
 
-        test('passing onClick as an option to the string form throws', function (assert) {
-            // Pinned, not fixed. MenuItem declares an `onClick(handler)` chaining
-            // method, but its constructor also assigns `this.onClick = null`,
-            // which shadows the method on every instance. The normalizer calls
-            // `menuItem.onClick(handler)` for this option, so the documented
-            // string-plus-options form is unusable for click handlers — an
-            // object literal is the only route that works today.
-            assert.throws(() => this.service.registerHeaderMenuItem('Orders', 'r', { onClick: () => {} }), /not a function/);
+        test('passing onClick as an option to the string form sets the handler', function (assert) {
+            let received;
+            this.service.registerHeaderMenuItem('Orders', 'r', { onClick: (...args) => (received = args) });
+
+            const [item] = this.service.getHeaderMenuItems();
+            item.onClick();
+
+            assert.strictEqual(received[0], item, 'wrapped like every other handler: it gets the menu item');
         });
     });
 
@@ -319,27 +323,17 @@ module('Unit | Service | universe/menu-service', function (hooks) {
             assert.strictEqual(this.service.getUserMenuItems()[0].route, 'console.profile');
         });
 
-        test('the two account getters do not actually separate the two menus', function (assert) {
-            // Documenting a defect rather than an intention. Registration goes
-            // to deliberate trouble to keep these apart — distinct key prefixes
-            // (`organization:` / `user:`) and distinct default sections — but
-            // getOrganizationMenuItems and getUserMenuItems are byte-identical:
-            // both return the whole `console:account` menu-item registry with no
-            // filter. So the organization menu lists user items and vice versa.
-            // The registry already stores `_registryKey` and supports prefix
-            // filtering, so a fix is available; changing what a public getter
-            // returns is a maintainer's call.
+        test('the two account getters each return their own menu', function (assert) {
             this.service.registerOrganizationMenuItem('Billing');
             this.service.registerUserMenuItem('Profile');
 
             assert.deepEqual(
                 this.service.getOrganizationMenuItems().map((i) => i.title),
-                ['Billing', 'Profile'],
-                'both menus come back from either getter'
+                ['Billing']
             );
             assert.deepEqual(
                 this.service.getUserMenuItems().map((i) => i.title),
-                ['Billing', 'Profile']
+                ['Profile']
             );
         });
 
@@ -350,7 +344,7 @@ module('Unit | Service | universe/menu-service', function (hooks) {
             assert.deepEqual(
                 this.registry.getRegistry('console:account', 'menu-item').map((i) => i._registryKey),
                 ['organization:billing', 'user:profile'],
-                'the information a working filter would need is present'
+                'which is what the getters filter on'
             );
         });
 

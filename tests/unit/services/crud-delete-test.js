@@ -90,12 +90,14 @@ module('Unit | Service | crud (delete)', function (hooks) {
             assert.strictEqual(this.lastConfirm().title, 'Are you sure to delete this Order?');
         });
 
-        test('the modelName option is a fallback, not an override', function (assert) {
-            // Easy to assume otherwise from the option's name. getModelName
-            // takes it as the *fallback* argument, and a real model's own
-            // constructor.modelName always wins — so passing modelName
-            // alongside a model record has no effect at all.
+        test('the modelName option overrides the name of the model', function (assert) {
             this.service.delete(this.record(), { modelName: 'fuel_report' });
+
+            assert.strictEqual(this.lastConfirm().title, 'Are you sure to delete this Fuel Report?');
+        });
+
+        test('without the option the model names itself', function (assert) {
+            this.service.delete(this.record());
 
             assert.strictEqual(this.lastConfirm().title, 'Are you sure to delete this Order?');
         });
@@ -243,10 +245,10 @@ module('Unit | Service | crud (delete)', function (hooks) {
             assert.strictEqual(this.lastConfirm().actionPath, 'fuel-reports/bulk-delete');
         });
 
-        test('a real record ignores the modelName option here too', function (assert) {
+        test('the modelName option names the bulk endpoint too', function (assert) {
             this.service.bulkDelete([this.record()], { modelName: 'fuel_report' });
 
-            assert.strictEqual(this.lastConfirm().actionPath, 'orders/bulk-delete');
+            assert.strictEqual(this.lastConfirm().actionPath, 'fuel-reports/bulk-delete');
         });
 
         test('records of a different type are dropped from the selection', function (assert) {

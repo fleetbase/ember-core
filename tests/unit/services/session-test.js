@@ -108,24 +108,18 @@ module('Unit | Service | session', function (hooks) {
             assert.strictEqual(this.service.getExpiresAtDate().toISOString(), '2026-01-15T09:30:00.000Z');
         });
 
-        test('getSessionSecondsRemaining returns a NEGATIVE number for a future expiry', function (assert) {
-            // NOTE: the subtraction is the wrong way round — it computes
-            // (now - expiry) rather than (expiry - now) — so a session with time
-            // left reports a negative "seconds remaining", and an expired one
-            // reports a positive value. Pinned rather than corrected because
-            // callers may already compensate for the sign.
+        test('getSessionSecondsRemaining counts down to a future expiry', function (assert) {
             this.setSessionData({ authenticated: { expires_at: new Date(Date.now() + 60_000).toISOString() } });
 
             const remaining = this.service.getSessionSecondsRemaining();
 
-            assert.true(remaining < 0, `expected a negative value, got ${remaining}`);
-            assert.true(Math.abs(remaining + 60) < 2, 'the magnitude is right, only the sign is wrong');
+            assert.true(Math.abs(remaining - 60) < 2, `expected about 60, got ${remaining}`);
         });
 
-        test('an already expired session reports a positive value', function (assert) {
+        test('an already expired session reports a negative value', function (assert) {
             this.setSessionData({ authenticated: { expires_at: new Date(Date.now() - 60_000).toISOString() } });
 
-            assert.true(this.service.getSessionSecondsRemaining() > 0);
+            assert.true(this.service.getSessionSecondsRemaining() < 0);
         });
     });
 

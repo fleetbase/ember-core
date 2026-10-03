@@ -236,18 +236,20 @@ module('Unit | Service | custom-fields-registry', function (hooks) {
             assert.strictEqual(options.saveOptions.callback, this.service.refresh);
         });
 
-        test('save options nested under the options argument discard the rest', function (assert) {
-            // Documenting a conflict rather than asserting an intention. The
-            // builder merges `options.saveOptions` with the third argument,
-            // then spreads `...options` last — which puts the raw
-            // `options.saveOptions` back, dropping both the merge and the
-            // `callback: this.refresh` default. Either the merge is dead code
-            // or the spread order is wrong; that is a maintainer's call.
+        test('save options from both places are merged, keeping the refresh callback', function (assert) {
             const options = this.service.panel.create({}, { saveOptions: { fromOptions: true } }, { fromArgument: true });
 
-            assert.deepEqual(options.saveOptions, { fromOptions: true });
-            assert.strictEqual(options.saveOptions.fromArgument, undefined, 'the third argument is lost');
-            assert.strictEqual(options.saveOptions.callback, undefined, 'so is the refresh callback');
+            assert.true(options.saveOptions.fromOptions);
+            assert.true(options.saveOptions.fromArgument);
+            assert.strictEqual(options.saveOptions.callback, this.service.refresh);
+        });
+
+        test('edit merges save options from both places too', function (assert) {
+            const customField = this.store.createRecord('custom-field', { label: 'Colour' });
+
+            const options = this.service.panel.edit(customField, { saveOptions: { fromOptions: true } }, { fromArgument: true });
+
+            assert.deepEqual(options.saveOptions, { fromOptions: true, fromArgument: true });
         });
 
         test('edit titles the panel after the field', function (assert) {

@@ -13,7 +13,8 @@ function record(date) {
 module('Unit | Utility | make-dataset', function () {
     module('makeDataset', function () {
         test('it counts records per day', function (assert) {
-            const dataset = makeDataset([record('2026-03-01T09:00:00Z'), record('2026-03-01T18:00:00Z'), record('2026-03-02T09:00:00Z')]);
+            // Local times: days are counted at local midnight, so a UTC 18:00 is the next day east of UTC.
+            const dataset = makeDataset([record('2026-03-01T09:00:00'), record('2026-03-01T18:00:00'), record('2026-03-02T09:00:00')]);
 
             assert.deepEqual(
                 dataset.map((point) => point.y),
@@ -64,7 +65,7 @@ module('Unit | Utility | make-dataset', function () {
         });
 
         test('it accepts Date instances as well as strings', function (assert) {
-            const dataset = makeDataset([record(new Date('2026-03-01T09:00:00Z')), record(new Date('2026-03-01T20:00:00Z'))]);
+            const dataset = makeDataset([record(new Date(2026, 2, 1, 9)), record(new Date(2026, 2, 1, 20))]);
 
             assert.deepEqual(
                 dataset.map((point) => point.y),

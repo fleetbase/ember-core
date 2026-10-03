@@ -269,7 +269,7 @@ module('Unit | Service | universe', function (hooks) {
 
             await this.service.virtualRouteRedirect({ to: {}, from: null }, 'registry', 'console.route');
 
-            assert.deepEqual(this.transitions, [['console.route', 'orders', { queryParams: { view: 'list' } }]]);
+            assert.deepEqual(this.transitions, [['console.route', 'orders', { queryParams: { q: 'search', view: 'list' } }]], 'the current query params come along');
         });
 
         test('query params are only written back when asked for', async function (assert) {
@@ -282,17 +282,24 @@ module('Unit | Service | universe', function (hooks) {
             assert.deepEqual(this.restored, [{ q: 'search' }]);
         });
 
-        test('the query params gathered for the redirect never reach the transition', async function (assert) {
-            // Pinned, not fixed. virtualRouteRedirect reads the current query
-            // params and passes them as a third argument to transitionMenuItem,
-            // but that method's signature is (route, menuItem) — the third
-            // argument is silently dropped. Only `restoreQueryParams` puts them
-            // back, and it does so by rewriting the URL afterwards.
+        test('the query params gathered for the redirect are carried into the transition', async function (assert) {
             this.service.lookupMenuItemFromRegistry = () => ({ slug: 'orders' });
 
             await this.service.virtualRouteRedirect({ to: {}, from: null }, 'registry', 'console.route');
 
-            assert.deepEqual(this.transitions, [['console.route', 'orders']], 'no queryParams argument is forwarded');
+            assert.deepEqual(this.transitions, [['console.route', 'orders', { queryParams: { q: 'search' } }]]);
+        });
+
+        test('the menu item view wins over a view among the carried query params', function (assert) {
+            this.service.transitionMenuItem('console.route', { slug: 'orders', view: 'list' }, { queryParams: { view: 'grid', q: 'x' } });
+
+            assert.deepEqual(this.transitions, [['console.route', 'orders', { queryParams: { view: 'list', q: 'x' } }]]);
+        });
+
+        test('carried query params reach a sectioned transition too', function (assert) {
+            this.service.transitionMenuItem('console.route', { section: 'ops', slug: 'orders' }, { queryParams: { q: 'x' } });
+
+            assert.deepEqual(this.transitions, [['console.route', 'ops', 'orders', { queryParams: { q: 'x' } }]]);
         });
     });
 
@@ -350,10 +357,10 @@ module('Unit | Service | universe', function (hooks) {
             assert.deepEqual(item.queryParams, { view: 'list' });
         });
 
-        test('an onClick option throws, exactly as it does in the menu service', function (assert) {
-            // Same root cause: MenuItem's constructor assigns `this.onClick = null`,
-            // shadowing its own `onClick(handler)` chaining method.
-            assert.throws(() => this.service._createMenuItem('Orders', 'r', { onClick: () => {} }), /not a function/);
+        test('an onClick option becomes the handler', function (assert) {
+            const onClick = () => {};
+
+            assert.strictEqual(this.service._createMenuItem('Orders', 'r', { onClick }).onClick, onClick);
         });
     });
 });

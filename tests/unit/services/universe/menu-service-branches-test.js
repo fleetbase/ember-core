@@ -147,15 +147,37 @@ module('Unit | Service | universe/menu-service (branches)', function (hooks) {
             assert.strictEqual(this.itemsIn('fleet-ops')[0].route, 'console.fleet-ops.drivers');
         });
 
-        test('an item with no slug is keyed by its title', function (assert) {
-            // registerMenuItem defaults slug to '~', so reaching the title
-            // fallback needs an item that arrives already normalized.
+        test('an item with no slug is keyed by its view', function (assert) {
             const item = new MenuItem('Drivers', 'console.drivers');
             item.slug = null;
 
             this.service.registerMenuItem('fleet-ops', item);
 
+            assert.strictEqual(this.itemsIn('fleet-ops')[0]._registryKey, 'drivers');
+        });
+
+        test('an item with neither slug nor view is keyed by its title', function (assert) {
+            const item = new MenuItem('Drivers', 'console.drivers');
+            item.slug = null;
+            item.view = null;
+
+            this.service.registerMenuItem('fleet-ops', item);
+
             assert.strictEqual(this.itemsIn('fleet-ops')[0]._registryKey, 'Drivers');
+        });
+
+        test('items registered by title share the ~ slug but not a key, so none replaces another', function (assert) {
+            this.service.registerMenuItem('fleet-ops', 'Drivers');
+            this.service.registerMenuItem('fleet-ops', 'Vehicles');
+
+            const items = this.itemsIn('fleet-ops');
+            assert.deepEqual(
+                items.map((item) => [item.slug, item.view, item._registryKey]),
+                [
+                    ['~', 'drivers', 'drivers'],
+                    ['~', 'vehicles', 'vehicles'],
+                ]
+            );
         });
     });
 

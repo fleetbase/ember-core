@@ -275,10 +275,11 @@ export default class UniverseService extends Service.extend(Evented) {
      *
      * @method getRegistry
      * @param {String} name Registry name
+     * @param {String} listName The list within the registry (default 'menu-item', as createRegistry)
      * @returns {Array} Registry items
      */
-    getRegistry(name) {
-        return this.registryService.getRegistry(name);
+    getRegistry(name, listName = 'menu-item') {
+        return this.registryService.getRegistry(name, listName);
     }
 
     /**
@@ -288,9 +289,10 @@ export default class UniverseService extends Service.extend(Evented) {
      * @param {String} registryName Registry name
      * @param {String} key Item key
      * @param {*} value Item value
+     * @param {String} listName The list within the registry (default 'menu-item', as createRegistry)
      */
-    registerInRegistry(registryName, key, value) {
-        this.registryService.register(registryName, key, value);
+    registerInRegistry(registryName, key, value, listName = 'menu-item') {
+        this.registryService.register(registryName, listName, key, value);
     }
 
     /**
@@ -299,10 +301,11 @@ export default class UniverseService extends Service.extend(Evented) {
      * @method lookupFromRegistry
      * @param {String} registryName Registry name
      * @param {String} key Item key
+     * @param {String} listName The list within the registry (default 'menu-item', as createRegistry)
      * @returns {*} The registered item
      */
-    lookupFromRegistry(registryName, key) {
-        return this.registryService.lookup(registryName, key);
+    lookupFromRegistry(registryName, key, listName = 'menu-item') {
+        return this.registryService.lookup(registryName, listName, key);
     }
 
     // ============================================================================
@@ -544,8 +547,10 @@ export default class UniverseService extends Service.extend(Evented) {
      */
     get dashboardWidgets() {
         return {
-            defaultWidgets: this.widgetService.getDefaultWidgets(),
-            widgets: this.widgetService.getWidgets(),
+            // The dashboard the deprecated registerDashboardWidgets() and
+            // registerDefaultDashboardWidgets() register into.
+            defaultWidgets: this.widgetService.getDefaultWidgets('dashboard'),
+            widgets: this.widgetService.getWidgets('dashboard'),
         };
     }
 
@@ -637,25 +642,22 @@ export default class UniverseService extends Service.extend(Evented) {
      * @method transitionMenuItem
      * @param {String} route Route name
      * @param {Object} menuItem Menu item object with slug, view, and optional section
+     * @param {Object} options
+     * @param {Object} options.queryParams Query params to carry into the transition
      * @returns {Transition} The router transition
      */
     @action
-    transitionMenuItem(route, menuItem) {
+    transitionMenuItem(route, menuItem, options = {}) {
         const { slug, view, section } = menuItem;
+        const params = section && slug ? [section, slug] : [slug];
+        // The menu item's own view wins over a `view` among the carried query params.
+        const queryParams = { ...options.queryParams, ...(view ? { view } : {}) };
 
-        if (section && slug && view) {
-            return this.router.transitionTo(route, section, slug, { queryParams: { view } });
+        if (Object.keys(queryParams).length) {
+            return this.router.transitionTo(route, ...params, { queryParams });
         }
 
-        if (section && slug) {
-            return this.router.transitionTo(route, section, slug);
-        }
-
-        if (slug && view) {
-            return this.router.transitionTo(route, slug, { queryParams: { view } });
-        }
-
-        return this.router.transitionTo(route, slug);
+        return this.router.transitionTo(route, ...params);
     }
 
     /**
@@ -701,7 +703,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Array} Menu items
      */
     getMenuItemsFromRegistry(registryName) {
-        return this.registryService.getRegistry(registryName) || A([]);
+        return this.menuService.getMenuItems(registryName) || A([]);
     }
 
     /**
@@ -713,7 +715,7 @@ export default class UniverseService extends Service.extend(Evented) {
      * @returns {Array} Menu panels
      */
     getMenuPanelsFromRegistry(registryName) {
-        return this.registryService.getRegistry(`${registryName}:panels`) || A([]);
+        return this.menuService.getMenuPanels(registryName) || A([]);
     }
 
     /**
@@ -782,7 +784,7 @@ export default class UniverseService extends Service.extend(Evented) {
         if (options.type) menuItem.withType(options.type);
         if (options.wrapperClass) menuItem.withWrapperClass(options.wrapperClass);
         if (options.queryParams) menuItem.withQueryParams(options.queryParams);
-        if (options.onClick) menuItem.onClick(options.onClick);
+        if (options.onClick) menuItem.withOnClick(options.onClick);
 
         return menuItem.toObject();
     }

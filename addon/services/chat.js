@@ -34,10 +34,11 @@ export default class ChatService extends Service.extend(Evented) {
 
     rememberOpenedChannel(chatChannelRecord) {
         let openedChats = this.appCache.get('open-chats', []);
-        if (isArray(openedChats) && !openedChats.includes(chatChannelRecord.id)) {
-            openedChats = [...openedChats, chatChannelRecord.id];
-        } else {
+        if (!isArray(openedChats)) {
+            // A corrupted cache: start over.
             openedChats = [chatChannelRecord.id];
+        } else if (!openedChats.includes(chatChannelRecord.id)) {
+            openedChats = [...openedChats, chatChannelRecord.id];
         }
         this.appCache.set('open-chats', openedChats);
     }

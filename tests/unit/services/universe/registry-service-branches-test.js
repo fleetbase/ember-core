@@ -71,22 +71,25 @@ module('Unit | Service | universe/registry-service (branches)', function (hooks)
             assert.deepEqual(this.keys(), ['chosen']);
         });
 
-        test('a class is stored but its key is thrown away, so it cannot be looked up', function (assert) {
-            // Pinned, not fixed. registerRenderableComponent computes the key as
-            //     component._registryKey || component.name || component.path || `component-...`
-            // which resolves to 'OrderCard' for a class. But `register` only
-            // stamps the key onto the value when it is an object:
-            //     if (typeof value === 'object' && value !== null) { value._registryKey = key; }
-            // and a class is a FUNCTION, so the key is discarded. `lookup` then
-            // skips non-objects for the same reason, making the component
-            // unfindable by the name it was keyed under.
+        test('a class is keyed by its name, so it can be looked up', function (assert) {
             class OrderCard {}
 
             this.service.registerRenderableComponent(this.slot, OrderCard);
 
             assert.strictEqual(this.service.getRegistry(this.slot, 'components')[0], OrderCard, 'it is stored');
-            assert.deepEqual(this.keys(), [undefined], 'but with no key on it');
-            assert.strictEqual(this.service.lookup(this.slot, 'components', 'OrderCard'), null, 'so nothing finds it');
+            assert.deepEqual(this.keys(), ['OrderCard'], 'with its key');
+            assert.strictEqual(this.service.lookup(this.slot, 'components', 'OrderCard'), OrderCard, 'so it can be found');
+        });
+
+        test('registering a class again under its name replaces it', function (assert) {
+            class OrderCard {}
+            class OrderCardV2 {}
+            OrderCardV2._registryKey = 'OrderCard';
+
+            this.service.registerRenderableComponent(this.slot, OrderCard);
+            this.service.registerRenderableComponent(this.slot, OrderCardV2);
+
+            assert.deepEqual(this.service.getRegistry(this.slot, 'components').slice(), [OrderCardV2]);
         });
 
         test('a plain object with a name keeps its key', function (assert) {

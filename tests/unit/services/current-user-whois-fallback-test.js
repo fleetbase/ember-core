@@ -67,16 +67,11 @@ module('Unit | Service | current-user (whois fallback)', function (hooks) {
             assert.strictEqual(typeof whois.timezone, 'string', 'carrying the browser timezone');
         });
 
-        test('the user is NOT warned, because the failure never reaches this service', async function (assert) {
-            // Pinned, not fixed. loadWhois wraps lookupUserIp in a try/catch
-            // whose catch warns the user and builds a fallback — but
-            // lookupUserIp already absorbs every failure itself and RETURNS
-            // getFallbackWhois() instead of rejecting. So the catch is
-            // unreachable by a failing lookup, the duplicate fallback below it
-            // is dead, and the user is never told their location is unknown.
+        test('the user is warned that their location is unknown', async function (assert) {
             await this.service.loadWhois();
 
-            assert.deepEqual(this.warnings, [], 'the warning the code intends to show never fires');
+            assert.strictEqual(this.warnings.length, 1);
+            assert.true(this.warnings[0].includes('Unable to detect your location'));
         });
 
         test('the fallback is stored so it is not looked up again', async function (assert) {
@@ -87,32 +82,23 @@ module('Unit | Service | current-user (whois fallback)', function (hooks) {
     });
 
     module('loadWhois when storing the result fails', function () {
-        test('that failure DOES reach the catch, and warns', async function (assert) {
-            // The only way into the catch: something after lookupUserIp throws.
-            // A storage write is the realistic candidate.
+        test('the failure is logged, not thrown', async function (assert) {
             let calls = 0;
             this.service.setOption = () => {
                 calls += 1;
-                if (calls === 1) {
-                    throw new Error('storage full');
-                }
+                throw new Error('storage full');
             };
 
             const whois = await this.service.loadWhois();
 
-            assert.strictEqual(this.warnings.length, 1);
-            assert.true(this.warnings[0].includes('Unable to detect your location'));
             assert.strictEqual(whois._source, 'fallback');
-            assert.strictEqual(calls, 2, 'the catch retries the write with its own fallback');
+            assert.strictEqual(calls, 1, 'the write is attempted once');
+            assert.strictEqual(this.warnings.length, 1, 'the only warning is the unknown location');
         });
 
-        test('the service fallback is kept as the whois data', async function (assert) {
-            let calls = 0;
+        test('the whois data is kept in memory all the same', async function (assert) {
             this.service.setOption = () => {
-                calls += 1;
-                if (calls === 1) {
-                    throw new Error('storage full');
-                }
+                throw new Error('storage full');
             };
 
             const whois = await this.service.loadWhois();

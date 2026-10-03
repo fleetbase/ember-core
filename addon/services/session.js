@@ -183,26 +183,28 @@ export default class SessionService extends SimpleAuthSessionService {
     async promiseCurrentUser(transition = null) {
         const invalidateWithLoader = this.invalidateWithLoader.bind(this);
 
-        try {
-            const user = await this.currentUser.promiseUser();
-            if (!user) {
-                if (transition) {
-                    transition.abort();
-                }
-
-                await invalidateWithLoader('Session authentication failed...');
-                throw new Error('Session authentication failed...');
-            }
-
-            return user;
-        } catch (error) {
+        // Abort and invalidate once, whichever way authentication failed.
+        const fail = async (error) => {
             if (transition) {
                 transition.abort();
             }
 
             await invalidateWithLoader(error.message ?? 'Session authentication failed...');
             throw error;
+        };
+
+        let user;
+        try {
+            user = await this.currentUser.promiseUser();
+        } catch (error) {
+            return fail(error);
         }
+
+        if (!user) {
+            return fail(new Error('Session authentication failed...'));
+        }
+
+        return user;
     }
 
     /**
@@ -281,7 +283,7 @@ export default class SessionService extends SimpleAuthSessionService {
         const date = this.getExpiresAtDate();
         const now = new Date();
 
-        return Math.round((now - date) / 1000);
+        return Math.round((date - now) / 1000);
     }
 
     /**

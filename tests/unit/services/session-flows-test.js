@@ -180,20 +180,15 @@ module('Unit | Service | session (flows)', function (hooks) {
             assert.strictEqual(this.invalidations, 0);
         });
 
-        test('no user aborts and invalidates TWICE, not once', async function (assert) {
-            // Pinned, not fixed. The no-user branch aborts, invalidates, then
-            // throws — but that throw is inside the same `try`, so its own
-            // `catch` receives it and runs the identical abort-and-invalidate
-            // again before rethrowing. Every failed authentication therefore
-            // aborts the transition twice and invalidates the session twice.
+        test('no user aborts and invalidates once', async function (assert) {
             this.loadResult = null;
             let aborted = 0;
             const transition = { abort: () => (aborted += 1) };
 
             await assert.rejects(this.service.promiseCurrentUser(transition), /Session authentication failed/);
 
-            assert.strictEqual(aborted, 2, 'the catch re-runs what the try already did');
-            assert.strictEqual(this.invalidations, 2);
+            assert.strictEqual(aborted, 1);
+            assert.strictEqual(this.invalidations, 1);
         });
 
         test('a failed promise aborts and rethrows the original error', async function (assert) {
@@ -239,12 +234,12 @@ module('Unit | Service | session (flows)', function (hooks) {
     });
 
     module('promiseCurrentUser without a transition to abort', function () {
-        test('no user still invalidates, twice, with nothing to abort', async function (assert) {
+        test('no user still invalidates once, with nothing to abort', async function (assert) {
             this.loadResult = null;
 
             await assert.rejects(this.service.promiseCurrentUser(), /Session authentication failed/);
 
-            assert.strictEqual(this.invalidations, 2, 'the same double invalidation as when a transition is given');
+            assert.strictEqual(this.invalidations, 1);
         });
 
         test('a rejection carrying no message falls back to the default text', async function (assert) {

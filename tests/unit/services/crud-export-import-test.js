@@ -222,15 +222,15 @@ module('Unit | Service | crud (export and import)', function (hooks) {
             assert.deepEqual(this.options().acceptedFileTypes, ['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv']);
         });
 
-        test('queueing a file throws, because the queue is a plain array', function (assert) {
-            // Pinned, not fixed. `uploadQueue` is initialized to `[]` — a plain
-            // array literal — and queueFile calls `pushObject` on it, which
-            // does not exist with prototype extensions off. removeFile and the
-            // confirm loop have the same problem with removeObject and objectAt.
-            // The import modal cannot accept a file at all.
+        test('the default queue accepts a file', function (assert) {
             this.service.import('order');
 
-            assert.throws(() => this.options().queueFile({ name: 'orders.csv' }), /pushObject is not a function/);
+            this.options().queueFile({ name: 'orders.csv' });
+
+            assert.deepEqual(
+                this.options().uploadQueue.map((file) => file.name),
+                ['orders.csv']
+            );
         });
 
         test('a caller supplying an Ember array can queue files', function (assert) {

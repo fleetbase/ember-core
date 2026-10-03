@@ -8,7 +8,7 @@ import { isArray } from '@ember/array';
 import { singularize, pluralize } from 'ember-inflector';
 import { task } from 'ember-concurrency';
 import { storageFor } from 'ember-local-storage';
-import { intervalToDuration, parseISO } from 'date-fns';
+import { add, isAfter, parseISO } from 'date-fns';
 import { decompress as decompressJson } from 'compress-json';
 import config from 'ember-get-config';
 import corslite from '../utils/corslite';
@@ -402,13 +402,9 @@ export default class FetchService extends Service {
                 const expirationInterval = options.expirationInterval ?? 3;
                 const expirationIntervalUnit = pluralize(options.expirationIntervalUnit ?? 'days');
 
-                // calculate duration between cache version and now
-                const duration = intervalToDuration({
-                    start: parseISO(version),
-                    end: new Date(),
-                });
-                // determine if we should expire cache
-                const shouldExpire = duration[expirationIntervalUnit] > expirationInterval;
+                // Expire once the whole interval has passed since the cache version. (The
+                // interval's unit component alone would read a month-old cache as 0 days old.)
+                const shouldExpire = isAfter(new Date(), add(parseISO(version), { [expirationIntervalUnit]: expirationInterval }));
 
                 // if the version is older than 3 days clear it
                 if (!version || shouldExpire || options.clearData === true) {
@@ -666,7 +662,8 @@ export default class FetchService extends Service {
         const contentDisposition = response.headers.get('content-disposition');
         let fileName = defaultFilename;
 
-        if (contentDisposition) {
+        // A name the caller asked for wins; the header only fills in when there is none.
+        if (contentDisposition && !defaultFilename) {
             const results = /filename=(.*)/.exec(contentDisposition);
 
             if (isArray(results) && results.length > 1) {
@@ -685,11 +682,9 @@ export default class FetchService extends Service {
         let mimeType = defaultMimeType;
 
         if (contentType) {
-            const results = /(.*)?;/.exec(contentType);
-
-            if (isArray(results) && results.length > 1) {
-                mimeType = results[1];
-            }
+            // The media type is everything before the first parameter, if there are any:
+            // `text/csv` and `text/csv; charset=utf-8` both mean `text/csv`.
+            mimeType = contentType.split(';')[0].trim();
         }
 
         return mimeType;

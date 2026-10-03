@@ -5,11 +5,8 @@ import Service from '@ember/service';
 /**
  * lookupMenuItemFromRegistry's matching rules.
  *
- * The facade's own getMenuItemsFromRegistry goes to the REGISTRY service, not
- * the menu service, and passes too few arguments to it — that is already on the
- * defect register — so against a real registry the list is always empty and the
- * matcher never runs. The stub here returns items regardless of the arguments,
- * which is what lets the matching itself be exercised at all.
+ * getMenuItemsFromRegistry reads the menu service; the stub here hands back
+ * whatever items the test sets, so the matching itself is what is exercised.
  */
 module('Unit | Service | universe (registry lookup)', function (hooks) {
     setupTest(hooks);
@@ -19,15 +16,15 @@ module('Unit | Service | universe (registry lookup)', function (hooks) {
         const testContext = this;
 
         this.owner.register(
-            'service:universe/registry-service',
+            'service:universe/menu-service',
             class extends Service {
-                getRegistry() {
+                getMenuItems() {
                     return testContext.items;
                 }
             }
         );
 
-        for (const name of ['universe/menu-service', 'universe/extension-manager', 'universe/widget-service', 'universe/hook-service', 'router', 'intl', 'url-search-params']) {
+        for (const name of ['universe/registry-service', 'universe/extension-manager', 'universe/widget-service', 'universe/hook-service', 'router', 'intl', 'url-search-params']) {
             this.owner.register(`service:${name}`, class extends Service {});
         }
 

@@ -192,6 +192,28 @@ module('Unit | Service | fetch (request shaping)', function (hooks) {
             assert.strictEqual(this.requests.length, 1);
         });
 
+        test('a cache exactly a month old has expired', async function (assert) {
+            // Measured as elapsed time: a month is not "0 days" just because its day component is 0.
+            const old = new Date();
+            old.setMonth(old.getMonth() - 1);
+            this.service.localCache.set('orders', { stale: true });
+            this.service.localCache.set('orders-version', old.toISOString());
+            this.requestResponse = { fresh: true };
+
+            assert.deepEqual(await this.service.cachedGet('orders'), { fresh: true });
+        });
+
+        test('the expiry unit is configurable', async function (assert) {
+            const old = new Date(Date.now() - 2 * 60 * 60 * 1000);
+            this.service.localCache.set('orders', { stale: true });
+            this.service.localCache.set('orders-version', old.toISOString());
+            this.requestResponse = { fresh: true };
+
+            const result = await this.service.cachedGet('orders', {}, { expirationInterval: 1, expirationIntervalUnit: 'hour' });
+
+            assert.deepEqual(result, { fresh: true }, 'two hours is past a one-hour window');
+        });
+
         test('the expiry window is configurable', async function (assert) {
             const old = new Date();
             old.setDate(old.getDate() - 5);
@@ -351,10 +373,10 @@ module('Unit | Service | fetch (request shaping)', function (hooks) {
             assert.strictEqual(this.service.getMimeTypeFromResponse(res), 'text/csv');
         });
 
-        test('a content type without parameters yields the default', function (assert) {
+        test('a content type without parameters is the mime type', function (assert) {
             const res = response({ headers: { 'content-type': 'text/csv' } });
 
-            assert.strictEqual(this.service.getMimeTypeFromResponse(res, 'application/octet-stream'), 'application/octet-stream', 'the pattern requires a semicolon');
+            assert.strictEqual(this.service.getMimeTypeFromResponse(res, 'application/octet-stream'), 'text/csv');
         });
 
         test('without a content type the default is used', function (assert) {

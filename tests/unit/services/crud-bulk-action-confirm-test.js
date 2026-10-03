@@ -191,24 +191,20 @@ module('Unit | Service | crud (bulkAction confirm)', function (hooks) {
             assert.deepEqual(this.notified, [{ level: 'success', message: 'Two orders archived.' }]);
         });
 
-        test('the default success message repeats the count', async function (assert) {
-            // Pinned, not fixed. The message is built as
-            //   `${count} ${pluralize(count, modelName)} were updated successfully.`
-            // but ember-inflector's pluralize(count, word) ALREADY returns
-            // "<count> <word>", so the count is interpolated twice.
+        test('the default success message counts the records once', async function (assert) {
             this.service.bulkAction('archive', [this.record('1', 'A'), this.record('2', 'B')]);
 
             await this.lastOptions().confirm(this.modal);
 
-            assert.strictEqual(this.notified[0].message, '2 2 Orders were updated successfully.');
+            assert.strictEqual(this.notified[0].message, '2 Orders were updated successfully.');
         });
 
-        test('a single record is described in the singular, and still doubled', async function (assert) {
+        test('a single record is described in the singular', async function (assert) {
             this.service.bulkAction('archive', [this.record('1', 'A')]);
 
             await this.lastOptions().confirm(this.modal);
 
-            assert.strictEqual(this.notified[0].message, '1 1 Order were updated successfully.');
+            assert.strictEqual(this.notified[0].message, '1 Order were updated successfully.');
         });
 
         test('a caller-supplied notification is used verbatim', async function (assert) {

@@ -31,6 +31,20 @@ import UniverseRegistry from '../../contracts/universe-registry';
  * @class RegistryService
  * @extends Service
  */
+/**
+ * Whether a helper is a class to instantiate (a `Helper` subclass) rather than a function.
+ */
+function isHelperClass(value) {
+    return typeof value.prototype?.compute === 'function';
+}
+
+/**
+ * Whether a registry item can carry a `_registryKey`: any object, or a class.
+ */
+function isKeyable(value) {
+    return (typeof value === 'object' && value !== null) || typeof value === 'function';
+}
+
 export default class RegistryService extends Service {
     @service('universe/extension-manager') extensionManager;
 
@@ -178,14 +192,15 @@ export default class RegistryService extends Service {
     register(sectionName, listName, key, value) {
         const registry = this.getOrCreateList(sectionName, listName);
 
-        // Store the key with the value for lookups
-        if (typeof value === 'object' && value !== null) {
+        // Store the key with the value for lookups. A class (a renderable component) is
+        // keyed too, or nothing could look it up by name.
+        if (isKeyable(value)) {
             value._registryKey = key;
         }
 
         // Check if already exists
         const existing = registry.find((item) => {
-            if (typeof item === 'object' && item !== null) {
+            if (isKeyable(item)) {
                 return item._registryKey === key || item.slug === key || item.id === key || item.widgetId === key;
             }
             return false;
@@ -243,7 +258,7 @@ export default class RegistryService extends Service {
         const registry = this.getRegistry(sectionName, listName);
         return (
             registry.find((item) => {
-                if (typeof item === 'object' && item !== null) {
+                if (isKeyable(item)) {
                     return item._registryKey === key || item.slug === key || item.id === key || item.widgetId === key;
                 }
                 return false;
@@ -544,7 +559,8 @@ export default class RegistryService extends Service {
             }
         } else {
             // Direct function or class registration
-            const instantiate = options.instantiate !== undefined ? options.instantiate : typeof helperClassOrTemplateHelper !== 'function' || helperClassOrTemplateHelper.prototype;
+            // A Helper subclass is instantiated; a plain function helper is not, however it was written.
+            const instantiate = options.instantiate !== undefined ? options.instantiate : typeof helperClassOrTemplateHelper !== 'function' || isHelperClass(helperClassOrTemplateHelper);
 
             owner.register(`helper:${helperName}`, helperClassOrTemplateHelper, {
                 instantiate,

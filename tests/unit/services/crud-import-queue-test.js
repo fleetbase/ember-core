@@ -7,11 +7,9 @@ import { A } from '@ember/array';
  * The import modal's file queue: queueing, removing, and the accept button that
  * follows the queue's emptiness.
  *
- * The default uploadQueue crud supplies is a plain `[]`, and all three of
- * queueFile, removeFile and confirm call Ember array methods on it — which do
- * not exist with prototype extensions off. That is already on the defect
- * register; the tests here pin both the failure and the caller-supplied
- * `A([])` that works around it.
+ * queueFile, removeFile and confirm call Ember array methods on the queue, so
+ * the default queue crud supplies is an Ember array, `A([])`; a caller may
+ * still supply its own.
  */
 module('Unit | Service | crud (import queue)', function (hooks) {
     setupTest(hooks);
@@ -52,16 +50,25 @@ module('Unit | Service | crud (import queue)', function (hooks) {
     });
 
     module('with the default queue', function () {
-        test('queueing throws, because the queue is a plain array', function (assert) {
+        test('queueing adds the file', function (assert) {
             this.service.import('order');
 
-            assert.throws(() => this.lastOptions().queueFile(this.file('a.csv')), /pushObject is not a function/);
+            this.lastOptions().queueFile(this.file('a.csv'));
+
+            assert.deepEqual(
+                this.lastOptions().uploadQueue.map((file) => file.name),
+                ['a.csv']
+            );
         });
 
-        test('removing throws for the same reason', function (assert) {
+        test('removing takes it out again', function (assert) {
             this.service.import('order');
+            const file = this.file('a.csv');
 
-            assert.throws(() => this.lastOptions().removeFile(this.file('a.csv')), /removeObject is not a function/);
+            this.lastOptions().queueFile(file);
+            this.lastOptions().removeFile(file);
+
+            assert.deepEqual(this.lastOptions().uploadQueue.toArray(), []);
         });
     });
 

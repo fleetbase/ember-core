@@ -1,12 +1,13 @@
 import ison from 'dummy/utils/ison';
+import isJson from '@fleetbase/ember-core/utils/is-json';
 import { module, test } from 'qunit';
 
-// NOTE: the implementation takes no arguments and always returns true; it appears
-// to be an unfinished/dead utility. These tests pin the actual current contract.
+// A misspelt duplicate of is-json, kept as an alias so existing imports keep working.
 module('Unit | Utility | ison', function () {
-    test('it currently returns true regardless of input', function (assert) {
-        assert.true(ison());
+    test('it is is-json', function (assert) {
+        assert.strictEqual(ison, isJson);
         assert.true(ison('{}'));
-        assert.true(ison(null));
+        assert.false(ison('{'));
+        assert.false(ison(null));
     });
 });

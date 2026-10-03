@@ -198,7 +198,7 @@ module('Unit | Service | universe (defaults and fallbacks)', function (hooks) {
 });
 
 /**
- * The `|| A([])` fallbacks on the two registry getters. This needs its own
+ * The `|| A([])` fallbacks on the two menu-registry getters. This needs its own
  * module rather than a nested one: UniverseService is a classic class, so its
  * injections resolve when it is built, and re-registering a sub-service after
  * that throws "Cannot re-register ... as it has already been resolved".
@@ -208,15 +208,18 @@ module('Unit | Service | universe (empty registry fallbacks)', function (hooks) 
 
     hooks.beforeEach(function () {
         this.owner.register(
-            'service:universe/registry-service',
+            'service:universe/menu-service',
             class extends Service {
-                getRegistry() {
+                getMenuItems() {
+                    return null;
+                }
+                getMenuPanels() {
                     return null;
                 }
             }
         );
 
-        for (const name of ['universe/menu-service', 'universe/widget-service', 'universe/hook-service', 'universe/extension-manager', 'router', 'intl', 'url-search-params']) {
+        for (const name of ['universe/registry-service', 'universe/widget-service', 'universe/hook-service', 'universe/extension-manager', 'router', 'intl', 'url-search-params']) {
             this.owner.register(`service:${name}`, class extends Service {});
         }
 

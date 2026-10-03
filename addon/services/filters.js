@@ -159,9 +159,11 @@ export default class FiltersService extends Service {
             const controllerQueryParams = getWithDefault(controller, 'queryParams', []);
 
             if (isArray(controllerQueryParams)) {
-                for (let i = 0; i < controllerQueryParams.length; i++) {
-                    const qp = controllerQueryParams[i];
+                // An entry is a property name, or Ember's mapped form, e.g. `{ category: 'cat' }`,
+                // whose keys are the property names. Filters read and set properties.
+                const propertyNames = controllerQueryParams.flatMap((qp) => (typeof qp === 'string' ? [qp] : Object.keys(qp)));
 
+                for (const qp of propertyNames) {
                     if (this.managedQueryParams.includes(qp)) {
                         continue;
                     }

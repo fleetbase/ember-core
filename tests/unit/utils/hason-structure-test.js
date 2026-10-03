@@ -1,12 +1,13 @@
 import hasonStructure from 'dummy/utils/hason-structure';
+import hasJsonStructure from '@fleetbase/ember-core/utils/has-json-structure';
 import { module, test } from 'qunit';
 
-// NOTE: this looks like a typo'd duplicate of has-json-structure: it takes no
-// arguments and always returns true. These tests pin the actual current contract.
+// A misspelt duplicate of has-json-structure, kept as an alias so existing imports keep working.
 module('Unit | Utility | hason-structure', function () {
-    test('it currently returns true regardless of input', function (assert) {
-        assert.true(hasonStructure());
+    test('it is has-json-structure', function (assert) {
+        assert.strictEqual(hasonStructure, hasJsonStructure);
         assert.true(hasonStructure('{"a":1}'));
-        assert.true(hasonStructure('not json'));
+        assert.false(hasonStructure('not json'));
+        assert.false(hasonStructure());
     });
 });

@@ -84,7 +84,7 @@ export default class MenuService extends Service.extend(Evented) {
                 else if (key === 'type') menuItem.withType(options[key]);
                 else if (key === 'wrapperClass') menuItem.withWrapperClass(options[key]);
                 else if (key === 'queryParams') menuItem.withQueryParams(options[key]);
-                else if (key === 'onClick') menuItem.onClick(options[key]);
+                else if (key === 'onClick') menuItem.withOnClick(options[key]);
                 else menuItem.setOption(key, options[key]);
             });
 
@@ -367,8 +367,11 @@ export default class MenuService extends Service.extend(Evented) {
             menuItem.view = null;
         }
 
-        // Register the menu item
-        this.registry.register(registryName, 'menu-item', menuItem.slug || menuItem.title, menuItem);
+        // Register the menu item. Items registered by title share the '~' slug (their URL is
+        // `virtual/~?view=<view>`), so they are keyed by view or title instead; keyed by '~'
+        // each would replace the one before it.
+        const key = menuItem.slug && menuItem.slug !== '~' ? menuItem.slug : (menuItem.view ?? menuItem.title);
+        this.registry.register(registryName, 'menu-item', key, menuItem);
 
         // Trigger event
         this.trigger('menuItem.registered', menuItem, registryName);
@@ -461,7 +464,7 @@ export default class MenuService extends Service.extend(Evented) {
      * @returns {Array} Organization menu items
      */
     getOrganizationMenuItems() {
-        return this.registry.getRegistry('console:account', 'menu-item');
+        return this.registry.getAllFromPrefix('console:account', 'menu-item', 'organization:');
     }
 
     /**
@@ -471,7 +474,7 @@ export default class MenuService extends Service.extend(Evented) {
      * @returns {Array} User menu items
      */
     getUserMenuItems() {
-        return this.registry.getRegistry('console:account', 'menu-item');
+        return this.registry.getAllFromPrefix('console:account', 'menu-item', 'user:');
     }
 
     /**

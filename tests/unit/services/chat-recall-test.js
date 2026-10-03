@@ -78,19 +78,12 @@ module('Unit | Service | chat (recall and creation)', function (hooks) {
             assert.deepEqual(this.cache['open-chats'], ['a', 'b']);
         });
 
-        test('remembering an already-remembered channel DISCARDS the rest of the list', function (assert) {
-            // Pinned, not fixed. The condition is
-            //   if (isArray(openedChats) && !openedChats.includes(id)) { append }
-            //   else { openedChats = [id] }
-            // so the else arm is reached in two quite different situations: the
-            // cache holding something that is not a list, and the id already
-            // being present. In the second the whole list is replaced by the one
-            // id, silently forgetting every other open chat.
+        test('remembering an already-remembered channel keeps the list as it is', function (assert) {
             this.cache['open-chats'] = ['a', 'b', 'c'];
 
             this.service.rememberOpenedChannel(channel('b'));
 
-            assert.deepEqual(this.cache['open-chats'], ['b'], 'a and c are gone');
+            assert.deepEqual(this.cache['open-chats'], ['a', 'b', 'c']);
         });
 
         test('a cache holding something that is not a list is replaced', function (assert) {

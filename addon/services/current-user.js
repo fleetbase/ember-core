@@ -185,35 +185,27 @@ export default class CurrentUserService extends Service.extend(Evented) {
     }
 
     async loadWhois() {
-        try {
-            // Use frontend IP lookup to get accurate user location
-            // This avoids the issue of server-side lookup returning server IP instead of user IP
-            const whois = await lookupUserIp({
-                timeout: 5000,
-                cache: true,
-            });
+        // Use frontend IP lookup to get accurate user location
+        // This avoids the issue of server-side lookup returning server IP instead of user IP
+        const whois = await lookupUserIp({
+            timeout: 5000,
+            cache: true,
+        });
 
-            this.setOption('whois', whois);
-            this.whoisData = whois;
-
-            return whois;
-        } catch (error) {
-            console.error('[currentUser] Failed to load whois:', error);
+        // lookupUserIp absorbs its own failures and hands back a fallback rather than
+        // rejecting, so the result, not an exception, says the location is unknown.
+        if (whois._source === 'fallback') {
             this.notifications.warning('Unable to detect your location. Some features may use default settings.');
-
-            // Return fallback data with browser timezone
-            const fallback = {
-                city: null,
-                country_code: null,
-                timezone: getBrowserTimezone(),
-                _source: 'fallback',
-            };
-
-            this.setOption('whois', fallback);
-            this.whoisData = fallback;
-
-            return fallback;
         }
+
+        this.whoisData = whois;
+        try {
+            this.setOption('whois', whois);
+        } catch (error) {
+            console.error('[currentUser] Failed to store whois:', error);
+        }
+
+        return whois;
     }
 
     getCompany() {

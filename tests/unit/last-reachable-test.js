@@ -147,10 +147,8 @@ module('Unit | Decorator | legacy-fetch-from (the prototype accessor)', function
     });
 
     test('the symbol-backed accessor reads and writes through', function (assert) {
-        // The decorator defines its accessor on the PROTOTYPE. A native class
-        // field shadows it with an own property — that is the pinned defect —
-        // so reaching the accessor at all means applying the decorator to a
-        // class that declares no such field.
+        // Applied by hand, with no field and so no descriptor, the decorator still
+        // defines its accessor on the prototype.
         const Subject = EmberObject.extend({});
         legacyFetchFrom('widgets')(Subject.prototype, 'records');
 
