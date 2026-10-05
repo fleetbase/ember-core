@@ -12,6 +12,7 @@ import { decompress as decompressJson } from 'compress-json';
 import getUserOptions from '../utils/get-user-options';
 import config from 'ember-get-config';
 
+/* istanbul ignore if -- runs at import; whichever of adapters/application or services/fetch loads first sets the host, so the other can never enter */
 if (isBlank(config.API.host)) {
     config.API.host = `${window.location.protocol}//${window.location.hostname}`;
 }
@@ -88,7 +89,10 @@ export default class ApplicationAdapter extends RESTAdapter {
         const userId = this.session.data.authenticated.user;
         const userOptions = getUserOptions();
         const isSandbox = get(userOptions, `${userId}:sandbox`) === true;
-        const testKey = get(userOptions, `${userId}:testKey`);
+        // `currentUser.setOption` dasherizes before storing, so the key written
+        // by `setOption('testKey', …)` is `<user>:test-key`. Reading `testKey`
+        // never matched anything, so this header was never sent.
+        const testKey = get(userOptions, `${userId}:test-key`);
         let isAuthenticated = this.session.isAuthenticated;
         let { token } = this.session.data.authenticated;
 

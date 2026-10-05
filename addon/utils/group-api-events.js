@@ -10,6 +10,7 @@ export default function groupApiEvents(webhookEvents = []) {
             if (!groups[eventResource]) {
                 groups[eventResource] = [];
             }
+            /* istanbul ignore else -- eventResource is the part of `event` before its first dot, so `event` always contains it */
             if (event.includes(eventResource)) {
                 groups[eventResource].push(event);
             }

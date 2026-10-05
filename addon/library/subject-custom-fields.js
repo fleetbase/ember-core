@@ -12,6 +12,7 @@ export default class SubjectCustomFields {
     @tracked groups = [];
     @tracked fields = [];
     @tracked values = Object.create(null);
+    /* istanbul ignore next -- the constructor assigns options unconditionally, so this default is never read */
     @tracked options = {};
 
     constructor({ owner, subject, options = {} }) {
@@ -61,11 +62,13 @@ export default class SubjectCustomFields {
     }
 
     @action writeFieldValue(resource, value, customField) {
+        const fieldId = typeof customField === 'string' ? customField : customField?.id;
+        if (!fieldId) return;
+
         this.setFieldValue(value, customField);
 
-        const fieldId = typeof customField === 'string' ? customField : customField?.id;
         const valueType = typeof customField === 'string' ? null : (customField?.valueType ?? customField?.value_type ?? null);
-        if (!fieldId || !resource) return;
+        if (!resource) return;
 
         let rec = this.#getLocalValueRecord(resource, fieldId);
         const nextVal = value ?? '';
@@ -357,7 +360,7 @@ export default class SubjectCustomFields {
 
             const prev = g.customFields; // <- no coercion
             const needsInit = !Array.isArray(prev); // undefined / non-array
-            const changed = !needsInit && !sameIds(prev, computed, key, false);
+            const changed = !needsInit && !sameIds(prev, computed, { key, orderMatters: false });
 
             if (needsInit || changed) {
                 planned.push({ g, next: computed }); // initialize or update
@@ -371,7 +374,7 @@ export default class SubjectCustomFields {
                     const { g, next } = planned[i];
                     const current = g.customFields; // no coercion
                     const needsInit = !Array.isArray(current);
-                    const changed = !needsInit && !sameIds(current, next, key, false);
+                    const changed = !needsInit && !sameIds(current, next, { key, orderMatters: false });
 
                     if (needsInit || changed) {
                         g.customFields = next; // tracked; safe after render
@@ -421,8 +424,12 @@ export default class SubjectCustomFields {
             }
 
             case 'file':
-                // your File value is a JSON string; reuse your rule (must look like {...})
-                return typeof value === 'string' && value.startsWith('{') && value.endsWith('}');
+                if (typeof value !== 'string') return false;
+                // A value that has been through the server comes back as file JSON, but one
+                // staged since the last save is still the `file:<uuid>` sentinel the upload
+                // handlers write. Both mean the field has a file on it.
+                if (value.startsWith('file:')) return value.length > 'file:'.length;
+                return value.startsWith('{') && value.endsWith('}');
 
             default:
                 // fallback: any non-nullish, non-empty string

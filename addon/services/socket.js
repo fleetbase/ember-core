@@ -36,7 +36,8 @@ export default class SocketService extends Service {
                 const channel = this.socket.subscribe(channelId);
 
                 // Track channel
-                this.channels.pushObject(channel);
+                // Reassigned rather than mutated so the tracked property invalidates.
+                this.channels = [...this.channels, channel];
 
                 // Listen to channel for events
                 await channel.listener('subscribe').once();
@@ -56,7 +57,7 @@ export default class SocketService extends Service {
 
     closeChannels() {
         for (let i = 0; i < this.channels.length; i++) {
-            const channel = this.channels.objectAt(i);
+            const channel = this.channels[i];
 
             channel.close();
         }

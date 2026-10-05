@@ -5,7 +5,7 @@ export default function groupBy(arr, key) {
     let _key;
 
     for (let i = 0; i < arr.length; i++) {
-        const item = arr.objectAt(i);
+        const item = arr[i];
 
         if (typeof key === 'string') {
             _key = get(item, key);
@@ -19,7 +19,7 @@ export default function groupBy(arr, key) {
             grouped[_key] = [];
         }
 
-        grouped[_key].pushObject(item);
+        grouped[_key].push(item);
     }
 
     return grouped;

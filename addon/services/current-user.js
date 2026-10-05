@@ -185,35 +185,27 @@ export default class CurrentUserService extends Service.extend(Evented) {
     }
 
     async loadWhois() {
-        try {
-            // Use frontend IP lookup to get accurate user location
-            // This avoids the issue of server-side lookup returning server IP instead of user IP
-            const whois = await lookupUserIp({
-                timeout: 5000,
-                cache: true,
-            });
+        // Use frontend IP lookup to get accurate user location
+        // This avoids the issue of server-side lookup returning server IP instead of user IP
+        const whois = await lookupUserIp({
+            timeout: 5000,
+            cache: true,
+        });
 
-            this.setOption('whois', whois);
-            this.whoisData = whois;
-
-            return whois;
-        } catch (error) {
-            console.error('[currentUser] Failed to load whois:', error);
+        // lookupUserIp absorbs its own failures and hands back a fallback rather than
+        // rejecting, so the result, not an exception, says the location is unknown.
+        if (whois._source === 'fallback') {
             this.notifications.warning('Unable to detect your location. Some features may use default settings.');
-
-            // Return fallback data with browser timezone
-            const fallback = {
-                city: null,
-                country_code: null,
-                timezone: getBrowserTimezone(),
-                _source: 'fallback',
-            };
-
-            this.setOption('whois', fallback);
-            this.whoisData = fallback;
-
-            return fallback;
         }
+
+        this.whoisData = whois;
+        try {
+            this.setOption('whois', whois);
+        } catch (error) {
+            console.error('[currentUser] Failed to store whois:', error);
+        }
+
+        return whois;
     }
 
     getCompany() {
@@ -235,20 +227,20 @@ export default class CurrentUserService extends Service.extend(Evented) {
 
         // get direct applied permissions
         if (user.get('permissions')) {
-            permissions.pushObjects(user.get('permissions').toArray());
+            permissions.push(...user.get('permissions').toArray());
         }
 
         // get role permissions and role policies permissions
         if (user.get('role')) {
             if (user.get('role.permissions')) {
-                permissions.pushObjects(user.get('role.permissions').toArray());
+                permissions.push(...user.get('role.permissions').toArray());
             }
 
             if (user.get('role.policies')) {
                 for (let i = 0; i < user.get('role.policies').length; i++) {
                     const policy = user.get('role.policies').objectAt(i);
                     if (policy.get('permissions')) {
-                        permissions.pushObjects(policy.get('permissions').toArray());
+                        permissions.push(...policy.get('permissions').toArray());
                     }
                 }
             }
@@ -259,7 +251,7 @@ export default class CurrentUserService extends Service.extend(Evented) {
             for (let i = 0; i < user.get('policies').length; i++) {
                 const policy = user.get('policies').objectAt(i);
                 if (policy.get('permissions')) {
-                    permissions.pushObjects(policy.get('permissions').toArray());
+                    permissions.push(...policy.get('permissions').toArray());
                 }
             }
         }
@@ -310,7 +302,13 @@ export default class CurrentUserService extends Service.extend(Evented) {
     }
 
     hasOption(key) {
-        return this.getOption(key) !== undefined;
+        // Read storage directly rather than going through getOption: its
+        // `defaultValue = null` parameter applies whenever the stored value is
+        // undefined, so getOption can never return undefined and this was
+        // always true.
+        key = `${this.optionsPrefix}${dasherize(key)}`;
+
+        return this.options.get(key) !== undefined;
     }
 
     filledOption(key) {

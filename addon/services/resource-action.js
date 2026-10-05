@@ -112,6 +112,98 @@ export default class ResourceActionService extends Service {
     @tracked mountPrefix = 'fleet-ops';
 
     /**
+     * The engine that owns this resource's views, used in its registry names.
+     * Set by `initialize`, from `mountPrefix` (`console.fleet-ops` → `fleet-ops`).
+     */
+    @tracked registryExtension;
+
+    /**
+     * The resource segment of this resource's registry names. Derived from the
+     * model name without its engine prefix (`ledger-invoice` → `invoice`).
+     */
+    @tracked registryResource = null;
+
+    /**
+     * The shared resource view registry service.
+     *
+     * Looked up rather than injected: an engine built against an older
+     * ember-core does not list it as a dependency, and a missing registry must
+     * leave the view exactly as it was. Undefined when there is none.
+     */
+    get resourceView() {
+        return getOwner(this).lookup('service:universe/resource-view-service');
+    }
+
+    /**
+     * The table registry prefix for this resource, e.g. `fleet-ops:driver:table`.
+     * Pass it to `<Layout::Resource::Tabular @registry=…>`.
+     */
+    get tableRegistry() {
+        return this.registryResource ? `${this.registryExtension}:${this.registryResource}:table` : null;
+    }
+
+    /**
+     * The details registry prefix for this resource, e.g. `fleet-ops:driver:details`.
+     * Pass it to `<Layout::Resource::Panel @registry=…>`.
+     */
+    get detailsRegistry() {
+        return this.registryResource ? `${this.registryExtension}:${this.registryResource}:details` : null;
+    }
+
+    /**
+     * Merge what extensions registered into one of this resource's view slots.
+     * Returns the built-in items unchanged when nothing is registered.
+     *
+     * @param {String} surface 'table' or 'details'
+     * @param {String} slot e.g. 'columns', 'actions', 'menu'
+     * @param {Array} baseItems The view's built-in items
+     * @param {Object} context Extra view context (`resource`, `controller`, …)
+     * @returns {Array}
+     */
+    mergeRegistered(surface, slot, baseItems = [], context = {}) {
+        const prefix = surface === 'details' ? this.detailsRegistry : this.tableRegistry;
+        if (!prefix || !this.resourceView) {
+            return baseItems;
+        }
+
+        return this.resourceView.mergeSlot(prefix, slot, baseItems, context);
+    }
+
+    /**
+     * This resource's table columns with registered columns and row actions
+     * merged in. For views that render their own `<Table>` rather than
+     * `<Layout::Resource::Tabular @registry=…>`, which merges by itself.
+     *
+     * @param {Array} columns The view's built-in columns
+     * @param {Object} context Extra view context (`controller`, `table`, …)
+     * @returns {Array}
+     */
+    mergeRegisteredColumns(columns = [], context = {}) {
+        if (!this.tableRegistry || !this.resourceView) {
+            return columns;
+        }
+
+        const merged = this.resourceView.mergeSlot(this.tableRegistry, 'columns', columns, context);
+        return this.resourceView.mergeRowActions(this.tableRegistry, merged, context);
+    }
+
+    /**
+     * The query params this resource's index controller must declare: its
+     * own, plus the filter params of filterable registered columns. Use it for
+     * the controller's `queryParams` class field.
+     *
+     * @param {Array} baseQueryParams
+     * @returns {Array}
+     */
+    queryParamsFor(baseQueryParams = []) {
+        if (!this.registryResource || !this.resourceView) {
+            return baseQueryParams;
+        }
+
+        return this.resourceView.queryParamsFor(this.registryExtension, this.registryResource, baseQueryParams);
+    }
+
+    /**
      * Initialize the service for store actions
      */
     initialize(modelName, options = {}) {
@@ -127,6 +219,8 @@ export default class ResourceActionService extends Service {
         this.baseAssetUrl = options.baseAssetUrl ?? this.baseAssetUrl;
         this.permissionPrefix = options.permissionPrefix ?? 'fleet-ops';
         this.mountPrefix = options.mountPrefix ?? `console.${this.permissionPrefix}`;
+        this.registryExtension = options.registryExtension ?? this.mountPrefix.replace(/^console\./, '');
+        this.registryResource = options.registryResource ?? modelName?.replace(new RegExp(`^${this.registryExtension}-`), '') ?? null;
 
         return this;
     }
@@ -206,7 +300,6 @@ export default class ResourceActionService extends Service {
      */
     @action bulkDelete(selected = [], options = {}) {
         selected = [...(isArray(selected) ? selected : []), ...this.tableContext.getSelectedRows()];
-        if (!selected) return;
 
         options = { ...options, ...(this.bulkDeleteOptions ?? {}) };
         // if no direct fetchOptions use global fetch options if applicable
@@ -230,7 +323,6 @@ export default class ResourceActionService extends Service {
      */
     @action export(selections = [], options = {}) {
         selections = [...(isArray(selections) ? selections : []), ...this.tableContext.getSelectedIds()];
-        if (!selections) return;
 
         options = { ...options, ...(this.exportOptions ?? {}) };
         // if no direct fetchOptions use global fetch options if applicable

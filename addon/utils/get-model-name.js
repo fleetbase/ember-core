@@ -10,7 +10,9 @@ export default function getModelName(model, fallback = null, options = {}) {
 
     if (isArray(fallback)) {
         for (let i = 0; i < fallback.length; i++) {
-            const defaultValue = fallback.objectAt(i);
+            // `isArray` is true for a native array, which has no `objectAt`
+            // once prototype extensions are off — index directly instead.
+            const defaultValue = fallback[i];
 
             if (!isBlank(defaultValue)) {
                 modelName = defaultValue;

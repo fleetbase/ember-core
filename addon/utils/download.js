@@ -7,14 +7,18 @@ export default function download(data, strFileName, strMimeType) {
         payload = data,
         url = !strFileName && !strMimeType && payload,
         anchor = document.createElement('a'),
-        toString = function (a) {
+        toString = /* istanbul ignore next -- only used when the browser has no Blob constructor, a path that throws on `instanceof` before reaching here */ function (a) {
             return String(a);
         },
-        myBlob = self.Blob || self.MozBlob || self.WebKitBlob || toString,
+        myBlob,
         fileName = strFileName || 'download',
         blob,
         reader;
-    myBlob = myBlob.call ? myBlob.bind(self) : Blob;
+    // Hoisted out of the declaration above so the ignore hint below attaches to a
+    // statement — on a declarator inside a var list it is not honoured.
+    /* istanbul ignore next -- every browser this suite can run in has Blob, so the vendored MozBlob/WebKitBlob/toString fallbacks are unreachable */
+    myBlob = self.Blob || self.MozBlob || self.WebKitBlob || toString;
+    myBlob = /* istanbul ignore next -- myBlob is always a constructor here, so the bare-Blob arm cannot be taken */ myBlob.call ? myBlob.bind(self) : Blob;
 
     if (String(this) === 'true') {
         //reverse arguments, allowing download.bind(true, "text/xml", "export.xml") to act as a callback
@@ -122,6 +126,7 @@ export default function download(data, strFileName, strMimeType) {
             if (/^data:/.test(url)) url = 'data:' + url.replace(/^data:([\w\/\-\+]+)/, defaultMime);
             if (!window.open(url)) {
                 // popup blocked, offer direct download:
+                /* istanbul ignore if -- covering this would navigate the page away, taking the test run with it */
                 if (confirm('Displaying New Document\n\nUse Save As... to download, then click back to return to this page.')) {
                     location.href = url;
                 }
@@ -157,6 +162,7 @@ export default function download(data, strFileName, strMimeType) {
         saver(self.URL.createObjectURL(blob), true);
     } else {
         // handle non-Blob()+non-URL browsers:
+        /* istanbul ignore if -- blob is only a string when the browser has no Blob constructor, which throws earlier */
         if (typeof blob === 'string' || blob.constructor === toString) {
             try {
                 return saver('data:' + mimeType + ';base64,' + self.btoa(blob));

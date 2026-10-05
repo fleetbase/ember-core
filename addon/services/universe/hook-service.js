@@ -23,14 +23,39 @@ export default class HookService extends Service {
      */
     @tracked applicationInstance = null;
 
+    #hookRegistry = null;
+
     /**
-     * Creates an instance of HookService.
-     * @memberof HookService
+     * The shared hook registry, resolved on first use.
+     *
+     * This is deliberately lazy rather than resolved in the constructor:
+     * #getApplication prefers an explicitly set applicationInstance over the
+     * owner, and setApplicationInstance can only run after construction. Doing
+     * the lookup here means that preference is actually honoured.
+     *
+     * Read-only. It was a writable field before, but nothing in the addon, its
+     * tests or the console app ever assigned it, and replacing a memoized
+     * container lookup from outside is not a meaningful operation.
+     *
+     * @type {HookRegistry}
      */
-    constructor() {
-        super(...arguments);
-        // Initialize shared hook registry
-        this.hookRegistry = this.#initializeHookRegistry();
+    get hookRegistry() {
+        return this.#resolveHookRegistry();
+    }
+
+    /**
+     * Memoized resolution, kept out of the getter body so a property read is not
+     * itself an assignment.
+     *
+     * @private
+     * @returns {HookRegistry}
+     */
+    #resolveHookRegistry() {
+        if (!this.#hookRegistry) {
+            this.#hookRegistry = this.#initializeHookRegistry();
+        }
+
+        return this.#hookRegistry;
     }
 
     /**
@@ -127,7 +152,7 @@ export default class HookService extends Service {
      * @param {Object} options Optional options
      * @returns {Object} Normalized hook object
      */
-    #normalizeHook(input, handler = null, options = {}) {
+    #normalizeHook(input, handler, options) {
         if (input instanceof Hook) {
             return input.toObject();
         }
