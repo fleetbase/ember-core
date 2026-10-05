@@ -54,10 +54,15 @@ jobs:
       run: pnpm run coverage
 
     # Uploaded before the gate, and regardless of whether the suite passed, so
-    # Codecov still receives a report from a run with failing tests. A missing or
-    # unreadable report is a real problem and still fails the job.
+    # Codecov still receives a report from a run with failing tests.
+    #
+    # A failed upload is reported on the step but does not fail the job: the
+    # action downloads its CLI from cli.codecov.io on every run, and an outage
+    # there would otherwise fail CI and skip the coverage gate below, even though
+    # nothing in this repository is wrong. The gate is what enforces coverage.
     - name: Upload coverage to Codecov
       if: '!cancelled()'
+      continue-on-error: true
       uses: codecov/codecov-action@v5
       with:
         files: coverage/lcov.info
