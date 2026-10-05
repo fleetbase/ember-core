@@ -68,7 +68,7 @@ module('Unit | Utility | small utils (defaults and fallbacks)', function () {
         // The class declares `fn = function () {}` as a default, but the
         // constructor then assigns `this.fn = fn` unconditionally — so building
         // one with no argument overwrites the default with `undefined` and the
-        // declared no-op is never callable. Pinned here, flagged in DEFECTS.md.
+        // declared no-op is never callable. Pinned as it stands.
         const task = new MockTask();
 
         assert.strictEqual(task.fn, undefined, 'the declared default is overwritten');
