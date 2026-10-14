@@ -1,6 +1,7 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'dummy/tests/helpers';
 import { settled } from '@ember/test-helpers';
+import { inertClientMethods } from 'dummy/tests/helpers/stub-socketcluster';
 
 /**
  * The body of `listen`'s async-iteration loop.
@@ -43,6 +44,7 @@ module('Unit | Service | socket (listening)', function (hooks) {
         window.socketClusterClient = {
             create() {
                 return {
+                    ...inertClientMethods(),
                     subscribe(channelId) {
                         return fakeChannel(channelId, testContext.messages);
                     },

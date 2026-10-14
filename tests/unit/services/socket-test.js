@@ -2,6 +2,7 @@ import { module, test } from 'qunit';
 import { setupTest } from 'dummy/tests/helpers';
 import { settled } from '@ember/test-helpers';
 import config from 'dummy/config/environment';
+import { inertClientMethods } from 'dummy/tests/helpers/stub-socketcluster';
 
 // The global SocketCluster client is replaced for the whole suite by
 // tests/helpers/stub-socketcluster, so no real connection is ever opened. These
@@ -41,6 +42,7 @@ module('Unit | Service | socket', function (hooks) {
             create(socketConfig) {
                 testContext.created.push(socketConfig);
                 return {
+                    ...inertClientMethods(),
                     subscribe(channelId) {
                         const channel = fakeChannel(channelId);
                         testContext.subscribed.push(channel);

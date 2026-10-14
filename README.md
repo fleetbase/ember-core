@@ -173,7 +173,7 @@ export default class OrdersController extends Controller {
 | `table-context` | Selection state for the active table |
 | `abilities` | Permission checks |
 | `notifications` | Toast notifications |
-| `socket` | Real-time channels |
+| `socket` | Real-time channels, authenticated with session socket tokens |
 | `chat` | Chat channels and messages |
 | `events` | Application event tracking |
 | `theme` | Light and dark themes and route body classes |

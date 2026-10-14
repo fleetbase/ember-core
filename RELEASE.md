@@ -1,37 +1,20 @@
-> v0.3.25 ~ "Resource view registries, 100% test coverage, and the fixes it turned up"
+> v0.3.26 ~ "The console's realtime socket authenticates with short-lived socket tokens"
 
 ---
 ## Highlights
 
-- **Resource view registries.** Extensions can add columns, row actions, bulk actions and toolbar buttons to any engine's table views, and header buttons and menu items to its details views. Names follow `<extension>:<resource>:<surface>:<slot>`, for example `fleet-ops:driver:table:columns` or `ledger:invoice:details:menu`.
-  - New contracts: `TableColumn`, `ResourceAction` and `ActionButton`.
-  - New service: `universe/resource-view-service`, reached as `universe.getService('resource-view')`.
-  - New `ResourceActionService` helpers: `tableRegistry`, `detailsRegistry`, `mergeRegisteredColumns()` and `queryParamsFor()`.
-  - Guide: [Resource views](https://fleetbase.io/docs/extension-development/resource-views).
-  - Rendering ships in fleetbase/ember-ui v0.4.5.
-- **Verified 100% test coverage.** Statements, branches, functions and lines are all at 100%, checked per file by a CI gate, with results on Codecov. Writing the tests turned up a number of defects; the fixes are listed below.
-- **Fixes found while writing the tests:**
-  - `crud`:
-    - bulk-action messages no longer print the count twice;
-    - the import dialog accepts files;
-    - a `modelName` option now overrides the model's own name.
-  - `fetch`:
-    - a bare `Content-Type` such as `text/csv` is read correctly;
-    - a filename the caller passes wins over the `content-disposition` header;
-    - `cachedGet` expires a month-old cache.
-  - `filters` understand Ember's mapped query params.
-  - The organization and user account menus no longer show each other's items.
-  - Sign-in failures abort and invalidate once, and the session's seconds remaining is positive until it expires.
-  - The user is warned when their location cannot be detected.
-  - Reopening a chat keeps the other open chats.
-  - Menu items registered by title no longer replace each other.
-  - `MenuItem`'s chaining click setter is now `withOnClick()`.
-  - `loadSubjectCustomFields` rejects when loading fails, so callers can tell a failure from a subject with no custom fields.
-- **Header shortcuts keep their permission.** `registerHeaderMenuItem` now carries `permission` onto each shortcut, or inherits the parent's, so the header can hide shortcuts a user cannot open.
-- **Fix: a required file custom field rejected a file uploaded in the same session.** A freshly staged `file:<uuid>` value now counts as present.
-- **Fix: the universe registry facade.** `getRegistry`, `registerInRegistry`, `lookupFromRegistry`, `getMenuItemsFromRegistry` and `getMenuPanelsFromRegistry` passed the wrong arguments and returned nothing.
-  - Panels that read registered tabs through them now see those tabs.
-  - `virtualRouteRedirect` (used by the console's login route) now redirects hidden `auth:login` pages on direct load.
+- **Authenticated realtime socket.** The `socket` service now authenticates its SocketCluster connection with a short-lived socket token from `POST int/v1/socket/token`. ([#97](https://github.com/fleetbase/ember-core/pull/97))
+  - The token is delivered in the handshake by an in-memory auth engine. It is never written to `localStorage` or the connection URL.
+  - It is refreshed a minute before it expires.
+  - After a `deauthenticate`, or a kick-out or failed subscription with an auth reason, the service fetches a new token, re-authenticates and resubscribes the affected channels.
+  - It re-authenticates on sign-in and organization switch, and disconnects on sign-out.
+  - Channel names are unchanged, and callers of `listen()` and `instance().subscribe()` need no changes.
+  - The connection carries a `client` query tag (`console/<version>`) so operators can see which clients still connect without a token.
+- **Works with servers that have socket authentication off.** When the token route answers `404`, or no one is signed in, the socket connects anonymously as before.
+
+---
+## Upgrading
+No changes are needed in extensions. Subscriptions are authorized server-side once an instance turns on socket authentication (`SOCKETCLUSTER_AUTH_ENABLED`, fleetbase/core-api v1.6.69). Handle `subscribeFail` on channels the signed-in user may not be allowed to read.
 
 ---
 ## Need help?
