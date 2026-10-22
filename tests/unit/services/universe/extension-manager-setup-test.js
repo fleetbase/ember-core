@@ -2,6 +2,7 @@ import { module, test } from 'qunit';
 import { setupTest } from 'dummy/tests/helpers';
 import Service from '@ember/service';
 import config from 'dummy/config/environment';
+import { prepareRuntimeEngines, registerRuntimeEngines, resetRuntimeEngines } from '@fleetbase/ember-core/utils/runtime-engines';
 
 /**
  * `loadExtensions` and `setupExtensions` — the boot-time half of the extension
@@ -18,6 +19,45 @@ import config from 'dummy/config/environment';
  *    same trick the fetch tests use on ember-fetch.
  */
 const EXTENSIONS_MODULE = '@fleetbase/console/extensions';
+const RUNTIME_ENGINE = '@acme/runtime-engine';
+
+/**
+ * Prepare and register one runtime engine the way the console's initializers
+ * do, with its route map and extension module defined in loader.js directly.
+ */
+async function installRuntimeEngine(calls) {
+    const engine = {
+        name: RUNTIME_ENGINE,
+        version: '1.0.0',
+        bundle: { assets: [{ uri: 'assets/engine.js', type: 'js' }] },
+        routes: 'routes.js',
+    };
+    const load = () => {
+        window.define(`${RUNTIME_ENGINE}/routes`, [], () => ({}));
+        return Promise.resolve();
+    };
+    await prepareRuntimeEngines(
+        { resolveRegistration: () => undefined },
+        { payload: [engine], doc: document.implementation.createHTMLDocument(''), load, has: () => true }
+    );
+
+    const assetLoader = {
+        pushManifest() {},
+        loadBundle() {
+            window.define(`${RUNTIME_ENGINE}/extension`, ['exports'], (exports) => {
+                exports.default = () => calls.push('runtime extension ran');
+            });
+            return Promise.resolve();
+        },
+    };
+    registerRuntimeEngines({ lookup: (name) => (name === 'service:asset-loader' ? assetLoader : undefined) });
+}
+
+function uninstallRuntimeEngine() {
+    resetRuntimeEngines();
+    delete window.requirejs.entries[`${RUNTIME_ENGINE}/routes`];
+    delete window.requirejs.entries[`${RUNTIME_ENGINE}/extension`];
+}
 
 module('Unit | Service | universe/extension-manager (loading and setup)', function (hooks) {
     setupTest(hooks);
@@ -133,6 +173,22 @@ module('Unit | Service | universe/extension-manager (loading and setup)', functi
             );
         });
 
+        test('runtime engines are added to the installed extensions', async function (assert) {
+            await installRuntimeEngine([]);
+
+            try {
+                const extensions = await this.service.loadExtensions(this.application);
+
+                assert.deepEqual(
+                    extensions.map((e) => e.name),
+                    ['@fleetbase/fleetops-engine', RUNTIME_ENGINE]
+                );
+                assert.ok(this.application.engines[RUNTIME_ENGINE], 'with an engine dependency map');
+            } finally {
+                uninstallRuntimeEngine();
+            }
+        });
+
         test('it marks extensions as loaded', async function (assert) {
             let released = false;
             const waiting = this.service.waitForExtensionsLoaded().then(() => (released = true));
@@ -212,6 +268,20 @@ module('Unit | Service | universe/extension-manager (loading and setup)', functi
             await this.service.setupExtensions(this.appInstance, this.universeStub);
 
             assert.deepEqual(calls, [], 'it waits for the engine');
+        });
+
+        test('a runtime engine falls back to its runtime extension loader', async function (assert) {
+            const calls = [];
+            await installRuntimeEngine(calls);
+            this.application.extensions = [{ name: RUNTIME_ENGINE }];
+
+            try {
+                await this.service.setupExtensions(this.appInstance, this.universeStub);
+
+                assert.deepEqual(calls, ['runtime extension ran']);
+            } finally {
+                uninstallRuntimeEngine();
+            }
         });
 
         test('an extension with no registered loader is skipped', async function (assert) {

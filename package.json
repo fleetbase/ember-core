@@ -11,6 +11,11 @@
     "repository": "https://github.com/fleetbase/ember-core",
     "license": "AGPL-3.0-or-later",
     "author": "Fleetbase Pte Ltd <hello@fleetbase.io>",
+    "bin": {
+        "fleetbase-build-engine-release": "bin/build-engine-release.js",
+        "fleetbase-check-engine-compat": "bin/check-engine-compat.js",
+        "fleetbase-host-modules": "bin/host-modules.js"
+    },
     "directories": {
         "app": "app",
         "addon": "addon",
@@ -31,6 +36,7 @@
         "test:ember": "ember test",
         "coverage": "COVERAGE=true ember test",
         "coverage:check": "node --test scripts/check-coverage.test.mjs && node scripts/check-coverage.mjs",
+        "test:node": "node --test node-tests/*.test.js",
         "test:ember-compatibility": "ember try:each",
         "publish:npm": "npm config set registry https://registry.npmjs.org/ && npm publish",
         "publish:github": "npm config set '@fleetbase:registry' https://npm.pkg.github.com/ && npm publish"
