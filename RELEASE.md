@@ -1,20 +1,16 @@
-> v0.3.26 ~ "The console's realtime socket authenticates with short-lived socket tokens"
+> v0.4.0 (in progress) ~ "Runtime engines for the Fleetbase Extensions Registry"
 
 ---
-## Highlights
+## Status
+This release is assembled on `release/v0.4.0` and ships together with the Fleetbase Extensions Registry v2 (registry, registry-bridge, fleetbase-cli, registry-infra and the console). Nothing in it merges to `main` until the registry project is complete. Patch releases (`v0.3.x`) continue from `main` in the meantime; merge `main` into this branch to keep it current.
 
-- **Authenticated realtime socket.** The `socket` service now authenticates its SocketCluster connection with a short-lived socket token from `POST int/v1/socket/token`. ([#97](https://github.com/fleetbase/ember-core/pull/97))
-  - The token is delivered in the handshake by an in-memory auth engine. It is never written to `localStorage` or the connection URL.
-  - It is refreshed a minute before it expires.
-  - After a `deauthenticate`, or a kick-out or failed subscription with an auth reason, the service fetches a new token, re-authenticates and resubscribes the affected channels.
-  - It re-authenticates on sign-in and organization switch, and disconnects on sign-out.
-  - Channel names are unchanged, and callers of `listen()` and `instance().subscribe()` need no changes.
-  - The connection carries a `client` query tag (`console/<version>`) so operators can see which clients still connect without a token.
-- **Works with servers that have socket authentication off.** When the token route answers `404`, or no one is signed in, the socket connects anonymously as before.
+---
+## Highlights (planned)
+- **Runtime engines.** Mount prebuilt extension engine releases in a console that was built without them, so installing an extension no longer rebuilds the console. Adds `utils/runtime-engines`, the `build-engine-release` and `check-engine-compat` bins, and the host module list used by the installer's compatibility check. ([#99](https://github.com/fleetbase/ember-core/pull/99))
 
 ---
 ## Upgrading
-No changes are needed in extensions. Subscriptions are authorized server-side once an instance turns on socket authentication (`SOCKETCLUSTER_AUTH_ENABLED`, fleetbase/core-api v1.6.69). Handle `subscribeFail` on channels the signed-in user may not be allowed to read.
+To be written at release time. Consoles must ship this version together with the console's runtime-engine initializers (fleetbase/fleetbase#730); the initializers import `@fleetbase/ember-core/utils/runtime-engines`, which earlier versions do not have.
 
 ---
 ## Need help?
