@@ -4,6 +4,7 @@ import { setupTest } from 'dummy/tests/helpers';
 
 const CACHE_KEY = 'fleetbase_extensions_list';
 const CACHE_VERSION_KEY = 'fleetbase_extensions_version';
+const CACHE_RUNTIME_SIGNATURE_KEY = 'fleetbase_extensions_runtime_signature';
 
 /**
  * loadExtensions fetches /extensions.json, caching the result in localStorage
@@ -65,6 +66,7 @@ module('Unit | Utility | load-extensions', function (hooks) {
             assert.deepEqual(cached.extensions, this.extensions);
             assert.ok(cached.timestamp, 'stamped with a time');
             assert.strictEqual(window.localStorage.getItem(CACHE_VERSION_KEY), 'v1.2.3');
+            assert.strictEqual(window.localStorage.getItem(CACHE_RUNTIME_SIGNATURE_KEY), '', 'with the (empty) runtime engine signature');
         });
     });
 
@@ -127,6 +129,42 @@ module('Unit | Utility | load-extensions', function (hooks) {
             assert.deepEqual(extensions, this.extensions);
         });
 
+        test('in production an entry written for the same runtime engines is served', async function (assert) {
+            this.config.environment = 'production';
+            this.config.APP.version = 'v1.2.3';
+            window.localStorage.setItem(CACHE_KEY, JSON.stringify({ extensions: [{ name: 'cached' }], timestamp: Date.now() }));
+            window.localStorage.setItem(CACHE_VERSION_KEY, 'v1.2.3');
+            window.localStorage.setItem(CACHE_RUNTIME_SIGNATURE_KEY, '@acme/widgets-engine@1.0.0');
+
+            const extensions = await loadExtensions({ runtimeSignature: '@acme/widgets-engine@1.0.0' });
+
+            assert.deepEqual(extensions, [{ name: 'cached' }]);
+        });
+
+        test('in production an entry from before a runtime engine changed is discarded', async function (assert) {
+            this.config.environment = 'production';
+            this.config.APP.version = 'v1.2.3';
+            window.localStorage.setItem(CACHE_KEY, JSON.stringify({ extensions: [{ name: 'cached' }], timestamp: Date.now() }));
+            window.localStorage.setItem(CACHE_VERSION_KEY, 'v1.2.3');
+            window.localStorage.setItem(CACHE_RUNTIME_SIGNATURE_KEY, '@acme/widgets-engine@1.0.0');
+
+            const extensions = await loadExtensions({ runtimeSignature: '@acme/widgets-engine@1.1.0' });
+
+            assert.deepEqual(extensions, this.extensions, 'an install or update invalidates the cache');
+            assert.strictEqual(window.localStorage.getItem(CACHE_RUNTIME_SIGNATURE_KEY), '@acme/widgets-engine@1.1.0', 'and the new list is recorded');
+        });
+
+        test('in production an entry from before any runtime engine was installed is discarded', async function (assert) {
+            this.config.environment = 'production';
+            this.config.APP.version = 'v1.2.3';
+            window.localStorage.setItem(CACHE_KEY, JSON.stringify({ extensions: [{ name: 'cached' }], timestamp: Date.now() }));
+            window.localStorage.setItem(CACHE_VERSION_KEY, 'v1.2.3');
+
+            const extensions = await loadExtensions({ runtimeSignature: '@acme/widgets-engine@1.0.0' });
+
+            assert.deepEqual(extensions, this.extensions);
+        });
+
         test('in production a half-written cache is ignored', async function (assert) {
             this.config.environment = 'production';
             window.localStorage.setItem(CACHE_KEY, JSON.stringify({ extensions: [{ name: 'cached' }], timestamp: Date.now() }));
@@ -139,14 +177,16 @@ module('Unit | Utility | load-extensions', function (hooks) {
     });
 
     module('clearExtensionsCache', function () {
-        test('it removes both keys', function (assert) {
+        test('it removes every key', function (assert) {
             window.localStorage.setItem(CACHE_KEY, 'anything');
             window.localStorage.setItem(CACHE_VERSION_KEY, 'v1');
+            window.localStorage.setItem(CACHE_RUNTIME_SIGNATURE_KEY, 'a@1');
 
             clearExtensionsCache();
 
             assert.strictEqual(window.localStorage.getItem(CACHE_KEY), null);
             assert.strictEqual(window.localStorage.getItem(CACHE_VERSION_KEY), null);
+            assert.strictEqual(window.localStorage.getItem(CACHE_RUNTIME_SIGNATURE_KEY), null);
         });
 
         test('clearing an empty cache is harmless', function (assert) {
