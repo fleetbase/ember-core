@@ -1,20 +1,15 @@
-> v0.3.26 ~ "The console's realtime socket authenticates with short-lived socket tokens"
+> v0.3.27 ~ "Registered table columns can be sorted, grouped and hidden by default"
 
 ---
 ## Highlights
 
-- **Authenticated realtime socket.** The `socket` service now authenticates its SocketCluster connection with a short-lived socket token from `POST int/v1/socket/token`. ([#97](https://github.com/fleetbase/ember-core/pull/97))
-  - The token is delivered in the handshake by an in-memory auth engine. It is never written to `localStorage` or the connection URL.
-  - It is refreshed a minute before it expires.
-  - After a `deauthenticate`, or a kick-out or failed subscription with an auth reason, the service fetches a new token, re-authenticates and resubscribes the affected channels.
-  - It re-authenticates on sign-in and organization switch, and disconnects on sign-out.
-  - Channel names are unchanged, and callers of `listen()` and `instance().subscribe()` need no changes.
-  - The connection carries a `client` query tag (`console/<version>`) so operators can see which clients still connect without a token.
-- **Works with servers that have socket authentication off.** When the token route answers `404`, or no one is signed in, the socket connects anonymously as before.
+- **`TableColumn.withSort(sortParam)`.** A column an extension registers into `<extension>:<resource>:table:columns` can opt into sorting and name the sort key the API is asked for (`?sort=key`). Without a key the column's `valuePath` is sent, as for built-in columns. The API must be able to order by that key; fleetbase/core-api v2.0.1 lets an extension register one with `Model::addSortHandler()`.
+- **`TableColumn.inGroup(group)`.** Lists the column under a heading of its own in the column picker, after the view's own columns (needs fleetbase/ember-ui v0.4.7 to draw the headings; older versions list the column with the rest).
+- **`TableColumn.hiddenByDefault()`.** Keeps a registered column out of the table until the user turns it on in the column picker, so an extension can offer many columns without widening every table.
 
 ---
 ## Upgrading
-No changes are needed in extensions. Subscriptions are authorized server-side once an instance turns on socket authentication (`SOCKETCLUSTER_AUTH_ENABLED`, fleetbase/core-api v1.6.69). Handle `subscribeFail` on channels the signed-in user may not be allowed to read.
+No changes needed. The new methods only set column options (`sortable`, `sortParam`, `group`, `hidden`) that a plain column object could already carry.
 
 ---
 ## Need help?
