@@ -2,7 +2,7 @@
 
 ---
 ## Status
-This release is assembled on `release/v0.4.0` and ships together with the Fleetbase Extensions Registry v2 (registry, registry-bridge, fleetbase-cli, registry-infra and the console). Nothing in it merges to `main` until the registry project is complete. Patch releases (`v0.3.x`) continue from `main` in the meantime; merge `main` into this branch to keep it current.
+This release is assembled on `feature/extensions-registry-v2` and ships together with the Fleetbase Extensions Registry v2 (registry, registry-bridge, fleetbase-cli, registry-infra and the console). Nothing in it merges to `main` until the registry project is complete. Patch releases (`v0.3.x`) continue from `main` in the meantime; merge `main` into this branch to keep it current (it includes v0.3.27).
 
 ---
 ## Highlights (planned)
