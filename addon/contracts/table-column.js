@@ -12,7 +12,10 @@ import ResourceViewItem from './resource-view-item';
  * component can live in the extension's own engine.
  *
  * A registered column is not sortable unless it says so: the API only sorts
- * on what it knows about.
+ * on what it knows about. `withSort()` opts in and names the sort key the API
+ * is asked for, which the extension's server side must be able to order by.
+ * `inGroup()` lists the column under a heading of its own in the column picker,
+ * and `hiddenByDefault()` keeps it out of the table until the user picks it.
  *
  * @class TableColumn
  * @extends ResourceViewItem
@@ -21,6 +24,9 @@ import ResourceViewItem from './resource-view-item';
  * new TableColumn({ id: 'safety-score', label: 'Safety Score', valuePath: 'meta.safety_score' })
  *     .after('status')
  *     .withCellComponent(new ExtensionComponent('@acme/engine', 'cell/safety-score'))
+ *     .withSort('safety_score')
+ *     .inGroup('Safety')
+ *     .hiddenByDefault()
  */
 export default class TableColumn extends ResourceViewItem {
     static contractType = 'table-column';
@@ -54,6 +60,36 @@ export default class TableColumn extends ResourceViewItem {
         this.setOption('filterable', true).setOption('filterParam', filterParam).setOption('filterComponent', filterComponent);
         Object.entries(options).forEach(([key, value]) => this.setOption(key, value));
         return this;
+    }
+
+    /**
+     * Make the column sortable. The table sends `sortParam` as the sort key
+     * (`?sort=key`, `?sort=-key`); without one it sends the column's `valuePath`.
+     * @param {String} [sortParam]
+     * @returns {TableColumn}
+     */
+    withSort(sortParam) {
+        this.setOption('sortable', true);
+        return sortParam ? this.setOption('sortParam', sortParam) : this;
+    }
+
+    /**
+     * List the column under this heading in the column picker, after the
+     * view's own columns.
+     * @param {String} group
+     * @returns {TableColumn}
+     */
+    inGroup(group) {
+        return this.setOption('group', group);
+    }
+
+    /**
+     * Leave the column out of the table until the user turns it on in the
+     * column picker.
+     * @returns {TableColumn}
+     */
+    hiddenByDefault() {
+        return this.setOption('hidden', true);
     }
 
     get filterParam() {
