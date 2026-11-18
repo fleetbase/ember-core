@@ -6,7 +6,7 @@ on:
     tags:
       - 'v*'
   pull_request:
-    branches: [ main ]
+    branches: [ main, feature/extensions-registry-v2 ]
 
 env:
   NODE_VERSION: 22.x

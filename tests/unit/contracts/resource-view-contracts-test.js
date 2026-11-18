@@ -40,6 +40,13 @@ module('Unit | Contracts | resource view items', function () {
         assert.strictEqual(column.filterParam, 'safety_score');
         assert.strictEqual(new TableColumn({ id: 'x', filterParam: 'x' }).filterParam, null, 'a param without filterable is not a filter');
         assert.true(new TableColumn({ id: 'x', sortable: true }).toObject().sortable, 'sortable can be opted into');
+
+        const sorted = new TableColumn({ id: 'eta', valuePath: 'meta.eta' }).withSort('eta').inGroup('Repair').hiddenByDefault().toObject();
+        assert.true(sorted.sortable, 'withSort opts in');
+        assert.strictEqual(sorted.sortParam, 'eta', 'and names the sort key');
+        assert.strictEqual(sorted.group, 'Repair');
+        assert.true(sorted.hidden);
+        assert.false('sortParam' in new TableColumn({ id: 'y', valuePath: 'name' }).withSort().toObject(), 'without a key the value path is the sort key');
     });
 
     test('before and after are mutually exclusive', function (assert) {
