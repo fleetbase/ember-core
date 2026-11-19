@@ -6,6 +6,7 @@ import { assert, debug, warn } from '@ember/debug';
 import { next } from '@ember/runloop';
 import loadInstalledExtensions from '@fleetbase/ember-core/utils/load-installed-extensions';
 import mapEngines from '@fleetbase/ember-core/utils/map-engines';
+import { getRuntimeEngines, getRuntimeExtensionLoader } from '@fleetbase/ember-core/utils/runtime-engines';
 import config from 'ember-get-config';
 import { getExtensionLoader } from '@fleetbase/console/extensions';
 import { isArray } from '@ember/array';
@@ -736,8 +737,8 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             // Get admin-configured extensions from config
             const additionalCoreExtensions = config.APP?.extensions ?? [];
 
-            // Load installed extensions (includes core, admin-configured, and user-installed)
-            const extensions = await loadInstalledExtensions(additionalCoreExtensions);
+            // Load installed extensions (includes core, admin-configured, user-installed and runtime engines)
+            const extensions = await loadInstalledExtensions(additionalCoreExtensions, getRuntimeEngines());
 
             application.extensions = extensions;
             application.engines = mapEngines(extensions);
@@ -790,8 +791,8 @@ export default class ExtensionManagerService extends Service.extend(Evented) {
             const extensionName = extension.name || extension;
             const extStartTime = performance.now();
 
-            // Lookup the loader function from the build-time generated map
-            const loader = getExtensionLoader(extensionName);
+            // Lookup the loader function from the build-time generated map, then the runtime engines
+            const loader = getExtensionLoader(extensionName) ?? getRuntimeExtensionLoader(extensionName);
 
             if (!loader) {
                 warn(`[ExtensionManager] No loader registered for ${extensionName}. Ensure addon/extension.js exists and prebuild generated the mapping.`, false, {

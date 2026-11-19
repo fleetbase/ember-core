@@ -6,7 +6,7 @@ on:
     tags:
       - 'v*'
   pull_request:
-    branches: [ main ]
+    branches: [ main, feature/extensions-registry-v2 ]
 
 env:
   NODE_VERSION: 22.x
@@ -49,6 +49,12 @@ jobs:
 
     - name: Coverage gate self-tests
       run: node --test scripts/check-coverage.test.mjs
+
+    # The engine release builder, compatibility check and their CLIs. The
+    # end-to-end mount test in node-tests/ skips itself: it needs two console
+    # builds (see docs/runtime-engines.md).
+    - name: Node tests (runtime engine tooling)
+      run: pnpm run test:node
 
     - name: Test with coverage (full suite)
       run: pnpm run coverage

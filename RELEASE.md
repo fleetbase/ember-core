@@ -1,15 +1,16 @@
-> v0.3.27 ~ "Registered table columns can be sorted, grouped and hidden by default"
+> v0.4.0 (in progress) ~ "Runtime engines for the Fleetbase Extensions Registry"
 
 ---
-## Highlights
+## Status
+This release is assembled on `feature/extensions-registry-v2` and ships together with the Fleetbase Extensions Registry v2 (registry, registry-bridge, fleetbase-cli, registry-infra and the console). Nothing in it merges to `main` until the registry project is complete. Patch releases (`v0.3.x`) continue from `main` in the meantime; merge `main` into this branch to keep it current (it includes v0.3.27).
 
-- **`TableColumn.withSort(sortParam)`.** A column an extension registers into `<extension>:<resource>:table:columns` can opt into sorting and name the sort key the API is asked for (`?sort=key`). Without a key the column's `valuePath` is sent, as for built-in columns. The API must be able to order by that key; fleetbase/core-api v2.0.1 lets an extension register one with `Model::addSortHandler()`.
-- **`TableColumn.inGroup(group)`.** Lists the column under a heading of its own in the column picker, after the view's own columns (needs fleetbase/ember-ui v0.4.7 to draw the headings; older versions list the column with the rest).
-- **`TableColumn.hiddenByDefault()`.** Keeps a registered column out of the table until the user turns it on in the column picker, so an extension can offer many columns without widening every table.
+---
+## Highlights (planned)
+- **Runtime engines.** Mount prebuilt extension engine releases in a console that was built without them, so installing an extension no longer rebuilds the console. Adds `utils/runtime-engines`, the `build-engine-release` and `check-engine-compat` bins, and the host module list used by the installer's compatibility check. ([#99](https://github.com/fleetbase/ember-core/pull/99))
 
 ---
 ## Upgrading
-No changes needed. The new methods only set column options (`sortable`, `sortParam`, `group`, `hidden`) that a plain column object could already carry.
+To be written at release time. Consoles must ship this version together with the console's runtime-engine initializers (fleetbase/fleetbase#730); the initializers import `@fleetbase/ember-core/utils/runtime-engines`, which earlier versions do not have.
 
 ---
 ## Need help?
