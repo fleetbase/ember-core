@@ -153,6 +153,29 @@ module('Unit | Utility | load-installed-extensions', function (hooks) {
         });
     });
 
+    module('runtime engines', function () {
+        const runtimeEngine = (name, version = '1.0.0', mount = { as: 'widgets', path: 'widgets', root: false }) => ({ name, version, mount });
+
+        test('a runtime engine is installed without the registry vouching for it', async function (assert) {
+            this.manifest = [{ name: '@fleetbase/fleetops-engine' }];
+
+            const installed = await loadInstalledExtensions([], [runtimeEngine('@acme/widgets-engine')]);
+
+            assert.deepEqual(installed, [
+                { name: '@fleetbase/fleetops-engine' },
+                { name: '@acme/widgets-engine', version: '1.0.0', route: 'widgets', fleetbase: { route: 'widgets' }, runtime: true },
+            ]);
+        });
+
+        test('an engine the console was built with keeps its build-time entry', async function (assert) {
+            this.manifest = [{ name: '@fleetbase/pallet-engine', version: '0.0.2' }];
+
+            const installed = await loadInstalledExtensions([], [runtimeEngine('@fleetbase/pallet-engine', '0.0.3')]);
+
+            assert.deepEqual(installed, [{ name: '@fleetbase/pallet-engine', version: '0.0.2' }]);
+        });
+    });
+
     module('the core engine list', function () {
         test('every shipped engine is treated as core', async function (assert) {
             const core = [
