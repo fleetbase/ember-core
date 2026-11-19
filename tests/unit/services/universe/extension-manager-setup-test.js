@@ -36,10 +36,7 @@ async function installRuntimeEngine(calls) {
         window.define(`${RUNTIME_ENGINE}/routes`, [], () => ({}));
         return Promise.resolve();
     };
-    await prepareRuntimeEngines(
-        { resolveRegistration: () => undefined },
-        { payload: [engine], doc: document.implementation.createHTMLDocument(''), load, has: () => true }
-    );
+    await prepareRuntimeEngines({ resolveRegistration: () => undefined }, { payload: [engine], doc: document.implementation.createHTMLDocument(''), load, has: () => true });
 
     const assetLoader = {
         pushManifest() {},

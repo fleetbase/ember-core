@@ -187,7 +187,10 @@ test('a prebuilt engine mounts into a console built without it', { skip: skip ??
             );
             assert.ok(!bootRequests.some((request) => request.endsWith(`/engines-dist/${manifest.name}/${engineJs}`)), 'and the engine bundle is not: it stays lazy');
         }
-        assert.ok(server.requests.some((request) => request.endsWith(`/engines-dist/${manifest.name}/${engineJs}`)), 'the bundle loads when the engine is needed');
+        assert.ok(
+            server.requests.some((request) => request.endsWith(`/engines-dist/${manifest.name}/${engineJs}`)),
+            'the bundle loads when the engine is needed'
+        );
     });
 
     await t.test('a release that needs a module the console lacks is refused and not mounted', async (st) => {

@@ -135,19 +135,9 @@ test('a release is extracted with every artifact a runtime mount needs', () => {
     ]);
     assert.deepEqual(manifest.runtime.config, { modulePrefix: ENGINE, environment: 'development' });
     assert.equal(manifest.runtime.extension, 'extension.js');
-    assert.deepEqual(manifest.requires.modules, [
-        '@ember/component',
-        '@fleetbase/ember-ui/components/button',
-        '@fleetbase/ember-ui/components/modal',
-        'ember-engines/routes',
-        'lodash',
-    ]);
+    assert.deepEqual(manifest.requires.modules, ['@ember/component', '@fleetbase/ember-ui/components/button', '@fleetbase/ember-ui/components/modal', 'ember-engines/routes', 'lodash']);
     assert.deepEqual(manifest.requires.aliases, ['@fleetbase/ember-ui/components/button', '@fleetbase/ember-ui/components/modal']);
-    assert.deepEqual(
-        manifest.requires.unresolved,
-        ['@fleetbase/ember-core/contracts', '@fleetbase/ember-ui/utils/dangling'],
-        'modules the build host did not define either'
-    );
+    assert.deepEqual(manifest.requires.unresolved, ['@fleetbase/ember-core/contracts', '@fleetbase/ember-ui/utils/dangling'], 'modules the build host did not define either');
     assert.match(manifest.files['assets/engine.js'], /^sha256-[0-9a-f]{64}$/);
     assert.deepEqual(Object.keys(manifest.files).sort(), ['assets/engine.css', 'assets/engine.js', 'extension.js', 'host-app.js', 'routes.js', 'translations.json']);
 });

@@ -23,10 +23,12 @@ const MINIFIED_BUNDLE =
     'define("a/one",["exports","b/two"],(function(e,t){"use strict";var n=t.x/2/1;e.default=n>1?")":"("}));define(\'a/two\',[],(function(){return{}}));define.alias("b/three","a/three")';
 
 test('it lists the modules a bundle defines, including aliases', () => {
-    assert.deepEqual(
-        [...collectDefinedModules(DEV_BUNDLE)].sort(),
-        ['@acme/widgets-engine/components/modal', '@acme/widgets-engine/components/thing', '@acme/widgets-engine/components/thing-alias', '@acme/widgets-engine/routes']
-    );
+    assert.deepEqual([...collectDefinedModules(DEV_BUNDLE)].sort(), [
+        '@acme/widgets-engine/components/modal',
+        '@acme/widgets-engine/components/thing',
+        '@acme/widgets-engine/components/thing-alias',
+        '@acme/widgets-engine/routes',
+    ]);
     assert.deepEqual([...collectDefinedModules(MINIFIED_BUNDLE)].sort(), ['a/one', 'a/three', 'a/two']);
 });
 

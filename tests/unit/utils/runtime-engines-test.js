@@ -481,10 +481,7 @@ module('Unit | Utility | runtime-engines', function (hooks) {
             assert.deepEqual(this.loaded, ['/engines-dist/@acme/widgets-engine/routes.js', '/engines-dist/@acme/widgets-engine/host-app.js']);
             assert.ok(this.doc.querySelector(`meta[name="${ENGINE}/config/environment"]`), 'config meta appended');
             assert.deepEqual(accepted[0].messages, [['en-us', { widgets: { title: 'Widgets' } }]]);
-            assert.true(
-                buildMap(this.Router).log.includes('mount @acme/widgets-engine at console.widgets (/widgets)'),
-                'mounted'
-            );
+            assert.true(buildMap(this.Router).log.includes('mount @acme/widgets-engine at console.widgets (/widgets)'), 'mounted');
         });
 
         test('an engine without host modules or translations still loads', async function (assert) {
