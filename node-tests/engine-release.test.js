@@ -37,6 +37,7 @@ function makeFixture({ uiVersion = '0.4.6', hostModules = ['button', 'modal'] } 
     write(consoleDir, `node_modules/${ENGINE}/package.json`, { name: ENGINE, version: '1.2.0', fleetbase: { route: 'widgets' } });
     write(consoleDir, `node_modules/${ENGINE}/app/models/widget.js`, `export { default } from '${ENGINE}/models/widget';`);
     write(consoleDir, `node_modules/${ENGINE}/app/routes/home.js`, `export { default } from '${ENGINE}/routes/home';`);
+    write(consoleDir, `node_modules/${ENGINE}/addon/routes.js`, "import buildRoutes from 'ember-engines/routes';\nexport default buildRoutes(function () { this.route('home', { path: '/' }); });");
     write(consoleDir, `node_modules/${ENGINE}/translations/en-us.yaml`, 'widgets: Widgets');
     write(consoleDir, `node_modules/${ENGINE}/translations/README.md`, 'not a translation');
 
@@ -162,9 +163,27 @@ test('engines that need what a runtime mount cannot give are refused', () => {
     fs.appendFileSync(consoleJs, `\ndefine("@fleetbase/console/initializers/widgets", ["exports", "${ENGINE}/initializers/widgets"], function () {});`);
     assert.throws(() => extractRelease({ ...fixture, engineName: ENGINE, parseYaml }), /adds initializers to the host/);
 
+    // An engine with addon/routes whose map is missing from the build: the build is not the one it was installed in.
     const vendor = path.join(fixture.distDir, 'assets/vendor.js');
     fs.writeFileSync(vendor, fs.readFileSync(vendor, 'utf8').replace(`define("${ENGINE}/routes"`, 'define("x/routes"'));
     assert.throws(() => extractRelease({ ...fixture, engineName: ENGINE, parseYaml }), /does not define @acme\/widgets-engine\/routes/);
+});
+
+test('an engine without routes (an integration engine) is released with an empty route map', () => {
+    const fixture = makeFixture();
+    fs.rmSync(path.join(fixture.consoleDir, `node_modules/${ENGINE}/addon/routes.js`));
+    const vendor = path.join(fixture.distDir, 'assets/vendor.js');
+    fs.writeFileSync(vendor, fs.readFileSync(vendor, 'utf8').replace(`define("${ENGINE}/routes"`, 'define("x/routes"'));
+
+    const logs = [];
+    const manifest = extractRelease({ ...fixture, engineName: ENGINE, parseYaml, log: (message) => logs.push(message) });
+    const routes = fs.readFileSync(path.join(fixture.outDir, ENGINE, 'routes.js'), 'utf8');
+
+    assert.match(routes, /^define\("@acme\/widgets-engine\/routes", \["exports", "ember-engines\/routes"\]/);
+    assert.match(routes, /\(0, _routes\.default\)\(function \(\) \{\}\)/);
+    assert.equal(manifest.runtime.routes, 'routes.js');
+    assert.ok(manifest.requires.modules.includes('ember-engines/routes'));
+    assert.ok(logs.some((message) => message.includes('empty route map')));
 });
 
 test('a build without the engine, its bundle or its config is an error', () => {
