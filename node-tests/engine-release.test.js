@@ -37,7 +37,11 @@ function makeFixture({ uiVersion = '0.4.6', hostModules = ['button', 'modal'] } 
     write(consoleDir, `node_modules/${ENGINE}/package.json`, { name: ENGINE, version: '1.2.0', fleetbase: { route: 'widgets' } });
     write(consoleDir, `node_modules/${ENGINE}/app/models/widget.js`, `export { default } from '${ENGINE}/models/widget';`);
     write(consoleDir, `node_modules/${ENGINE}/app/routes/home.js`, `export { default } from '${ENGINE}/routes/home';`);
-    write(consoleDir, `node_modules/${ENGINE}/addon/routes.js`, "import buildRoutes from 'ember-engines/routes';\nexport default buildRoutes(function () { this.route('home', { path: '/' }); });");
+    write(
+        consoleDir,
+        `node_modules/${ENGINE}/addon/routes.js`,
+        "import buildRoutes from 'ember-engines/routes';\nexport default buildRoutes(function () { this.route('home', { path: '/' }); });"
+    );
     write(consoleDir, `node_modules/${ENGINE}/translations/en-us.yaml`, 'widgets: Widgets');
     write(consoleDir, `node_modules/${ENGINE}/translations/README.md`, 'not a translation');
 
