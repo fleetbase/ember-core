@@ -7,4 +7,11 @@ module('Unit | Exports | services', function () {
         assert.ok(services.includes('docs-panel'), 'docs-panel is included in engine services');
         assert.ok(hostServices.includes('docs-panel'), 'docs-panel is included in host services');
     });
+
+    test('it exposes the shell services to engines', function (assert) {
+        for (const name of ['dock', 'context-bar']) {
+            assert.ok(services.includes(name), `${name} is included in engine services`);
+            assert.ok(hostServices.includes(name), `${name} is included in host services`);
+        }
+    });
 });

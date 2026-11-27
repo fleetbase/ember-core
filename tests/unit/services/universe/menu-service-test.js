@@ -80,6 +80,61 @@ module('Unit | Service | universe/menu-service', function (hooks) {
             assert.strictEqual(this.service.getHeaderMenuItems()[0].badge, 'new');
         });
 
+        test('dock options are applied and returned by the getter', function (assert) {
+            this.service.registerHeaderMenuItem('Fleet-Ops', 'console.fleet-ops', {
+                color: '#2563eb',
+                status: { tone: 'warn', text: '3 late' },
+                badge: 3,
+                shortcut: 'g f',
+                group: 'operations',
+            });
+
+            const [item] = this.service.getHeaderMenuItems();
+            assert.strictEqual(item.color, '#2563eb');
+            assert.deepEqual(item.status, { tone: 'warn', text: '3 late' });
+            assert.strictEqual(item.badge, 3);
+            assert.strictEqual(item.shortcut, 'g f');
+            assert.strictEqual(item.group, 'operations');
+        });
+
+        test('a string status option is normalised', function (assert) {
+            this.service.registerHeaderMenuItem('Fleet-Ops', 'console.fleet-ops', { status: 'Live' });
+
+            assert.deepEqual(this.service.getHeaderMenuItems()[0].status, { tone: 'info', text: 'Live' });
+        });
+
+        test('shortcuts inherit colour and group but not status, badge or key', function (assert) {
+            this.service.registerHeaderMenuItem('Fleet-Ops', 'console.fleet-ops', {
+                color: 'teal',
+                group: 'operations',
+                status: { tone: 'error', text: 'Down' },
+                badge: 9,
+                shortcut: 'g f',
+                shortcuts: [{ title: 'Scheduler' }, { title: 'Live Map', color: 'navy', group: 'maps', status: { tone: 'info', text: 'Beta' }, badge: 1, shortcut: 'g m' }],
+            });
+
+            const [, scheduler, liveMap] = this.service.getHeaderMenuItems();
+            assert.strictEqual(scheduler.color, 'teal');
+            assert.strictEqual(scheduler.group, 'operations');
+            assert.strictEqual(scheduler.status, null);
+            assert.strictEqual(scheduler.badge, null);
+            assert.strictEqual(scheduler.shortcut, null);
+
+            assert.strictEqual(liveMap.color, 'navy');
+            assert.strictEqual(liveMap.group, 'maps');
+            assert.deepEqual(liveMap.status, { tone: 'info', text: 'Beta' });
+            assert.strictEqual(liveMap.badge, 1);
+            assert.strictEqual(liveMap.shortcut, 'g m');
+        });
+
+        test('shortcuts of a plain object item without dock fields get nulls', function (assert) {
+            this.service.registerHeaderMenuItem({ slug: 'ops', id: 'ops', shortcuts: [{ title: 'Board' }] });
+
+            const shortcut = this.service.getHeaderMenuItems().find((item) => item._isShortcut);
+            assert.strictEqual(shortcut.color, null);
+            assert.strictEqual(shortcut.group, null);
+        });
+
         test('a MenuItem instance can be registered directly', function (assert) {
             this.service.registerHeaderMenuItem(new MenuItem('Orders', 'console.orders').withIcon('box'));
 

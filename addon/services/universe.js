@@ -458,6 +458,73 @@ export default class UniverseService extends Service.extend(Evented) {
         this.menuService.registerMenuItem(registryName, menuItemOrTitle, routeOrOptions, options);
     }
 
+    // ============================================================================
+    // Search providers (command palette)
+    // ============================================================================
+
+    /**
+     * Register a command palette search provider.
+     *
+     * `search(query)` returns (or resolves to) an array of results:
+     * `{ id, title, subtitle?, group?, route?, models?, action? }`. Results with
+     * no `group` are grouped under the provider's label. Registering the same id
+     * again replaces the provider.
+     *
+     * @method registerSearchProvider
+     * @param {Object} provider `{ id, label?, icon?, search(query) }`
+     * @returns {Object} The normalised provider
+     * @throws {Error} When `id` or `search` is missing
+     *
+     * @example
+     * universe.registerSearchProvider({
+     *     id: 'fleet-ops:orders',
+     *     label: 'Orders',
+     *     icon: 'box',
+     *     search: async (query) => {
+     *         const orders = await store.query('order', { query, limit: 5 });
+     *         return orders.map((order) => ({ id: order.id, title: order.public_id, route: 'console.fleet-ops.operations.orders.index.details', models: [order.id] }));
+     *     },
+     * });
+     */
+    registerSearchProvider(provider = {}) {
+        const { id, label, icon, search } = provider ?? {};
+
+        if (!id || typeof id !== 'string') {
+            throw new Error('registerSearchProvider requires a string id.');
+        }
+
+        if (typeof search !== 'function') {
+            throw new Error(`Search provider "${id}" requires a search(query) function.`);
+        }
+
+        const providerLabel = label || id;
+        const normalized = {
+            ...provider,
+            id,
+            label: providerLabel,
+            icon: icon ?? null,
+            search: async (query) => {
+                const results = await search.call(provider, query);
+                return (Array.isArray(results) ? results : []).filter(Boolean).map((result) => ({ ...result, group: result.group ?? providerLabel }));
+            },
+        };
+
+        this.registryService.register('search', 'provider', id, normalized);
+        this.trigger('searchProvider.registered', normalized);
+
+        return normalized;
+    }
+
+    /**
+     * Get every registered search provider, in registration order.
+     *
+     * @method getSearchProviders
+     * @returns {Array<Object>} Providers `{ id, label, icon, search(query) }`
+     */
+    getSearchProviders() {
+        return [...this.registryService.getRegistry('search', 'provider')];
+    }
+
     /**
      * Get header menu items
      *

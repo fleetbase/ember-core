@@ -104,6 +104,63 @@ export default {
 };
 ```
 
+### Canvas shell: dock metadata, context bar and search
+
+The canvas shell reads three extension points. All are optional; extensions that use none of them keep working.
+
+**Dock metadata.** `registerHeaderMenuItem` takes five more options. Each is also a `MenuItem` builder
+(`withColor`, `withStatus`, `withBadge`, `withShortcut`, `inGroup`) and is returned by `universe.headerMenuItems`:
+
+```js
+universe.registerHeaderMenuItem('Acme', 'console.acme', {
+    icon: 'rocket',
+    color: '#7c3aed', // dock tile colour
+    status: { tone: 'warn', text: '2 jobs failing' }, // tone: 'warn' | 'error' | 'info'; a plain string means info
+    badge: 3, // count or short text
+    shortcut: 'g a', // keyboard shortcut (not the `shortcuts` sub-links)
+    group: 'operations', // dock group
+});
+```
+
+The `dock` service turns header items into the user's dock: `items`, `hiddenItems`, `reorder(ids)`, `hide(id)`,
+`show(id)` and `lockedIds`. Admins set per-role defaults with `roleDefaults(roleId)` and
+`setRoleDefaults(roleId, { order, locked })` (`canManageRoles` says whether the user may); locked items cannot be hidden.
+
+**Context bar.** Routes and controllers set the crumbs and chips shown above the page. They reset on the next route
+change unless the new route sets them; with no crumbs set, they are built from the route tree and menu-item titles.
+
+```js
+export default class OrderDetailsRoute extends Route {
+    @service contextBar;
+
+    setupController(controller, order) {
+        super.setupController(...arguments);
+        this.contextBar.setCrumbs([{ label: 'Orders', route: 'console.fleet-ops.operations.orders' }, { label: order.public_id }]);
+        this.contextBar.setChips([{ label: order.status, tone: 'info' }]); // tone: 'info' | 'warn' | 'ok' | 'menu'
+    }
+}
+```
+
+Crumbs are `{ label, route?, models?, query?, menu?, split? }`. `contextBar.clear()` drops both.
+
+**Search providers.** Add results to the command palette (⌘K). `search(query)` returns, or resolves to, an array of
+`{ id, title, subtitle?, group?, route?, models?, action? }`; results without a `group` are grouped under the provider's
+label, and registering an id again replaces that provider.
+
+```js
+universe.registerSearchProvider({
+    id: 'acme:jobs',
+    label: 'Acme jobs',
+    icon: 'rocket',
+    async search(query) {
+        const jobs = await fetch.get('acme/jobs', { query, limit: 5 });
+        return jobs.map((job) => ({ id: job.id, title: job.name, subtitle: job.status, route: 'console.acme.jobs.details', models: [job.id] }));
+    },
+});
+
+universe.getSearchProviders(); // [{ id, label, icon, search(query) }]
+```
+
 ### Using the services
 
 Every service is injected the usual way:
@@ -182,6 +239,8 @@ export default class OrdersController extends Controller {
 | `app-cache` | Persistent client-side cache |
 | `url-search-params` | Reading and writing the URL's query string |
 | `custom-fields-registry` | Custom fields attached to any model |
+| `dock` | The canvas shell's dock: order, hidden and locked items, per-role defaults |
+| `context-bar` | The canvas shell's breadcrumbs and status chips |
 
 </details>
 

@@ -28,6 +28,8 @@ export const services = [
     'universe/widget-service',
     'universe/resource-view-service',
     'universe/extension-manager',
+    'dock',
+    'context-bar',
     'events',
     'intl',
     'abilities',
