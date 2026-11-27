@@ -28,6 +28,7 @@ export const hostServices = [
     'universe/extension-manager',
     'dock',
     'context-bar',
+    'backdrop',
     'events',
     'intl',
     'abilities',

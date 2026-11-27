@@ -30,6 +30,7 @@ export const services = [
     'universe/extension-manager',
     'dock',
     'context-bar',
+    'backdrop',
     'events',
     'intl',
     'abilities',

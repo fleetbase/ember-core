@@ -161,6 +161,51 @@ universe.registerSearchProvider({
 universe.getSearchProviders(); // [{ id, label, icon, search(query) }]
 ```
 
+### Canvas shell: backdrops
+
+A backdrop is a component rendered once under all console content, such as a live map. It stays mounted across routes,
+so routes put their layers on it instead of mounting their own map. Routes with no backdrop show the dot-grid canvas.
+
+```js
+universe.registerBackdrop('fleet-ops:live-map', LiveMapBackdrop, {
+    routes: ['console.fleet-ops'], // route-name prefixes; children match too
+    priority: 0, // higher wins when several match; ties go to the longest prefix, then the first registered
+    keepAlive: true, // stay mounted (hidden) after leaving its routes
+});
+
+universe.getBackdrops(); // [{ name, component, routes, priority, keepAlive }]
+```
+
+The `backdrop` service tells the shell what to render and holds each owner's layers:
+
+- `active` is the registration for the current route, or `null` for the dot-grid canvas. `isActive(name)` checks one.
+- `mounted` lists the backdrops to render: the active one plus every `keepAlive` backdrop activated this session, in
+  registration order. Render all of them and hide the inactive ones; never destroy them.
+- `request(owner, { layers, fitBounds, focus, mode })` puts an owner's layers on the backdrop and returns a handle
+  `{ owner, layers, isReleased, update(options), release() }`. Requesting again for the same owner replaces its entry.
+- `release(owner)` takes that owner's layers off. Owners never touch each other's entries. An entry is also released
+  when the route it was requested from is left (a route owner's own route, the route being entered during a
+  transition, else the current route; pass `route` to choose), and when the owner is destroyed.
+- `state` is what the backdrop component renders: `{ layers: [{ owner, layers }], fitBounds, focus, mode }`. Each of
+  `fitBounds`, `focus` and `mode` comes from the newest request that set it.
+- The backdrop component calls `setInstance(map)` once its map loads (and `setInstance(null)` on teardown). `instance`
+  and `isReady` describe the active backdrop. `onReady((instance, state) => …)` runs at once if ready, else when it
+  becomes ready, and returns a cancel function.
+
+```js
+export default class OrdersIndexRoute extends Route {
+    @service backdrop;
+
+    setupController(controller, orders) {
+        super.setupController(...arguments);
+        // Released automatically when this route is left.
+        this.backdrop.request(this, { layers: [{ type: 'orders', records: orders }], fitBounds: 'layers', mode: 'live' });
+    }
+}
+```
+
+Layer objects are opaque to the service; the backdrop component decides what they mean for the map provider in use.
+
 ### Using the services
 
 Every service is injected the usual way:

@@ -525,6 +525,65 @@ export default class UniverseService extends Service.extend(Evented) {
         return [...this.registryService.getRegistry('search', 'provider')];
     }
 
+    // ============================================================================
+    // Backdrops (canvas shell)
+    // ============================================================================
+
+    /**
+     * Register a console backdrop: a component rendered once under all content
+     * (a live map, say) on the routes it claims. The `backdrop` service picks the
+     * one for the current route; routes with none show the dot-grid canvas.
+     * Registering the same name again replaces the backdrop.
+     *
+     * @method registerBackdrop
+     * @param {String} name Unique backdrop name, e.g. 'fleet-ops:live-map'
+     * @param {Object|Class|String} component Component class, ExtensionComponent or component name
+     * @param {Object} [options]
+     * @param {Array<String>|String} [options.routes] Route-name prefixes it is shown on ('console.fleet-ops' covers its children)
+     * @param {Number} [options.priority=0] Higher wins when several backdrops match a route
+     * @param {Boolean} [options.keepAlive=true] Stay mounted (hidden) after leaving its routes instead of being torn down
+     * @returns {Object} The registration `{ name, component, routes, priority, keepAlive, ...options }`
+     * @throws {Error} When `name` or `component` is missing
+     *
+     * @example
+     * universe.registerBackdrop('fleet-ops:live-map', LiveMapBackdrop, { routes: ['console.fleet-ops'] });
+     */
+    registerBackdrop(name, component, options = {}) {
+        if (!name || typeof name !== 'string') {
+            throw new Error('registerBackdrop requires a string name.');
+        }
+
+        if (!component) {
+            throw new Error(`Backdrop "${name}" requires a component.`);
+        }
+
+        const { routes, priority, keepAlive, ...rest } = options ?? {};
+        const routeList = (Array.isArray(routes) ? routes : [routes]).filter((route) => typeof route === 'string' && route.length > 0);
+        const registration = {
+            ...rest,
+            name,
+            component,
+            routes: routeList,
+            priority: Number.isFinite(priority) ? priority : 0,
+            keepAlive: keepAlive !== false,
+        };
+
+        this.registryService.register('backdrop', 'registration', name, registration);
+        this.trigger('backdrop.registered', registration);
+
+        return registration;
+    }
+
+    /**
+     * Get every registered backdrop, in registration order.
+     *
+     * @method getBackdrops
+     * @returns {Array<Object>} Registrations `{ name, component, routes, priority, keepAlive }`
+     */
+    getBackdrops() {
+        return [...this.registryService.getRegistry('backdrop', 'registration')];
+    }
+
     /**
      * Get header menu items
      *
