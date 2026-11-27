@@ -6,7 +6,7 @@ on:
     tags:
       - 'v*'
   pull_request:
-    branches: [ main, feature/extensions-registry-v2 ]
+    branches: [ main, feature/extensions-registry-v2, feature/map-canvas ]
 
 env:
   NODE_VERSION: 22.x
