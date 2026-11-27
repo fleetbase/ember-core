@@ -5,6 +5,20 @@ import { isArray } from '@ember/array';
 import isObject from '../utils/is-object';
 
 /**
+ * Tones a header menu item's status may take. Anything else falls back to `info`.
+ *
+ * @type {String[]}
+ */
+export const MENU_ITEM_STATUS_TONES = ['warn', 'error', 'info'];
+
+/**
+ * Dock metadata fields carried by header menu items (shell phase 2).
+ *
+ * @type {String[]}
+ */
+export const MENU_ITEM_DOCK_FIELDS = ['color', 'status', 'badge', 'shortcut', 'group'];
+
+/**
  * Represents a menu item in the application
  *
  * Menu items can be simple navigation links or complex interactive components.
@@ -129,6 +143,13 @@ export default class MenuItem extends BaseContract {
             // the overflow dropdown.  e.g. ['logistics', 'tracking', 'fleet'].
             // Optional – defaults to null.
             this.tags = isArray(definition.tags) ? definition.tags : definition.tags ? [definition.tags] : null;
+
+            // ── Dock metadata (shell phase 2) ─────────────────────────────
+            this.color = definition.color || null;
+            this.status = MenuItem.normalizeStatus(definition.status);
+            this.badge = definition.badge ?? null;
+            this.shortcut = definition.shortcut || null;
+            this.group = definition.group || null;
         } else {
             // Handle string title with optional route (chaining pattern)
             this.title = titleOrDefinition;
@@ -185,10 +206,53 @@ export default class MenuItem extends BaseContract {
             this.description = null;
             this.shortcuts = null;
             this.tags = null;
+
+            // ── Dock metadata (shell phase 2) ─────────────────────────────
+            this.color = null;
+            this.status = null;
+            this.badge = null;
+            this.shortcut = null;
+            this.group = null;
+        }
+
+        // toObject() spreads _options last, so a raw value from the definition
+        // (e.g. a string status) would override the normalised property.
+        for (const field of MENU_ITEM_DOCK_FIELDS) {
+            if (field in this._options) {
+                this._options[field] = this[field];
+            }
         }
 
         // Call setup() to trigger validation after properties are set
         super.setup();
+    }
+
+    /**
+     * Normalise a status value to `{ tone, text }` or null.
+     *
+     * Accepts a plain string (treated as `{ tone: 'info', text }`) or an object
+     * with `tone` ('warn' | 'error' | 'info') and `text`. Unknown tones become 'info'.
+     *
+     * @method normalizeStatus
+     * @static
+     * @param {String|Object|null} status Raw status
+     * @returns {Object|null} Normalised status
+     */
+    static normalizeStatus(status) {
+        if (!status) {
+            return null;
+        }
+
+        if (typeof status === 'string') {
+            return { tone: 'info', text: status };
+        }
+
+        if (!isObject(status)) {
+            return null;
+        }
+
+        const tone = MENU_ITEM_STATUS_TONES.includes(status.tone) ? status.tone : 'info';
+        return { tone, text: status.text ?? null };
     }
 
     /**
@@ -504,6 +568,74 @@ export default class MenuItem extends BaseContract {
         return this;
     }
 
+    // ── Dock metadata builder methods (shell phase 2) ─────────────────────
+
+    /**
+     * Set the module colour shown on the dock tile (any CSS colour or token name).
+     *
+     * @method withColor
+     * @param {String} color Colour value
+     * @returns {MenuItem} This instance for chaining
+     */
+    withColor(color) {
+        this.color = color || null;
+        this._options.color = this.color;
+        return this;
+    }
+
+    /**
+     * Set a status shown on the dock tile.
+     *
+     * @method withStatus
+     * @param {Object|String|null} status `{ tone: 'warn'|'error'|'info', text }` or a plain string
+     * @returns {MenuItem} This instance for chaining
+     */
+    withStatus(status) {
+        this.status = MenuItem.normalizeStatus(status);
+        this._options.status = this.status;
+        return this;
+    }
+
+    /**
+     * Set a badge (count or short text) shown on the dock tile.
+     *
+     * @method withBadge
+     * @param {Number|String|null} badge Badge value
+     * @returns {MenuItem} This instance for chaining
+     */
+    withBadge(badge) {
+        this.badge = badge ?? null;
+        this._options.badge = this.badge;
+        return this;
+    }
+
+    /**
+     * Set the keyboard shortcut that opens this item (e.g. 'g f').
+     * Not to be confused with `withShortcuts`, which sets sub-links.
+     *
+     * @method withShortcut
+     * @param {String|null} shortcut Key sequence
+     * @returns {MenuItem} This instance for chaining
+     */
+    withShortcut(shortcut) {
+        this.shortcut = shortcut || null;
+        this._options.shortcut = this.shortcut;
+        return this;
+    }
+
+    /**
+     * Set the dock group this item belongs to (e.g. 'operations').
+     *
+     * @method inGroup
+     * @param {String|null} group Group name
+     * @returns {MenuItem} This instance for chaining
+     */
+    inGroup(group) {
+        this.group = group || null;
+        this._options.group = this.group;
+        return this;
+    }
+
     /**
      * Get the plain object representation
      *
@@ -572,6 +704,13 @@ export default class MenuItem extends BaseContract {
 
             // Optional array of string tags for search discoverability
             tags: this.tags,
+
+            // Dock metadata (shell phase 2)
+            color: this.color,
+            status: this.status,
+            badge: this.badge,
+            shortcut: this.shortcut,
+            group: this.group,
 
             // Indicator flag
             _isMenuItem: true,

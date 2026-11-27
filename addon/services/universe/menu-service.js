@@ -85,6 +85,11 @@ export default class MenuService extends Service.extend(Evented) {
                 else if (key === 'wrapperClass') menuItem.withWrapperClass(options[key]);
                 else if (key === 'queryParams') menuItem.withQueryParams(options[key]);
                 else if (key === 'onClick') menuItem.withOnClick(options[key]);
+                else if (key === 'color') menuItem.withColor(options[key]);
+                else if (key === 'status') menuItem.withStatus(options[key]);
+                else if (key === 'badge') menuItem.withBadge(options[key]);
+                else if (key === 'shortcut') menuItem.withShortcut(options[key]);
+                else if (key === 'group') menuItem.inGroup(options[key]);
                 else menuItem.setOption(key, options[key]);
             });
 
@@ -198,6 +203,15 @@ export default class MenuService extends Service.extend(Evented) {
                     permission: sc.permission ?? menuItem.permission ?? null,
                     type: sc.type ?? 'default',
                     buttonType: sc.buttonType ?? null,
+
+                    // ── Dock metadata (shell phase 2) ─────────────────────────
+                    // Colour and group follow the parent module; status, badge
+                    // and keyboard shortcut belong to the shortcut itself.
+                    color: sc.color ?? menuItem.color ?? null,
+                    group: sc.group ?? menuItem.group ?? null,
+                    status: MenuItem.normalizeStatus(sc.status),
+                    badge: sc.badge ?? null,
+                    shortcut: sc.shortcut ?? null,
 
                     // ── Styling ───────────────────────────────────────────────
                     class: sc.class ?? null,
