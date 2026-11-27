@@ -29,6 +29,8 @@ export const hostServices = [
     'dock',
     'context-bar',
     'backdrop',
+    'shell',
+    'sheet-stack',
     'events',
     'intl',
     'abilities',

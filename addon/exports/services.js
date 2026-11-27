@@ -31,6 +31,8 @@ export const services = [
     'dock',
     'context-bar',
     'backdrop',
+    'shell',
+    'sheet-stack',
     'events',
     'intl',
     'abilities',
