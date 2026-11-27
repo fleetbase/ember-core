@@ -112,6 +112,7 @@ module('Unit | Service | context-bar', function (hooks) {
             this.service.setCrumbs([
                 'Orders',
                 { label: 'ORD-1', route: 'console.fleet-ops.orders.details', models: ['o1'], query: { tab: 'x' }, menu, split: true, extra: 1 },
+                { label: 'Bare', route: undefined },
                 { route: 'no-label' },
                 null,
             ]);
@@ -120,6 +121,7 @@ module('Unit | Service | context-bar', function (hooks) {
             assert.deepEqual(this.service.crumbs, [
                 { label: 'Orders' },
                 { label: 'ORD-1', route: 'console.fleet-ops.orders.details', models: ['o1'], query: { tab: 'x' }, menu, split: true },
+                { label: 'Bare' },
             ]);
         });
 
