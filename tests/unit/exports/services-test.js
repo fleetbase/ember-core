@@ -9,7 +9,7 @@ module('Unit | Exports | services', function () {
     });
 
     test('it exposes the shell services to engines', function (assert) {
-        for (const name of ['dock', 'context-bar']) {
+        for (const name of ['dock', 'context-bar', 'backdrop', 'shell', 'sheet-stack']) {
             assert.ok(services.includes(name), `${name} is included in engine services`);
             assert.ok(hostServices.includes(name), `${name} is included in host services`);
         }
